@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getStaticTemplateById } from '@/constants/component-templates';
-import { analyzeComponentForBoard, auditProjectDesign } from '@/lib/datasheet-rules';
+import { analyzeComponentForBoard, auditProjectDesign, getProjectStageReadiness } from '@/lib/datasheet-rules';
 import { makeComponent, makeTemplate } from './test-fixtures.ts';
 
 test('imported schematic board skips board-voltage compatibility warnings', () => {
@@ -96,6 +96,39 @@ test('auditProjectDesign resolves top-level audit issues from code + params with
       issue.message === '데이터 라인 풀업 저항 확인'
     )
   );
+});
+
+test('imported schematic components do not emit stale unrouted warnings from editor routing state', () => {
+  const template = makeTemplate({
+    id: 'tpl_imported_resistor',
+    name: 'Imported Resistor',
+    category: 'PASSIVE',
+    pins: [
+      { name: '1', allowedTypes: ['DIGITAL'] },
+      { name: '2', allowedTypes: ['DIGITAL'] },
+    ],
+  });
+
+  const component = {
+    ...makeComponent({
+      instanceId: 'r1',
+      templateId: 'tpl_imported_resistor',
+      name: 'R1',
+    }),
+    importedReference: 'R1',
+    isFullyRouted: false,
+  };
+
+  const report = auditProjectDesign([component], 'kicad_generic', templateId =>
+    templateId === template.id ? template : undefined
+  );
+  const readiness = getProjectStageReadiness([component], 'kicad_generic', templateId =>
+    templateId === template.id ? template : undefined
+  );
+
+  assert.equal(report.issues.some(issue => issue.code === 'routing.unrouted-component'), false);
+  assert.equal(readiness.pcbReasons.some(reason => reason.includes('미배선 부품')), false);
+  assert.equal(readiness.manufacturingReasons.some(reason => reason.includes('미배선 부품')), false);
 });
 
 test('auditProjectDesign emits structured I2C planning and pull-up issues from datasheet rules', () => {

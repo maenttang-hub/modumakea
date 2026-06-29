@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
 /tests/kicad_samples/
 .pytest_cache/
 

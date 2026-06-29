@@ -13,6 +13,8 @@ PCB production is not the primary goal of this MVP.
 
 ## Local development
 
+ModuMake's editor is currently a desktop workspace. Use a browser viewport of at least 1024px wide; 1280px or wider is recommended. Narrower screens show a desktop-use notice instead of the three-panel editor.
+
 ```bash
 npm install
 npm run dev
@@ -77,6 +79,14 @@ npm run test:coverage
 npm run lint
 npm run build
 ```
+
+Large KiCad stress fixtures are intentionally not committed. Keep local real-project samples under `tests/kicad_samples/` or the existing absolute fixture paths, and run them only when needed:
+
+```bash
+npm run test:kicad:real
+```
+
+The default test suite skips those optional stress fixtures so a fresh clone stays small and CI remains reproducible.
 
 Launch Desk specific checks:
 

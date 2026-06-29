@@ -46,11 +46,11 @@ export function SidebarRight({
       <div className="border-b border-[#e7ddd1] px-4 pb-3 pt-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a29487]">Review</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a29487]">검토</div>
             <div className="mt-1 text-[15px] font-semibold text-[#40342c]">검토 패널</div>
           </div>
           <div className="rounded-full bg-[#efe8dc] px-2.5 py-1 text-[10px] font-semibold text-[#7f7062]">
-            workspace
+            작업공간
           </div>
         </div>
         <div className="mt-3 flex rounded-[14px] bg-[#efe8dc] p-1">

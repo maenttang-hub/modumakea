@@ -3225,6 +3225,43 @@ test('circuit netlist parses embedded resistor notation without fallback side ef
   );
 });
 
+test('circuit netlist parses common resistor value labels as ohms', () => {
+  const cases = [
+    { value: '10Kohm', expectedOhms: 10_000 },
+    { value: '10 kohm', expectedOhms: 10_000 },
+    { value: '10KΩ', expectedOhms: 10_000 },
+    { value: '330ohm', expectedOhms: 330 },
+    { value: '330 Ohm', expectedOhms: 330 },
+    { value: '330R', expectedOhms: 330 },
+    { value: '4.7kΩ', expectedOhms: 4_700 },
+  ];
+
+  for (const { value, expectedOhms } of cases) {
+    const result = analyzeCircuitNetlist(
+      [
+        makeComponent({
+          instanceId: `r-${value}`,
+          templateId: 'tpl_resistor',
+          name: `R ${value}`,
+          value,
+          assignedPins: { '1': '5V', '2': 'GND' },
+        }),
+      ],
+      'uno',
+      resolveTemplate,
+      [],
+    );
+
+    assert.equal(result.resistors.length, 1);
+    assert.equal(result.resistors[0]?.resistanceOhms, expectedOhms, value);
+    assert.equal(
+      result.issues.some(issue => issue.ruleId === 'netlist.resistor-value-fallback'),
+      false,
+      value
+    );
+  }
+});
+
 test('circuit netlist clears imported pinout mismatch when saved overrides match expected pads', () => {
   const diode = makeComponent({
     instanceId: 'd-fixed',

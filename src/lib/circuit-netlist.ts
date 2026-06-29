@@ -93,6 +93,15 @@ function getPartMasterRecordForCircuitComponent(
   return findPartMasterRecordByLookupCandidates(rawCandidates);
 }
 
+function getComponentAnalysisValue(component: PlacedComponent) {
+  return (
+    component.value?.trim() ||
+    component.importedMapping?.value?.trim() ||
+    component.importedGeometry?.valueLabel?.trim() ||
+    undefined
+  );
+}
+
 export interface CircuitAnalysisReport {
   nets: CircuitNet[];
   resistors: CircuitResistorElement[];
@@ -241,7 +250,7 @@ function parseResistanceOhms(value?: string): ParsedResistanceResult {
     };
   }
 
-  const match = normalized.match(/^([0-9]*\.?[0-9]+)([kmu]?)(?:f|h)?$/);
+  const match = normalized.match(/^([0-9]*\.?[0-9]+)([rkmu]?)(?:f|h)?$/);
   if (!match) {
     return {
       resistanceOhms: 220,
@@ -435,7 +444,7 @@ function parsePowerRating(value?: string): ParsedPowerRatingResult {
 }
 
 function inferLedForwardVoltage(component: PlacedComponent, channel?: 'R' | 'G' | 'B') {
-  const raw = `${component.value ?? ''} ${component.name}`.toLowerCase();
+  const raw = `${getComponentAnalysisValue(component) ?? ''} ${component.name}`.toLowerCase();
   if (channel === 'B') {
     return 3.0;
   }
@@ -460,7 +469,7 @@ function inferLedForwardVoltage(component: PlacedComponent, channel?: 'R' | 'G' 
 }
 
 function inferDiodeForwardVoltage(component: PlacedComponent) {
-  const raw = `${component.value ?? ''} ${component.name}`.toLowerCase();
+  const raw = `${getComponentAnalysisValue(component) ?? ''} ${component.name}`.toLowerCase();
 
   if (raw.includes('schottky') || raw.includes('1n581')) {
     return 0.35;
@@ -1638,7 +1647,8 @@ function normalizeImportedPinRole(value: string) {
 }
 
 function inferResistorPowerRatingW(component: PlacedComponent) {
-  const explicit = parsePowerRating(component.value ?? component.name).powerW;
+  const analysisValue = getComponentAnalysisValue(component);
+  const explicit = parsePowerRating(analysisValue ?? component.name).powerW;
   if (typeof explicit === 'number') {
     return explicit;
   }
@@ -1646,7 +1656,7 @@ function inferResistorPowerRatingW(component: PlacedComponent) {
   const footprintText = [
     component.importedMapping?.footprint,
     component.importedMapping?.libraryId,
-    component.value,
+    analysisValue,
     component.name,
   ]
     .filter(Boolean)
@@ -4754,13 +4764,14 @@ export function analyzeCircuitNetlist(
         const netA = netIdByNodeKey.get(getComponentPinNodeKey(component, '1'));
         const netB = netIdByNodeKey.get(getComponentPinNodeKey(component, '2'));
         if (netA && netB && netA !== netB) {
-          const parsedCapacitance = parseCapacitanceFarads(component.value);
-          const parsedVoltageRating = parseVoltageRating(component.value);
+          const componentValue = getComponentAnalysisValue(component);
+          const parsedCapacitance = parseCapacitanceFarads(componentValue);
+          const parsedVoltageRating = parseVoltageRating(componentValue);
           capacitors.push({
             id: component.instanceId,
             componentId: component.instanceId,
             componentName: component.name,
-            value: component.value,
+            value: componentValue,
             packageHint: `${component.importedMapping?.footprint ?? ''} ${component.importedMapping?.libraryId ?? ''}`.trim() || undefined,
             capacitanceFarads: parsedCapacitance.capacitanceFarads,
             voltageRatingV: parsedVoltageRating.voltageV ?? undefined,
@@ -4836,12 +4847,13 @@ export function analyzeCircuitNetlist(
       continue;
     }
 
-    const parsedResistance = parseResistanceOhms(component.value);
+    const componentValue = getComponentAnalysisValue(component);
+    const parsedResistance = parseResistanceOhms(componentValue);
     resistors.push({
       id: component.instanceId,
       componentId: component.instanceId,
       componentName: component.name,
-      value: component.value,
+      value: componentValue,
       packageHint: `${component.importedMapping?.footprint ?? ''} ${component.importedMapping?.libraryId ?? ''}`.trim() || undefined,
       resistanceOhms: parsedResistance.resistanceOhms,
       powerRatingW: inferResistorPowerRatingW(component),
@@ -4867,13 +4879,13 @@ export function analyzeCircuitNetlist(
         code: 'netlist.resistor-value-fallback',
         params: {
           componentName: component.name,
-          rawValue: parsedResistance.reason === 'missing' ? '' : (component.value ?? ''),
+          rawValue: parsedResistance.reason === 'missing' ? '' : (componentValue ?? ''),
         },
         title: '저항값 파싱 확인 필요',
         message:
           parsedResistance.reason === 'missing'
             ? `${component.name} 값이 비어 있어 회로 해석에서는 기본 220옴으로 계산했습니다.`
-            : `${component.name} 값 "${component.value ?? ''}"을(를) 저항값으로 해석하지 못해 회로 해석에서는 기본 220옴으로 계산했습니다.`,
+            : `${component.name} 값 "${componentValue ?? ''}"을(를) 저항값으로 해석하지 못해 회로 해석에서는 기본 220옴으로 계산했습니다.`,
         componentName: component.name,
         ruleId: 'netlist.resistor-value-fallback',
         recommendation: '저항 값을 220, 1k, 10k, 1M 같은 형식으로 명확히 입력해 해석 결과가 왜곡되지 않도록 맞춰 주세요.',

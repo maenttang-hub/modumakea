@@ -1,10 +1,14 @@
-import test from 'node:test';
+import testRunner from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
+import { getStaticTemplateById } from '@/constants/component-templates';
+import { analyzeCircuitNetlist } from '@/lib/circuit-netlist';
 import { importKiCadSchematic } from '@/lib/kicad-sch-parser';
 import { parseKiCadSchematicToLightweightValidationJson, parseKiCadSchematicToUnifiedCircuitModel } from '@/lib/v3-kicad-parser';
 import type { ImportedSchematicPrimitive, ImportedSchematicScene, ImportedSchematicSceneSymbol } from '@/types';
+
+const test = process.env.MODUMAKE_REAL_FIXTURES === '1' ? testRunner : testRunner.skip;
 
 type ImportedTextPrimitive = Extract<ImportedSchematicPrimitive, { kind: 'text' }>;
 type ImportedPolylinePrimitive = Extract<ImportedSchematicPrimitive, { kind: 'polyline' }>;
@@ -752,6 +756,63 @@ test('Arduino_hat keeps horizontal LED polarity and top power symbol orientation
 
   assert.ok(topGroundStem, 'expected top GNDPWR to keep a visible vertical stem tied to the wire');
   assert.ok(topFlagTip, 'expected top PWR_FLAG chevron to keep its upward-facing orientation');
+});
+
+test('Arduino_hat preserves visible passive values for circuit analysis', async () => {
+  const source = await readFile('/Users/gimdong-il/Downloads/KICAD-main/Arduino hat/Arduino_hat.kicad_sch', 'utf8');
+  const imported = importKiCadSchematic(source);
+  const document = imported.document;
+  const importedValuesByRef = new Map(
+    document.components.map(component => [
+      component.importedReference,
+      component.value ?? component.importedMapping?.value ?? component.importedGeometry?.valueLabel,
+    ])
+  );
+
+  assert.equal(importedValuesByRef.get('R1'), '10Kohm');
+  assert.equal(importedValuesByRef.get('R2'), '330ohm');
+  assert.equal(importedValuesByRef.get('C2'), '10uF');
+  assert.equal(importedValuesByRef.get('C3'), '22pF');
+  assert.equal(importedValuesByRef.get('C4'), '22pF');
+
+  const report = analyzeCircuitNetlist(
+    document.components,
+    document.activeBoardId,
+    getStaticTemplateById,
+    document.manualConnections ?? []
+  );
+  const componentById = new Map(document.components.map(component => [component.instanceId, component]));
+  const resistorByRef = new Map(
+    report.resistors.map(resistor => [
+      componentById.get(resistor.componentId)?.importedReference,
+      resistor,
+    ])
+  );
+  const capacitorByRef = new Map(
+    (report.capacitors ?? []).map(capacitor => [
+      componentById.get(capacitor.componentId)?.importedReference,
+      capacitor,
+    ])
+  );
+  const assertClose = (actual: number | undefined, expected: number) => {
+    assert.equal(typeof actual, 'number');
+    assert.ok(Math.abs((actual ?? 0) - expected) <= expected * 1e-9);
+  };
+
+  assert.equal(resistorByRef.get('R1')?.value, '10Kohm');
+  assert.equal(resistorByRef.get('R1')?.resistanceOhms, 10_000);
+  assert.equal(resistorByRef.get('R2')?.value, '330ohm');
+  assert.equal(resistorByRef.get('R2')?.resistanceOhms, 330);
+  assert.equal(capacitorByRef.get('C2')?.value, '10uF');
+  assertClose(capacitorByRef.get('C2')?.capacitanceFarads, 10e-6);
+  assert.equal(capacitorByRef.get('C3')?.value, '22pF');
+  assertClose(capacitorByRef.get('C3')?.capacitanceFarads, 22e-12);
+  assert.equal(capacitorByRef.get('C4')?.value, '22pF');
+  assertClose(capacitorByRef.get('C4')?.capacitanceFarads, 22e-12);
+  assert.equal(
+    report.issues.some(issue => issue.ruleId === 'netlist.resistor-value-fallback'),
+    false
+  );
 });
 
 test('Flamingo keeps charger and horizontal diode orientation stable', async () => {

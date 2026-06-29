@@ -32,7 +32,7 @@ test('sandbox launch request store persists internal payload while keeping API r
     assert.equal(publicRequest?.launchRequestId, request.launchRequestId);
     assert.equal(publicRequest?.boardId, 'uno');
     assert.equal(publicRequest?.state, 'pending');
-    assert.equal('payload' in (publicRequest as Record<string, unknown>), false);
+    assert.equal('payload' in (publicRequest as unknown as Record<string, unknown>), false);
   } finally {
     if (previousStore === undefined) {
       delete process.env.MODUMAKE_COMPILE_SANDBOX_REQUEST_STORE;

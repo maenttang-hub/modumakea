@@ -331,7 +331,7 @@ export function shouldUseQuietImportedOverlay(data: ImportedRenderData) {
 }
 
 export const IMPORTED_SCHEMATIC_FONT_FAMILY =
-  '"Lucida Console", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace';
+  '"SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", Arial, sans-serif';
 
 export function getImportedTextFontSizePx(
   primitive: Extract<ImportedSchematicPrimitive, { kind: 'text' }>
@@ -347,10 +347,10 @@ export function getImportedTextFontSizePx(
   }
 
   if (primitive.role === 'reference' || primitive.role === 'value') {
-    return Math.max(base * 0.86, 4.05);
+    return Math.max(base * 0.92, 5.35);
   }
 
-  return Math.max(base * 0.88, 4.05);
+  return Math.max(base * 0.92, 5.15);
 }
 
 export function getImportedPinLabelDisplay(options: {
@@ -382,6 +382,67 @@ export function getImportedPinLabelDisplay(options: {
 
   const maxLength = pinAnchorCount >= 16 ? 7 : pinAnchorCount >= 10 ? 9 : 14;
   return trimmed.length > maxLength ? `${trimmed.slice(0, maxLength - 1)}…` : trimmed;
+}
+
+export function isLowPriorityImportedPinText(
+  primitive: Extract<ImportedSchematicPrimitive, { kind: 'text' }>
+) {
+  if (primitive.role === 'pin-number') {
+    return true;
+  }
+
+  if (primitive.role !== 'pin-name') {
+    return false;
+  }
+
+  const token = primitive.text.trim().toUpperCase().replace(/\s+/g, '');
+  if (!token) {
+    return true;
+  }
+
+  return (
+    /^\d+$/.test(token) ||
+    /^(?:P[A-Z]\d+|A\d+|D\d+)$/.test(token) ||
+    token === 'AREF' ||
+    isPowerLikeImportedText(token) ||
+    /\/P[A-Z]\d+/.test(token)
+  );
+}
+
+function normalizeImportedPowerText(value?: string) {
+  return value?.trim().toUpperCase().replace(/\s+/g, '') ?? '';
+}
+
+export function isPowerLikeImportedText(value?: string) {
+  const token = normalizeImportedPowerText(value);
+  if (!token) {
+    return false;
+  }
+
+  return (
+    /^(?:AGND|DGND|GND|GNDPWR|PGND|VSS)$/.test(token) ||
+    /^(?:AVCC|VCC|VDD|VDDA|VDDD|VSYS|VIN|VBAT|VBUS)$/.test(token) ||
+    /^\+?(?:1V8|2V5|3V|3V3|3\.3V|5V|9V|12V|24V)$/.test(token) ||
+    token === 'PWR_FLAG'
+  );
+}
+
+export function getImportedTextOverviewOpacity(
+  primitive: Extract<ImportedSchematicPrimitive, { kind: 'text' }>
+) {
+  if (primitive.role === 'pin-number') {
+    return 0.18;
+  }
+
+  if (primitive.role === 'pin-name') {
+    return isLowPriorityImportedPinText(primitive) ? 0.24 : 0.68;
+  }
+
+  if (primitive.role === 'annotation') {
+    return 0.66;
+  }
+
+  return 0.92;
 }
 
 export function measureImportedTextPrimitiveBox(
@@ -449,9 +510,9 @@ export function hasNativeImportedText(data: ImportedRenderData) {
 export function getImportedTextDisplayAngle(
   angle: 0 | 90 | 180 | 270,
   role?: ImportedTextRole,
-  options?: { preserveNativeOrientation?: boolean }
+  options?: { preserveNativeOrientation?: boolean; text?: string }
 ) {
-  if (options?.preserveNativeOrientation) {
+  if (options?.preserveNativeOrientation && (role === 'pin-name' || role === 'pin-number')) {
     return angle;
   }
 
@@ -463,6 +524,19 @@ export function getImportedTextDisplayAngle(
   }
 
   if (role === 'reference' || role === 'value' || role === 'annotation') {
+    if (isPowerLikeImportedText(options?.text)) {
+      return 0;
+    }
+
+    const compactText = options?.text?.replace(/\s+/g, '') ?? '';
+    if ((angle === 90 || angle === 270) && compactText.length >= 5) {
+      return 0;
+    }
+
+    if (options?.preserveNativeOrientation) {
+      return angle;
+    }
+
     if (angle === 180) {
       return 0;
     }
@@ -474,11 +548,50 @@ export function getImportedTextDisplayAngle(
     return angle;
   }
 
+  if (options?.preserveNativeOrientation) {
+    return angle;
+  }
+
   if (angle === 180 || angle === 270) {
     return 0;
   }
 
   return angle;
+}
+
+export function shouldFlattenImportedTextForReadability(
+  primitive: Extract<ImportedSchematicPrimitive, { kind: 'text' }>
+) {
+  const sourceAngle = primitive.originalAngle ?? primitive.angle;
+  const displayAngle = getImportedTextDisplayAngle(sourceAngle, primitive.role, {
+    preserveNativeOrientation: primitive.preserveNativeOrientation,
+    text: primitive.text,
+  });
+
+  return (
+    (sourceAngle === 90 || sourceAngle === 270) &&
+    displayAngle === 0 &&
+    primitive.role !== 'pin-name' &&
+    primitive.role !== 'pin-number'
+  );
+}
+
+export function getImportedReadableTextOffset(
+  primitive: Extract<ImportedSchematicPrimitive, { kind: 'text' }>,
+  fontSizePx: number
+) {
+  if (!shouldFlattenImportedTextForReadability(primitive)) {
+    return { x: 0, y: 0 };
+  }
+
+  if (isPowerLikeImportedText(primitive.text)) {
+    return { x: 0, y: 0 };
+  }
+
+  return {
+    x: 0,
+    y: -Math.max(fontSizePx * 1.15, 5.5),
+  };
 }
 
 export function getImportedTextDisplayAnchor(

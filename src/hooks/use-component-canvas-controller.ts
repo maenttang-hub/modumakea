@@ -143,14 +143,24 @@ function getImportedReviewFitPadding(
   return viewMode === 'structured' ? 0.055 : 0.075;
 }
 
-function getImportedReviewZoomBias() {
-  return 1;
+function getImportedReviewZoomBias(viewMode: 'original' | 'structured') {
+  return viewMode === 'original' ? 1.34 : 1;
 }
 
 function getImportedReviewFocusBounds(
   bounds: { x: number; y: number; width: number; height: number }
 ) {
   return bounds;
+}
+
+function publishCanvasViewportZoom(zoom: number) {
+  if (typeof window === 'undefined' || !Number.isFinite(zoom)) {
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent('modumake:viewport-change', {
+    detail: { zoom },
+  }));
 }
 
 function normalizeStructuredViewportBounds(
@@ -312,18 +322,20 @@ export function useComponentCanvasController() {
       if (typeof window !== 'undefined') {
         const centerX = focusBounds.x + focusBounds.width / 2;
         const centerY = focusBounds.y + focusBounds.height / 2;
-        const zoomBias = getImportedReviewZoomBias();
+        const zoomBias = getImportedReviewZoomBias(importedSchematicViewMode);
         if (importedReviewBoostTimeoutRef.current !== null) {
           window.clearTimeout(importedReviewBoostTimeoutRef.current);
           importedReviewBoostTimeoutRef.current = null;
         }
         const applyBoost = () => {
           const viewport = rfInstance.getViewport();
+          const nextZoom = Number((viewport.zoom * zoomBias).toFixed(4));
           rfInstance.setCenter(centerX, centerY, {
-            zoom: Number((viewport.zoom * zoomBias).toFixed(4)),
+            zoom: nextZoom,
             duration: 0,
           });
-          appendViewportDebugAction(`boost:${request.source}:z=${(viewport.zoom * zoomBias).toFixed(3)}`);
+          publishCanvasViewportZoom(nextZoom);
+          appendViewportDebugAction(`boost:${request.source}:z=${nextZoom.toFixed(3)}`);
         };
 
         if (request.duration > 0) {
@@ -364,7 +376,7 @@ export function useComponentCanvasController() {
       duration: request.duration,
     });
     return true;
-  }, [appendViewportDebugAction, board, importedSchematicMode, rfInstance]);
+  }, [appendViewportDebugAction, board, importedSchematicMode, importedSchematicViewMode, rfInstance]);
 
   const { reviewFocus, clearReviewFocus } = useCanvasReviewFocus({
     positionedComponents,
@@ -648,7 +660,7 @@ export function useComponentCanvasController() {
 
     const focusBounds = getImportedReviewFocusBounds(importedReviewViewportBounds);
     const padding = getImportedReviewFitPadding(importedReviewViewportBounds, importedSchematicViewMode);
-    const zoomBias = getImportedReviewZoomBias();
+    const zoomBias = getImportedReviewZoomBias(importedSchematicViewMode);
 
     cameraModeRef.current = 'imported-review';
     rfInstance.fitBounds(focusBounds, {
@@ -662,10 +674,12 @@ export function useComponentCanvasController() {
       const centerY = focusBounds.y + focusBounds.height / 2;
       window.setTimeout(() => {
         const viewport = rfInstance.getViewport();
+        const nextZoom = Number((viewport.zoom * zoomBias).toFixed(4));
         rfInstance.setCenter(centerX, centerY, {
-          zoom: Number((viewport.zoom * zoomBias).toFixed(4)),
+          zoom: nextZoom,
           duration: 0,
         });
+        publishCanvasViewportZoom(nextZoom);
         appendViewportDebugAction(`boost:viewmode:${importedSchematicViewMode}`);
       }, 240);
     }

@@ -55,7 +55,7 @@ test('compile queue store persists jobs to the durable file store while keeping 
 
     const publicJob = await getCompileQueueJob(job.queueJobId);
     assert.equal(publicJob?.queueJobId, job.queueJobId);
-    assert.equal('payload' in (publicJob as Record<string, unknown>), false);
+    assert.equal('payload' in (publicJob as unknown as Record<string, unknown>), false);
   });
 });
 

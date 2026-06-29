@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Sparkles, Zap } from 'lucide-react';
+import { countIssueSeverities } from '@/lib/validation-issue-classification';
 import type { ProjectAuditIssue } from '@/types';
 
 type ReviewItem = {
@@ -106,6 +107,15 @@ function severityLabel(severity: ProjectAuditIssue['severity']) {
   return '정보';
 }
 
+function nextActionLine(issue: ProjectAuditIssue | undefined) {
+  if (!issue) {
+    return '차단 이슈는 없습니다. 리포트로 내보내기 전에 실제 배선과 전원 입력 조건만 한 번 더 확인하세요.';
+  }
+
+  const target = issue.componentName ? `${issue.componentName}: ` : '';
+  return `${target}${issue.recommendation ?? issue.evidence?.howToVerify ?? issue.message}`;
+}
+
 export function AiReviewPanel({
   projectName,
   boardName,
@@ -119,11 +129,13 @@ export function AiReviewPanel({
   issues: ProjectAuditIssue[];
   onSelectIssue: (issue: ProjectAuditIssue) => void;
 }) {
-  const errorCount = issues.filter(issue => issue.severity === 'error').length;
-  const warningCount = issues.filter(issue => issue.severity === 'warning').length;
-  const infoCount = issues.filter(issue => issue.severity === 'info').length;
+  const severityCounts = countIssueSeverities(issues);
+  const errorCount = severityCounts.error;
+  const warningCount = severityCounts.warning;
+  const infoCount = severityCounts.info;
   const lead = issues[0];
   const decision = decisionLabel(errorCount, warningCount);
+  const actionLine = nextActionLine(lead);
   const visibleItems: ReviewItem[] =
     issues.length > 0
       ? issues.slice(0, 4).map((issue, index) => ({
@@ -154,15 +166,15 @@ export function AiReviewPanel({
       <div className="border-b border-[#e7ddd1] px-4 pb-3 pt-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a19386]">
-              AI Review
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a19386]">
+              AI 감수
             </div>
             <div className="mt-1 text-[15px] font-semibold text-[#3f342c]">
-              {projectName || '새 회로 리뷰'}
+              {projectName || '새 회로'}
             </div>
           </div>
-          <div className="rounded-full bg-[#efe8dc] px-2.5 py-1 text-[10px] font-semibold text-[#7c6d60]">
-            {boardName}
+          <div className="max-w-[132px] truncate rounded-full bg-[#efe8dc] px-2.5 py-1 text-[10px] font-semibold text-[#7c6d60]" title={boardName}>
+            {boardName === 'Imported schematic' ? '가져온 회로도' : boardName}
           </div>
         </div>
         <div className="mt-3 rounded-[14px] border border-[#eadfce] bg-white px-3 py-3">
@@ -174,6 +186,9 @@ export function AiReviewPanel({
               </div>
               <div className="mt-2 text-[11px] font-semibold text-[#43372f]">
                 {decision.description}
+              </div>
+              <div className="mt-2 rounded-[10px] border border-[#dce8f3] bg-[#f8fbff] px-2.5 py-2 text-[11px] font-semibold leading-5 text-[#365f8f]">
+                {actionLine}
               </div>
               <div className="mt-1 text-[10px] leading-5 text-[#918375]">
                 {fileLabel}
@@ -190,15 +205,15 @@ export function AiReviewPanel({
         <div className="mt-3 grid grid-cols-3 gap-2">
           <div className="rounded-[12px] border border-[#edd8d8] bg-[#fff8f8] px-3 py-2.5">
             <div className="text-[10px] uppercase tracking-[0.14em] text-[#ac938b]">오류</div>
-            <div className="mt-1 text-[16px] font-semibold text-[#b24f4f]">{errorCount}</div>
+            <div data-testid="editor-error-count" className="mt-1 text-[16px] font-semibold text-[#b24f4f]">{errorCount}</div>
           </div>
           <div className="rounded-[12px] border border-[#ece2cf] bg-[#fffdf7] px-3 py-2.5">
             <div className="text-[10px] uppercase tracking-[0.14em] text-[#ac938b]">경고</div>
-            <div className="mt-1 text-[16px] font-semibold text-[#a57019]">{warningCount}</div>
+            <div data-testid="editor-warning-count" className="mt-1 text-[16px] font-semibold text-[#a57019]">{warningCount}</div>
           </div>
           <div className="rounded-[12px] border border-[#dde8dd] bg-[#fbfffb] px-3 py-2.5">
             <div className="text-[10px] uppercase tracking-[0.14em] text-[#ac938b]">정보</div>
-            <div className="mt-1 text-[16px] font-semibold text-[#34764a]">{infoCount}</div>
+            <div data-testid="editor-info-count" className="mt-1 text-[16px] font-semibold text-[#34764a]">{infoCount}</div>
           </div>
         </div>
       </div>

@@ -115,6 +115,19 @@ type ProjectAuditIssueInput =
     recommendation?: string;
   };
 
+function shouldReportUnroutedComponent(component: PlacedComponent, boardId: string): boolean {
+  if (component.isFullyRouted) return false;
+
+  if (
+    isImportedSchematicBoard(boardId) &&
+    Boolean(component.importedGeometry || component.importedReference || component.importedMapping)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 function getBoardPinElectricalSpec(boardId: string, pinId: string): ElectricalPinSpec | undefined {
   const board = getBoardById(boardId);
   const pinDefinition = board.pinDefinitions.find(pin => pin.id === pinId);
@@ -3551,7 +3564,7 @@ export function auditProjectDesign(
       else genericCount++;
     }
 
-    if (!component.isFullyRouted) {
+    if (shouldReportUnroutedComponent(component, boardId)) {
       pushAuditIssue(issues, {
         severity: 'warning',
         componentName: component.name,
@@ -3725,7 +3738,7 @@ export function getProjectStageReadiness(
     manufacturingReasons.push('부품이 아직 배치되지 않았습니다.');
   }
 
-  const unroutedCount = components.filter(component => !component.isFullyRouted).length;
+  const unroutedCount = components.filter(component => shouldReportUnroutedComponent(component, boardId)).length;
   if (unroutedCount > 0) {
     pcbReasons.push(`미배선 부품 ${unroutedCount}개를 먼저 연결해야 합니다.`);
     manufacturingReasons.push(`미배선 부품 ${unroutedCount}개를 먼저 연결해야 합니다.`);

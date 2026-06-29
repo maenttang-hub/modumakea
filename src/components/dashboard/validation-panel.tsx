@@ -482,7 +482,7 @@ export function ValidationPanel() {
               </div>
 
               <div className="mt-3 space-y-3">
-                {group.items.map(issue => {
+                {group.items.map((issue, issueIndex) => {
                   const key = buildReviewIssueKey(issue);
                   const decision = validationReviewDecisions[key];
                   const badges = getValidationReviewDecisionBadges(decision)
@@ -497,7 +497,7 @@ export function ValidationPanel() {
 
                   return (
                     <div
-                      key={key}
+                      key={`${key}-${issueIndex}`}
                       className={`rounded-[16px] border px-4 py-4 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset] ${
                         tonedDown
                           ? 'border-[#ddd6cc] bg-[#f8f4ee] opacity-80'
@@ -515,13 +515,13 @@ export function ValidationPanel() {
                               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.chip}`}>
                                 {meta.title}
                               </span>
-                              {badges.map(badge => (
-                                <span key={badge} className="rounded-full bg-[#efe8dc] px-2 py-0.5 text-[10px] font-semibold text-[#76685b]">
+                              {badges.map((badge, badgeIndex) => (
+                                <span key={`${badge}-${badgeIndex}`} className="rounded-full bg-[#efe8dc] px-2 py-0.5 text-[10px] font-semibold text-[#76685b]">
                                   {badge}
                                 </span>
                               ))}
-                              {conservativeBadges.map(badge => (
-                                <span key={badge} className="rounded-full bg-[#f1ede6] px-2 py-0.5 text-[10px] font-semibold text-[#8a765c]">
+                              {conservativeBadges.map((badge, badgeIndex) => (
+                                <span key={`${badge}-${badgeIndex}`} className="rounded-full bg-[#f1ede6] px-2 py-0.5 text-[10px] font-semibold text-[#8a765c]">
                                   {badge}
                                 </span>
                               ))}
@@ -564,8 +564,8 @@ export function ValidationPanel() {
                           </div>
                           {issue.evidence.checkedBy.length > 0 ? (
                             <div className="mt-2 flex flex-wrap gap-1.5">
-                              {issue.evidence.checkedBy.map(checker => (
-                                <span key={checker} className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-[#7b6d60]">
+                              {issue.evidence.checkedBy.map((checker, checkerIndex) => (
+                                <span key={`${checker}-${checkerIndex}`} className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-[#7b6d60]">
                                   {checkerLabel(checker)}
                                 </span>
                               ))}

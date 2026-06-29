@@ -1,5 +1,9 @@
 # Getting Started
 
+## Before you start
+
+Use ModuMake on a desktop-width browser window. The current editor officially supports 1024px and wider viewports, with 1280px or wider recommended. Phone-sized screens intentionally show a desktop-use notice instead of the full editor.
+
 ## Recommended first flow
 
 1. Place a board and at least one component.
@@ -22,3 +26,10 @@
 - Blink LED with resistor
 - DHT11 or DHT22 on Arduino Uno
 - RC smoothing test from PWM to analog-like output
+
+## Fixture Policy
+
+- Keep small examples in `examples/` and small deterministic test data in `tests/fixtures/`.
+- Do not commit `tests/kicad_samples/`; it is for local real-world KiCad stress files only.
+- Use `npm run test` for the normal suite.
+- Use `npm run test:kicad:real` only on machines that have the large local KiCad samples.

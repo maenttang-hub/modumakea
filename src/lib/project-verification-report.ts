@@ -2,6 +2,11 @@ import type { AppLanguage, PlacedComponent, ProjectAuditIssue } from '@/types';
 import type { DrcEngineReport } from '@/lib/drc-engine';
 import { translateEngineIssue } from '@/lib/engine-i18n';
 import { pickLanguage } from '@/lib/ui-language';
+import {
+  classifyIssueActionBucket,
+  countIssueSeverities,
+  resolveIssueConfidence,
+} from '@/lib/validation-issue-classification';
 
 export type VerificationReportStatus = 'passed' | 'warning' | 'critical';
 
@@ -84,10 +89,6 @@ function issueLocation(issue: ProjectAuditIssue, language: AppLanguage) {
   return parts.length > 0 ? parts.join(' / ') : pickLanguage(language, { ko: '프로젝트 전체', en: 'Project-wide' });
 }
 
-function resolveIssueConfidence(issue: ProjectAuditIssue) {
-  return issue.confidence ?? issue.evidence?.confidence ?? (issue.severity === 'error' ? 'strong-inference' : issue.severity === 'info' ? 'informational' : 'needs-review');
-}
-
 function confidenceBadge(issue: ProjectAuditIssue, language: AppLanguage) {
   const confidence = resolveIssueConfidence(issue);
 
@@ -101,17 +102,6 @@ function confidenceBadge(issue: ProjectAuditIssue, language: AppLanguage) {
     default:
       return pickLanguage(language, { ko: '참고 정보', en: 'Informational' });
   }
-}
-
-function classifyActionBucket(issue: ProjectAuditIssue) {
-  const confidence = resolveIssueConfidence(issue);
-  if (issue.severity === 'error' || confidence === 'confirmed') {
-    return 'must-fix' as const;
-  }
-  if (issue.severity === 'warning' || confidence === 'strong-inference' || confidence === 'needs-review') {
-    return 'review' as const;
-  }
-  return 'info' as const;
 }
 
 function buildIssueBlock(issue: ProjectAuditIssue, index: number, language: AppLanguage) {
@@ -164,22 +154,23 @@ function buildPowerSummary(audit: DrcEngineReport, language: AppLanguage) {
 
 export function buildProjectVerificationReport(input: ProjectVerificationReportInput): ProjectVerificationReport {
   const generatedAt = input.generatedAt ?? new Date();
-  const errorCount = input.audit.issues.filter(issue => issue.severity === 'error').length;
-  const warningCount = input.audit.issues.filter(issue => issue.severity === 'warning').length;
-  const infoCount = input.audit.issues.filter(issue => issue.severity === 'info').length;
+  const severityCounts = countIssueSeverities(input.audit.issues);
+  const errorCount = severityCounts.error;
+  const warningCount = severityCounts.warning;
+  const infoCount = severityCounts.info;
   const status: VerificationReportStatus = errorCount > 0 ? 'critical' : warningCount > 0 ? 'warning' : 'passed';
   const reportId = buildReportId(input.projectName, generatedAt);
   const t = (ko: string, en: string) => pickLanguage(input.language, { ko, en });
 
   const formalIssues = input.audit.issues.filter(isFormalIssue);
   const drcIssues = input.audit.issues.filter(issue => !isFormalIssue(issue));
-  const mustFixIssues = input.audit.issues.filter(issue => classifyActionBucket(issue) === 'must-fix');
-  const reviewIssues = input.audit.issues.filter(issue => classifyActionBucket(issue) === 'review');
+  const mustFixIssues = input.audit.issues.filter(issue => classifyIssueActionBucket(issue) === 'must-fix');
+  const reviewIssues = input.audit.issues.filter(issue => classifyIssueActionBucket(issue) === 'review');
   const highPriorityIssues = [...mustFixIssues, ...reviewIssues].slice(0, 8);
   const totalComponents = input.components.length;
   const recognizedComponents = Math.max(totalComponents - input.audit.partialCount - input.audit.genericCount, 0);
   const verificationLimitedCount = input.audit.partialCount + input.audit.genericCount;
-  const formalCriticalCount = formalIssues.filter(issue => classifyActionBucket(issue) === 'must-fix').length;
+  const formalCriticalCount = formalIssues.filter(issue => classifyIssueActionBucket(issue) === 'must-fix').length;
   const reviewSummaryLines = [
     mustFixIssues[0] ? `- ${t('즉시 수정 필요', 'Immediate fix')}: ${translateEngineIssue(mustFixIssues[0], input.language).title}` : null,
     reviewIssues[0] ? `- ${t('확인 권장', 'Review next')}: ${translateEngineIssue(reviewIssues[0], input.language).title}` : null,
@@ -266,7 +257,7 @@ export function buildProjectVerificationReport(input: ProjectVerificationReportI
     highPriorityIssues.length > 0
       ? highPriorityIssues.map((issue, index) => {
           const translated = translateEngineIssue(issue, input.language);
-          const priority = classifyActionBucket(issue) === 'must-fix'
+          const priority = classifyIssueActionBucket(issue) === 'must-fix'
             ? t('즉시 수정', 'Immediate fix')
             : t('확인 후 결정', 'Review before build');
           return `${index + 1}. [${priority}] ${translated.recommendation ?? issue.recommendation ?? translated.message}`;

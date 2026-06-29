@@ -23,6 +23,10 @@ import {
   getImportedTextDisplayBaseline,
   getImportedTextFontSizePx,
   getImportedPinLabelDisplay,
+  getImportedReadableTextOffset,
+  getImportedTextOverviewOpacity,
+  isLowPriorityImportedPinText,
+  shouldFlattenImportedTextForReadability,
   shouldUseImportedBodyFill,
 } from '@/lib/imported-schematic-render';
 import {
@@ -109,6 +113,27 @@ function resolveImportedPrimitiveFill(
   })
     ? palette.symbolBodyFill
     : 'none';
+}
+
+function shouldRenderPrimitiveInOriginalOverview(
+  symbol: ImportedSchematicSceneSymbol,
+  primitive: ImportedSchematicPrimitive,
+  highlighted: boolean
+) {
+  if (primitive.kind !== 'text' || highlighted) {
+    return true;
+  }
+
+  const isDenseSymbol =
+    symbol.family === 'mcu' ||
+    symbol.family === 'connector' ||
+    symbol.pinAnchors.length >= 8;
+
+  if (!isDenseSymbol) {
+    return true;
+  }
+
+  return !isLowPriorityImportedPinText(primitive);
 }
 
 function resolveImportedStrokeDasharray(
@@ -973,17 +998,20 @@ const LabelsLayer = memo(function LabelsLayer({
   return (
     <>
       {labels.map((label, index) => {
-        const renderedAngle = getImportedTextDisplayAngle(label.angle ?? 0, 'annotation');
-        const fontSize = Math.min(Math.max((label.sizeMm ?? 1.27) * (1 / 0.18) * 0.58, 4.8), 6.2);
+        const renderedAngle = getImportedTextDisplayAngle(label.angle ?? 0, 'annotation', {
+          text: label.text,
+        });
+        const fontSize = Math.min(Math.max((label.sizeMm ?? 1.27) * (1 / 0.18) * 0.66, 6.25), 7.4);
         const kind = classifyNetLabel(label.text);
         const displayText = truncateOverlayText(label.text, kind === 'signal' ? 20 : 14);
         const textFill =
           kind === 'power' ? '#9c6f1f' : kind === 'ground' ? '#5e564f' : '#486b8d';
+        const labelOpacity = dimmed ? 0.16 : kind === 'signal' ? 0.52 : 0.62;
         return (
           <g
             key={`label-${index}`}
             data-mm-imported-label="true"
-            opacity={dimmed ? 0.2 : 0.8}
+            opacity={labelOpacity}
             transform={
               renderedAngle
                 ? `rotate(${renderedAngle} ${label.at.x} ${label.at.y})`
@@ -1027,7 +1055,7 @@ const SymbolsLayer = memo(function SymbolsLayer({
 }) {
   return (
     <>
-      {symbols.map(symbol => {
+      {symbols.map((symbol, symbolIndex) => {
         const isHighlighted = highlightedComponentIds.has(symbol.instanceId);
         const opacity = dimNonTargets && highlightedComponentIds.size > 0 && !isHighlighted ? 0.24 : 1;
         const fallbackPinSideOrder = getPinSideOrder(symbol.pinAnchors);
@@ -1039,7 +1067,7 @@ const SymbolsLayer = memo(function SymbolsLayer({
 
         return (
           <g
-            key={symbol.instanceId}
+            key={`${symbol.instanceId}-${symbolIndex}`}
             data-mm-imported-symbol="true"
             opacity={opacity}
             filter={isHighlighted && pulse ? 'url(#mm-review-error-glow)' : undefined}
@@ -1052,15 +1080,17 @@ const SymbolsLayer = memo(function SymbolsLayer({
             {structuredMode ? (
               <StructuredSymbolShape symbol={symbol} palette={palette} highlighted={isHighlighted} />
             ) : (
-              symbol.primitives.map((primitive, index) => (
-                <ImportedPrimitiveShape
-                  key={`${symbol.instanceId}-shape-${index}`}
-                  primitive={primitive}
-                  symbol={symbol}
-                  palette={palette}
-                  highlighted={isHighlighted}
-                />
-              ))
+              symbol.primitives
+                .filter(primitive => shouldRenderPrimitiveInOriginalOverview(symbol, primitive, isHighlighted))
+                .map((primitive, index) => (
+                  <ImportedPrimitiveShape
+                    key={`${symbol.instanceId}-shape-${index}`}
+                    primitive={primitive}
+                    symbol={symbol}
+                    palette={palette}
+                    highlighted={isHighlighted}
+                  />
+                ))
             )}
 
             {!structuredMode && !hasNativePinText &&
@@ -1479,7 +1509,19 @@ function ImportedPrimitiveShape({
   const sourceAngle = primitive.originalAngle ?? primitive.angle;
   const displayAngle = getImportedTextDisplayAngle(sourceAngle, primitive.role, {
     preserveNativeOrientation: primitive.preserveNativeOrientation,
+    text: primitive.text,
   });
+  const flattenForReadability = shouldFlattenImportedTextForReadability(primitive);
+  const readableOffset = getImportedReadableTextOffset(primitive, fontSize);
+  const textX = primitive.at.x + readableOffset.x;
+  const textY = primitive.at.y + readableOffset.y;
+  const resolvedTextAnchor = flattenForReadability
+    ? 'middle'
+    : primitive.textAnchor ?? getImportedTextDisplayAnchor(sourceAngle, primitive.role);
+  const resolvedBaseline = flattenForReadability
+    ? 'middle'
+    : primitive.baseline ?? getImportedTextDisplayBaseline(sourceAngle, primitive.role);
+  const textOpacity = highlighted ? 1 : getImportedTextOverviewOpacity(primitive);
   const fill =
     primitive.role === 'reference'
       ? palette.referenceText
@@ -1493,29 +1535,26 @@ function ImportedPrimitiveShape({
 
   return (
     <text
-      x={primitive.at.x}
-      y={primitive.at.y}
+      x={textX}
+      y={textY}
       fontSize={fontSize}
       fill={fill}
-      textAnchor={
-        primitive.textAnchor ??
-        getImportedTextDisplayAnchor(sourceAngle, primitive.role)
-      }
-      dominantBaseline={
-        primitive.baseline ??
-        getImportedTextDisplayBaseline(sourceAngle, primitive.role)
-      }
+      opacity={textOpacity}
+      stroke={flattenForReadability ? palette.canvasBackground : undefined}
+      strokeWidth={flattenForReadability ? Math.max(fontSize * 0.32, 1.3) : undefined}
+      paintOrder={flattenForReadability ? 'stroke' : undefined}
+      textAnchor={resolvedTextAnchor}
+      dominantBaseline={resolvedBaseline}
       transform={
-        displayAngle ? `rotate(${displayAngle} ${primitive.at.x} ${primitive.at.y})` : undefined
+        displayAngle ? `rotate(${displayAngle} ${textX} ${textY})` : undefined
       }
       fontFamily={IMPORTED_SCHEMATIC_FONT_FAMILY}
     >
       {renderImportedTextLines(
         primitive.text,
-        primitive.at.x,
+        textX,
         fontSize,
-        primitive.baseline ??
-          getImportedTextDisplayBaseline(sourceAngle, primitive.role)
+        resolvedBaseline
       )}
     </text>
   );
@@ -1604,32 +1643,45 @@ function SceneDrawingPrimitive({
   const renderedAngle = getImportedTextDisplayAngle(
     primitive.originalAngle ?? primitive.angle,
     primitive.role,
-    { preserveNativeOrientation: primitive.preserveNativeOrientation }
+    { preserveNativeOrientation: primitive.preserveNativeOrientation, text: primitive.text }
   );
-  const resolvedBaseline =
-    primitive.baseline ??
-    getImportedTextDisplayBaseline(primitive.originalAngle ?? primitive.angle, primitive.role);
+  const sourceAngle = primitive.originalAngle ?? primitive.angle;
+  const flattenForReadability = shouldFlattenImportedTextForReadability(primitive);
+  const fontSize = getImportedTextFontSizePx(primitive);
+  const readableOffset = getImportedReadableTextOffset(primitive, fontSize);
+  const textX = primitive.at.x + readableOffset.x;
+  const textY = primitive.at.y + readableOffset.y;
+  const resolvedTextAnchor = flattenForReadability
+    ? 'middle'
+    : primitive.textAnchor ?? getImportedTextDisplayAnchor(sourceAngle, primitive.role);
+  const resolvedBaseline = flattenForReadability
+    ? 'middle'
+    : primitive.baseline ?? getImportedTextDisplayBaseline(sourceAngle, primitive.role);
+  const textOpacity = dimmed ? 0.18 : getImportedTextOverviewOpacity(primitive) * 0.78;
 
   return (
     <text
-      x={primitive.at.x}
-      y={primitive.at.y}
-      fontSize={getImportedTextFontSizePx(primitive)}
+      x={textX}
+      y={textY}
+      fontSize={fontSize}
       fill={palette.sheetText}
-      opacity={dimmed ? 0.24 : 1}
-      textAnchor={primitive.textAnchor ?? getImportedTextDisplayAnchor(primitive.originalAngle ?? primitive.angle, primitive.role)}
+      opacity={textOpacity}
+      stroke={flattenForReadability ? palette.canvasBackground : undefined}
+      strokeWidth={flattenForReadability ? Math.max(fontSize * 0.32, 1.3) : undefined}
+      paintOrder={flattenForReadability ? 'stroke' : undefined}
+      textAnchor={resolvedTextAnchor}
       dominantBaseline={resolvedBaseline}
       transform={
         renderedAngle
-          ? `rotate(${renderedAngle} ${primitive.at.x} ${primitive.at.y})`
+          ? `rotate(${renderedAngle} ${textX} ${textY})`
           : undefined
       }
       fontFamily={IMPORTED_SCHEMATIC_FONT_FAMILY}
     >
       {renderImportedTextLines(
         primitive.text,
-        primitive.at.x,
-        getImportedTextFontSizePx(primitive),
+        textX,
+        fontSize,
         resolvedBaseline
       )}
     </text>
@@ -1666,7 +1718,7 @@ const SheetFramesLayer = memo(function SheetFramesLayer({
               height={frameHeight}
               fill="none"
               stroke={palette.sheetStroke}
-              opacity={dimmed ? 0.12 : 0.42}
+              opacity={dimmed ? 0.1 : 0.28}
               strokeWidth={0.8}
               strokeDasharray="6 5"
               vectorEffect="non-scaling-stroke"
@@ -1676,7 +1728,7 @@ const SheetFramesLayer = memo(function SheetFramesLayer({
               y={titleY}
               fontSize={5.9}
               fill={palette.sheetText}
-              opacity={dimmed ? 0.14 : 0.58}
+              opacity={dimmed ? 0.1 : 0.28}
               fontFamily={IMPORTED_SCHEMATIC_FONT_FAMILY}
             >
               {title}
@@ -1690,7 +1742,7 @@ const SheetFramesLayer = memo(function SheetFramesLayer({
                 dominantBaseline="middle"
                 fontSize={5.3}
                 fill={palette.sheetText}
-                opacity={dimmed ? 0.12 : 0.36}
+                opacity={dimmed ? 0.08 : 0.16}
                 fontFamily={IMPORTED_SCHEMATIC_FONT_FAMILY}
               >
                 {truncateOverlayText(pin.text, 10)}

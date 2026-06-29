@@ -8,6 +8,10 @@ const launcherModule = await import('../services/sandbox-launcher/lib/launcher.m
 const runtimePolicyModule = await import('../services/sandbox-launcher/lib/runtime-policy.mjs');
 const workerModule = await import('../services/sandbox-launcher/lib/worker.mjs');
 
+function sandboxEnv(values: Record<string, string> = {}) {
+  return values as NodeJS.ProcessEnv;
+}
+
 test('sandbox launcher validates a clean launch request payload', () => {
   const payload = launcherModule.validateSandboxLaunchRequest({
     launchRequestId: 'launch-1',
@@ -57,11 +61,11 @@ test('sandbox launcher runtime spec encodes one-shot sandbox constraints', () =>
     },
   });
 
-  const spec = launcherModule.buildOneShotRuntimeSpec(validated, {
+  const spec = launcherModule.buildOneShotRuntimeSpec(validated, sandboxEnv({
     MODUMAKE_SANDBOX_RUNTIME_BACKEND: 'docker-cli-one-shot',
     MODUMAKE_SANDBOX_RUNTIME_IMAGE: 'sandbox-image:test',
     MODUMAKE_SANDBOX_TIMEOUT_MS: '22000',
-  });
+  }));
 
   assert.equal(spec.runtimeKind, 'one-shot-sandbox');
   assert.equal(spec.runtimeSpec.workspace.mode, 'tmpfs');
@@ -97,17 +101,17 @@ test('sandbox launcher can enqueue runtime specs into a durable launch queue fil
       },
     });
 
-    const spec = launcherModule.buildOneShotRuntimeSpec(validated, {});
-    const enqueueResult = await launcherModule.enqueueSandboxLaunchJob(spec, {
+    const spec = launcherModule.buildOneShotRuntimeSpec(validated, sandboxEnv());
+    const enqueueResult = await launcherModule.enqueueSandboxLaunchJob(spec, sandboxEnv({
       MODUMAKE_SANDBOX_LAUNCH_QUEUE_FILE: queueFile,
-    });
+    }));
 
     assert.equal(enqueueResult.launcherJobId, spec.launcherJobId);
     assert.equal(enqueueResult.queuedJobs, 1);
 
     const stored = JSON.parse(await readFile(queueFile, 'utf8')) as {
       version: number;
-      jobs: Array<{ launcherJobId: string; queueJobId: string }>;
+      jobs: Array<{ launcherJobId: string; queueJobId: string; state: string }>;
     };
     assert.equal(stored.version, 1);
     assert.equal(stored.jobs.length, 1);
@@ -145,13 +149,13 @@ test('sandbox launcher worker claims queued launch jobs, proxies compile, and po
         requiredLibraries: ['Wire'],
       },
     });
-    const spec = launcherModule.buildOneShotRuntimeSpec(validated, {});
-    await launcherModule.enqueueSandboxLaunchJob(spec, {
+    const spec = launcherModule.buildOneShotRuntimeSpec(validated, sandboxEnv());
+    await launcherModule.enqueueSandboxLaunchJob(spec, sandboxEnv({
       MODUMAKE_SANDBOX_LAUNCH_QUEUE_FILE: queueFile,
-    });
+    }));
 
-    const seenCallbacks = [];
-    globalThis.fetch = async (input, init) => {
+    const seenCallbacks: Array<{ headers: RequestInit['headers']; body: { state: string } }> = [];
+    globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       if (url === 'http://127.0.0.1:4100/api/v1/compile/job') {
         return new Response(
@@ -179,11 +183,11 @@ test('sandbox launcher worker claims queued launch jobs, proxies compile, and po
       throw new Error(`unexpected fetch ${url}`);
     };
 
-    const result = await workerModule.runSandboxLauncherWorkerCycle({
+    const result = await workerModule.runSandboxLauncherWorkerCycle(sandboxEnv({
       MODUMAKE_SANDBOX_LAUNCH_QUEUE_FILE: queueFile,
       MODUMAKE_SANDBOX_EXECUTOR_BACKEND: 'compile-server-proxy',
       MODUMAKE_COMPILE_SERVER_SHARED_TOKEN: 'compile-token',
-    });
+    }));
 
     assert.equal(result.status, 'succeeded');
     assert.equal(result.launcherJobId, spec.launcherJobId);

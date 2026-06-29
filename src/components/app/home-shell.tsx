@@ -38,17 +38,18 @@ import { useGlobalShortcuts } from '@/hooks/use-global-shortcuts';
 import { useUiPreferences, type RightTabValue } from '@/hooks/use-ui-preferences';
 import { useValidationReport } from '@/hooks/use-validation-report';
 import { useBoardStore } from '@/store/use-board-store';
-import { WORKSPACE_STORAGE_KEY } from '@/store/store-config';
+import { REPORT_WORKSPACE_SNAPSHOT_KEY } from '@/store/store-config';
 import {
   FileUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { COMMENT_PANEL_OPEN_EVENT } from '@/lib/comment-focus';
-import { REVIEW_FOCUS_EVENT, type ReviewFocusDetail } from '@/lib/review-focus';
+import { buildReviewIssueKey, emitReviewFocus, REVIEW_FOCUS_EVENT, type ReviewFocusDetail } from '@/lib/review-focus';
 import { getDevScenarioDocument } from '@/lib/dev-scenarios';
 import { isImportedSchematicProject } from '@/lib/component-template-utils';
 import { getImportedSchematicPalette } from '@/lib/imported-schematic-theme';
 import { pickReferencedTemplateCache } from '@/lib/template-cache-registry';
+import { countIssueSeverities } from '@/lib/validation-issue-classification';
 import type { AppLanguage, ComponentTemplate } from '@/types';
 
 const UI_PREFERENCES_STORAGE_KEY = 'modumake-ui-preferences-v2';
@@ -64,6 +65,26 @@ function normalizeLegacyRightTab(tab: RightTabValue): RightPanelTab {
     default:
       return 'validation';
   }
+}
+
+type WorkspacePresence = 'empty' | 'restored' | 'imported';
+
+function buildWorkspaceFileLabel({
+  projectName,
+  presence,
+}: {
+  projectName: string;
+  presence: WorkspacePresence;
+}) {
+  if (presence === 'imported') {
+    return `${projectName || 'project'}.kicad_sch`;
+  }
+
+  if (presence === 'restored') {
+    return `${projectName || 'project'}.modumake.json`;
+  }
+
+  return '파일을 열어주세요';
 }
 
 export type HomeShellProps = {
@@ -142,9 +163,30 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
     [effectiveShellMode, isViewOnly]
   );
   const { audit, issues: validationIssues } = useValidationReport();
+  const validationSeverityCounts = useMemo(
+    () => countIssueSeverities(audit.issues),
+    [audit.issues]
+  );
+  const hasWorkspaceContent = useMemo(
+    () =>
+      components.length > 0 ||
+      Boolean(importedSchematicSource?.trim()) ||
+      Boolean(importedSchematicScene) ||
+      Boolean(generatedCode.trim()),
+    [components.length, generatedCode, importedSchematicScene, importedSchematicSource]
+  );
+  const workspacePresence: WorkspacePresence = importedSchematicMode || Boolean(importedSchematicSource?.trim())
+    ? 'imported'
+    : hasWorkspaceContent
+      ? 'restored'
+      : 'empty';
+  const workspaceFileLabel = useMemo(
+    () => buildWorkspaceFileLabel({ projectName, presence: workspacePresence }),
+    [projectName, workspacePresence]
+  );
   const showReviewDropzone = useMemo(
-    () => !isCloudProjectLoading && components.length === 0,
-    [components.length, isCloudProjectLoading]
+    () => !isCloudProjectLoading && workspacePresence === 'empty',
+    [isCloudProjectLoading, workspacePresence]
   );
   const shellStyle = useMemo<CSSProperties>(() => {
     if (!importedSchematicMode) {
@@ -404,7 +446,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
     }> = [
       {
         id: 'schematic-file',
-        label: importedSchematicSource ? `${projectName || 'project'}.kicad_sch` : '파일을 열어주세요',
+        label: workspaceFileLabel,
         kind: 'schematic' as const,
       },
     ];
@@ -419,7 +461,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
     }
 
     return files;
-  }, [board.targetLanguage, generatedCode, importedSchematicSource, projectName]);
+  }, [board.targetLanguage, generatedCode, workspaceFileLabel]);
 
   const importDroppedKiCadFile = useCallback(async (file: File) => {
     if (!file.name.toLowerCase().endsWith('.kicad_sch')) {
@@ -533,7 +575,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
     }
 
     const state = useBoardStore.getState();
-    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify({
+    window.localStorage.setItem(REPORT_WORKSPACE_SNAPSHOT_KEY, JSON.stringify({
       state: {
         projectName: state.projectName,
         appLanguage: state.appLanguage,
@@ -557,8 +599,8 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
 
   const handleOpenReportView = useCallback(() => {
     persistCurrentWorkspaceSnapshotForReport();
-    window.open('/report', '_blank', 'noopener,noreferrer');
-  }, [persistCurrentWorkspaceSnapshotForReport]);
+    router.push('/report', { scroll: false });
+  }, [persistCurrentWorkspaceSnapshotForReport, router]);
 
   const handleExportReport = useCallback(() => {
     const projectDocument = serializeProject();
@@ -672,7 +714,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
         titleBar={
           <TitleBar
             projectName={projectName}
-            fileLabel={importedSchematicSource ? `${projectName || 'project'}.kicad_sch` : '파일을 열어주세요'}
+            fileLabel={workspaceFileLabel}
             hasCode={generatedCode.trim().length > 0}
             isAnalyzing={isGenerating}
             onProjectNameChange={setProjectName}
@@ -799,21 +841,39 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
               <AiReviewPanel
                 projectName={projectName}
                 boardName={board.name}
-                fileLabel={importedSchematicSource ? `${projectName || 'project'}.kicad_sch` : 'KiCad schematic not loaded'}
+                fileLabel={workspaceFileLabel}
                 issues={validationIssues}
                 onSelectIssue={issue => {
-                  const targetComponentId =
-                    issue.visualTargets?.componentIds?.[0] ??
-                    components.find(component => component.name === issue.componentName)?.instanceId ??
-                    null;
+                  const componentIds = issue.evidence?.affectedComponents ?? issue.visualTargets?.componentIds ?? [];
+                  const targetComponents = components.filter(component =>
+                    componentIds.includes(component.instanceId) ||
+                    (issue.componentName != null && component.name === issue.componentName)
+                  );
+                  const targetComponentId = targetComponents[0]?.instanceId ?? null;
 
                   if (targetComponentId) {
                     setSelectedComponentId(targetComponentId);
-                    setEditorRightTab('property');
-                    setActiveRightTab('comments');
-                    return;
                   }
 
+                  emitReviewFocus({
+                    source: 'review',
+                    interaction: 'focus',
+                    emphasis: 'card',
+                    issueKey: buildReviewIssueKey(issue),
+                    code: issue.code,
+                    componentInstanceId: targetComponentId ?? undefined,
+                    componentInstanceIds: targetComponents.map(component => component.instanceId),
+                    componentName: issue.componentName,
+                    boardPin: issue.boardPin,
+                    pinIds: issue.visualTargets?.pinIds,
+                    netIds: issue.evidence?.affectedNets ?? issue.visualTargets?.netIds,
+                    severity: issue.severity,
+                    title: issue.title,
+                    message: issue.message,
+                    line: issue.line,
+                    operation: issue.operation,
+                    ruleId: issue.ruleId,
+                  });
                   setEditorRightTab('ai');
                   setActiveRightTab('validation');
                 }}
@@ -837,8 +897,8 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
         }
         bottomBar={
           <BottomBar
-            errorCount={audit.issues.filter(issue => issue.severity === 'error').length}
-            warningCount={audit.issues.filter(issue => issue.severity === 'warning').length}
+            errorCount={validationSeverityCounts.error}
+            warningCount={validationSeverityCounts.warning}
             okLabel={audit.issueCount === 0 ? 'ERC 통과' : `ERC 이슈 ${audit.issueCount}`}
             onExportReport={handleExportReport}
             onShare={handleShare}

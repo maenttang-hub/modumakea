@@ -24,12 +24,13 @@
     "kicad:scan:regression": "node --experimental-strip-types --import ./tests/register-alias-loader.mjs ./scripts/kicad-regression-scan.ts",
     "kicad:parse-sym": "node --experimental-strip-types --import ./tests/register-alias-loader.mjs ./scripts/kicad-sym-parser.mjs",
     "test:parser": "node --experimental-strip-types --import ./tests/register-alias-loader.mjs ./scripts/kicad-parser-stress.ts",
-    "test:kicad:real": "node --test --experimental-strip-types --import ./tests/register-alias-loader.mjs ./tests/kicad-real-projects.test.ts",
+    "test:kicad:real": "MODUMAKE_REAL_FIXTURES=1 node --test --experimental-strip-types --import ./tests/register-alias-loader.mjs ./tests/kicad-real-projects.test.ts ./tests/real-board-netlist-validation.test.ts",
     "libraries:seed:index": "node --experimental-strip-types --import ./tests/register-alias-loader.mjs ./scripts/library-catalog/seed-arduino-index.ts",
     "start": "next start",
     "lint": "eslint",
     "lint:launch-desk": "eslint src/app/api/launch-desk/route.ts src/app/launch-desk/layout.tsx src/app/launch-desk/page.tsx src/components/launch-desk/launch-desk-app.tsx src/lib/launch-desk/*.ts tests/launch-desk-tools.test.ts",
     "test": "node --test --experimental-strip-types --import ./tests/register-alias-loader.mjs ./tests/*.test.ts",
+    "test:e2e": "playwright test",
     "test:validation:baseline": "bash ./scripts/ci-validation-baseline.sh",
     "test:validation:extended": "bash ./scripts/ci-validation-extended.sh",
     "test:launch-desk": "node --test --experimental-strip-types --import ./tests/register-alias-loader.mjs ./tests/launch-desk-tools.test.ts",
@@ -67,6 +68,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

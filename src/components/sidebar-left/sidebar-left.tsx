@@ -87,10 +87,10 @@ export function SidebarLeft({
   return (
     <aside className="flex h-full w-[clamp(172px,14vw,196px)] shrink-0 flex-col overflow-hidden rounded-[20px] border border-[#e2d7c8] bg-[linear-gradient(180deg,#fdfaf6_0%,#f7f1e8_100%)] shadow-[0_18px_40px_rgba(103,79,56,0.07)]">
       <div className="border-b border-[#e7ddd1] px-4 pb-3 pt-4">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a29487]">Navigator</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a29487]">탐색</div>
         <div className="mt-1 text-[15px] font-semibold text-[#40342c]">회로 구조</div>
         <div className="mt-1 text-[11px] leading-5 text-[#918375]">
-          전원, 신호, 부품을 빠르게 훑어보는 요약 패널
+          부품, 넷, 파일 요약
         </div>
       </div>
       <Section title="컴포넌트" collapsed={sectionState.components} onToggle={() => onToggleSection('components')}>

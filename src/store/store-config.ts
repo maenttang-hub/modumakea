@@ -3,6 +3,7 @@ import type { CompanionPartSuggestion, ProjectPowerInputMode, WorkspaceMode } fr
 export const DEFAULT_BOARD_ID = 'uno';
 export const DEFAULT_PROJECT_NAME = 'untitled_project';
 export const WORKSPACE_STORAGE_KEY = 'modumake-workspace-v1';
+export const REPORT_WORKSPACE_SNAPSHOT_KEY = 'modumake-report-workspace-snapshot-v1';
 export const SAVED_PROJECT_STORAGE_KEY = 'modumake-saved-project-v1';
 export const PROJECT_FILE_VERSION = 3;
 export const HISTORY_LIMIT = 60;

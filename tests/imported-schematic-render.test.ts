@@ -7,7 +7,11 @@ import {
   getImportedTextDisplayAngle,
   getImportedTextDisplayBaseline,
   getImportedPinLabelDisplay,
+  getImportedReadableTextOffset,
+  getImportedTextOverviewOpacity,
   hasNativeImportedText,
+  isPowerLikeImportedText,
+  isLowPriorityImportedPinText,
   normalizeImportedGeometryForRender,
   resolveImportedOverlayVisibility,
   shouldUseImportedBodyFill,
@@ -15,6 +19,7 @@ import {
   shouldPreferNativeImportedLabels,
   shouldShowImportedFallbackBadge,
   shouldUseQuietImportedOverlay,
+  shouldFlattenImportedTextForReadability,
 } from '@/lib/imported-schematic-render';
 import { IMPORTED_MM_TO_CANVAS, layoutImportedGeometry } from '@/lib/imported-schematic-geometry';
 import {
@@ -640,6 +645,63 @@ test('imported text display keeps labels upright while pin text stays readable',
   );
 });
 
+test('imported text display flattens long vertical labels while preserving short pin context', () => {
+  assert.equal(
+    getImportedTextDisplayAngle(90, 'value', { text: 'Crystal 16Mhz' }),
+    0
+  );
+  assert.equal(
+    getImportedTextDisplayAngle(90, 'annotation', { text: 'ADDR1' }),
+    0
+  );
+  assert.equal(
+    getImportedTextDisplayAngle(90, 'annotation', { text: 'VCC' }),
+    0
+  );
+  assert.equal(
+    getImportedTextDisplayAngle(90, 'value', { text: 'GNDPWR' }),
+    0
+  );
+  assert.equal(
+    getImportedTextDisplayAngle(90, 'pin-name', { text: 'ADDR1' }),
+    90
+  );
+  assert.equal(
+    shouldFlattenImportedTextForReadability({
+      kind: 'text',
+      at: { x: 0, y: 0 },
+      text: 'Crystal 16Mhz',
+      angle: 90,
+      sizeMm: 1.27,
+      role: 'value',
+    }),
+    true
+  );
+  const readableOffset = getImportedReadableTextOffset({
+      kind: 'text',
+      at: { x: 0, y: 0 },
+      text: 'Crystal 16Mhz',
+      angle: 90,
+      sizeMm: 1.27,
+      role: 'value',
+  }, 6);
+  assert.equal(readableOffset.x, 0);
+  assert.ok(readableOffset.y < -6.8 && readableOffset.y > -7);
+
+  const powerOffset = getImportedReadableTextOffset({
+    kind: 'text',
+    at: { x: 0, y: 0 },
+    text: 'VCC',
+    angle: 90,
+    sizeMm: 1.27,
+    role: 'annotation',
+  }, 6);
+  assert.equal(powerOffset.x, 0);
+  assert.equal(powerOffset.y, 0);
+  assert.equal(isPowerLikeImportedText('+3V3'), true);
+  assert.equal(isPowerLikeImportedText('ADDR1'), false);
+});
+
 test('imported pin label display reduces dense pin noise but keeps highlighted context readable', () => {
   assert.equal(
     getImportedPinLabelDisplay({
@@ -677,6 +739,48 @@ test('imported pin label display reduces dense pin noise but keeps highlighted c
     }),
     'MISO'
   );
+});
+
+test('imported text overview de-emphasizes dense pin metadata while keeping signal names readable', () => {
+  const pinNumber: Extract<ImportedSchematicPrimitive, { kind: 'text' }> = {
+    kind: 'text',
+    at: { x: 0, y: 0 },
+    text: '27',
+    angle: 0,
+    sizeMm: 1.27,
+    role: 'pin-number',
+  };
+  const portName: Extract<ImportedSchematicPrimitive, { kind: 'text' }> = {
+    kind: 'text',
+    at: { x: 0, y: 0 },
+    text: 'PB0',
+    angle: 0,
+    sizeMm: 1.27,
+    role: 'pin-name',
+  };
+  const muxedPortName: Extract<ImportedSchematicPrimitive, { kind: 'text' }> = {
+    kind: 'text',
+    at: { x: 0, y: 0 },
+    text: 'XTAL1/PB6',
+    angle: 0,
+    sizeMm: 1.27,
+    role: 'pin-name',
+  };
+  const signalName: Extract<ImportedSchematicPrimitive, { kind: 'text' }> = {
+    kind: 'text',
+    at: { x: 0, y: 0 },
+    text: 'MOSI',
+    angle: 0,
+    sizeMm: 1.27,
+    role: 'pin-name',
+  };
+
+  assert.equal(isLowPriorityImportedPinText(pinNumber), true);
+  assert.equal(isLowPriorityImportedPinText(portName), true);
+  assert.equal(isLowPriorityImportedPinText(muxedPortName), true);
+  assert.equal(isLowPriorityImportedPinText(signalName), false);
+  assert.ok(getImportedTextOverviewOpacity(pinNumber) < 0.25);
+  assert.ok(getImportedTextOverviewOpacity(signalName) > 0.6);
 });
 
 test('viewport bounds keep both imported wires and imported component bodies visible after reload', () => {

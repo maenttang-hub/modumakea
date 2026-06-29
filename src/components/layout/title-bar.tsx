@@ -42,6 +42,8 @@ export function TitleBar({
         <input
           value={projectName}
           onChange={event => onProjectNameChange(event.target.value)}
+          aria-label="프로젝트 이름"
+          placeholder="프로젝트 이름"
           className="h-8 w-[132px] rounded-[11px] border border-[#dfd2c1] bg-[#fffdfa] px-3 text-[11px] font-medium text-[#5b4e42] outline-none transition focus:border-[#c1b09c] xl:w-[144px]"
         />
         <button

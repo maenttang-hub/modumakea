@@ -12,8 +12,13 @@ import { buildProjectVerificationReport } from '@/lib/project-verification-repor
 import { pickLanguage } from '@/lib/ui-language';
 import { setRuntimeCustomComponentPackages } from '@/lib/custom-component-registry';
 import { setRuntimeTemplateCache } from '@/lib/template-cache-registry';
+import {
+  classifyIssueActionBucket,
+  resolveIssueConfidence,
+  type ReviewActionBucket,
+} from '@/lib/validation-issue-classification';
 import { buildDefaultProjectState } from '@/store/store-defaults';
-import { WORKSPACE_STORAGE_KEY } from '@/store/store-config';
+import { REPORT_WORKSPACE_SNAPSHOT_KEY, WORKSPACE_STORAGE_KEY } from '@/store/store-config';
 import type {
   AppLanguage,
   ComponentTemplate,
@@ -29,7 +34,7 @@ import type {
   ProjectPowerInputMode,
 } from '@/types';
 
-type ActionBucket = 'must-fix' | 'review' | 'info';
+type ActionBucket = ReviewActionBucket;
 
 type ReportWorkspaceSnapshot = {
   projectName: string;
@@ -53,19 +58,8 @@ function applyReportRuntimeCaches(snapshot: ReportWorkspaceSnapshot) {
   setRuntimeCustomComponentPackages(snapshot.customComponentPackages);
 }
 
-function resolveConfidence(issue: ProjectAuditIssue): ProjectAuditIssueConfidence {
-  return issue.confidence ?? issue.evidence?.confidence ?? (issue.severity === 'error' ? 'strong-inference' : issue.severity === 'info' ? 'informational' : 'needs-review');
-}
-
 function classifyIssue(issue: ProjectAuditIssue): ActionBucket {
-  const confidence = resolveConfidence(issue);
-  if (issue.severity === 'error' || confidence === 'confirmed') {
-    return 'must-fix';
-  }
-  if (issue.severity === 'warning' || confidence === 'strong-inference' || confidence === 'needs-review') {
-    return 'review';
-  }
-  return 'info';
+  return classifyIssueActionBucket(issue);
 }
 
 function confidenceLabel(confidence: ProjectAuditIssueConfidence, t: (ko: string, en: string) => string) {
@@ -92,6 +86,24 @@ function confidenceTone(confidence: ProjectAuditIssueConfidence) {
     default:
       return 'border-[#d9e5d9] bg-[#f8fff8] text-[#3d6d47]';
   }
+}
+
+function displayBoardName(boardName: string, t: (ko: string, en: string) => string) {
+  return boardName === 'Imported schematic'
+    ? t('가져온 회로도', 'Imported schematic')
+    : boardName;
+}
+
+function severityLabel(severity: ProjectAuditIssue['severity'], t: (ko: string, en: string) => string) {
+  if (severity === 'error') {
+    return t('오류', 'Error');
+  }
+
+  if (severity === 'warning') {
+    return t('경고', 'Warning');
+  }
+
+  return t('정보', 'Info');
 }
 
 function sectionMeta(bucket: ActionBucket, t: (ko: string, en: string) => string) {
@@ -155,7 +167,9 @@ function readWorkspaceSnapshot(): ReportWorkspaceSnapshot {
     };
   }
 
-  const raw = window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
+  const raw =
+    window.localStorage.getItem(REPORT_WORKSPACE_SNAPSHOT_KEY) ??
+    window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
   if (!raw) {
     const snapshot = {
       projectName: defaults.projectName,
@@ -263,7 +277,7 @@ export function ProjectVerificationReportPage() {
 
     return audit.issues.map(issue => {
       const localized = translateEngineIssue(issue, workspace.appLanguage);
-      const confidence = issue.confidence ?? issue.evidence?.confidence ?? (issue.severity === 'error' ? 'strong-inference' : issue.severity === 'info' ? 'informational' : 'needs-review');
+      const confidence = resolveIssueConfidence(issue);
       const evidence: ProjectAuditIssueEvidence = issue.evidence ?? {
         confidence,
         evidenceSummary: localized.message,
@@ -446,7 +460,7 @@ export function ProjectVerificationReportPage() {
                   </div>
                   <div className="rounded-[16px] border border-[#ddd2c4] bg-[rgba(255,255,255,0.52)] px-4 py-3">
                     <div className="text-[10px] uppercase tracking-[0.14em] text-[#8b7866]">{t('대상 보드 / MCU', 'Target Board / MCU')}</div>
-                    <div className="mt-1 font-semibold">{board.name}</div>
+                    <div className="mt-1 font-semibold">{displayBoardName(board.name, t)}</div>
                   </div>
                   <div className="rounded-[16px] border border-[#ddd2c4] bg-[rgba(255,255,255,0.52)] px-4 py-3">
                     <div className="text-[10px] uppercase tracking-[0.14em] text-[#8b7866]">{t('분석 시각', 'Analysis Date')}</div>
@@ -497,11 +511,11 @@ export function ProjectVerificationReportPage() {
           <section className="mt-5 grid gap-3 md:grid-cols-4">
             <div className="rounded-[18px] border border-[#e3d7c8] bg-[#fffaf3] px-4 py-4">
               <div className="text-[10px] uppercase tracking-[0.14em] text-[#8b7866]">{t('오류', 'Errors')}</div>
-              <div className="mt-2 text-[24px] font-semibold text-[#a94040]">{verificationReport.errorCount}</div>
+              <div data-testid="report-error-count" className="mt-2 text-[24px] font-semibold text-[#a94040]">{verificationReport.errorCount}</div>
             </div>
             <div className="rounded-[18px] border border-[#e3d7c8] bg-[#fffaf3] px-4 py-4">
               <div className="text-[10px] uppercase tracking-[0.14em] text-[#8b7866]">{t('경고', 'Warnings')}</div>
-              <div className="mt-2 text-[24px] font-semibold text-[#9b6615]">{verificationReport.warningCount}</div>
+              <div data-testid="report-warning-count" className="mt-2 text-[24px] font-semibold text-[#9b6615]">{verificationReport.warningCount}</div>
             </div>
             <div className="rounded-[18px] border border-[#e3d7c8] bg-[#fffaf3] px-4 py-4">
               <div className="text-[10px] uppercase tracking-[0.14em] text-[#8b7866]">{t('코드-회로 검증', 'Code cross-check')}</div>
@@ -535,7 +549,7 @@ export function ProjectVerificationReportPage() {
 
                 <div className="mt-4 space-y-3">
                   {bucketIssues.map((issue, index) => {
-                    const confidence = resolveConfidence(issue);
+                    const confidence = resolveIssueConfidence(issue);
                     const facts = issue.evidence?.observedFacts ?? [];
                     const assumptions = issue.evidence?.assumptions ?? [];
                     return (
@@ -545,7 +559,7 @@ export function ProjectVerificationReportPage() {
                             {confidenceLabel(confidence, t)}
                           </span>
                           <span className="rounded-full bg-[#efe5d8] px-2.5 py-1 text-[10px] font-semibold text-[#6d5c4f]">
-                            {issue.severity}
+                            {severityLabel(issue.severity, t)}
                           </span>
                         </div>
                         <h3 className="mt-3 text-[16px] font-semibold text-[#382d26]">

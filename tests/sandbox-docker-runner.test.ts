@@ -78,7 +78,7 @@ test('docker sandbox runner executes one-shot job and reads result payload from 
           MODUMAKE_SANDBOX_LAUNCH_WORKSPACE_ROOT: workspaceRoot,
           MODUMAKE_SANDBOX_KEEP_WORKSPACE: 'true',
         },
-        execFileImpl: async (_bin, _args) => {
+        execFileImpl: async () => {
           const jobDir = path.join(workspaceRoot, 'launcher-2');
           const payloadRaw = await readFile(path.join(jobDir, 'job.json'), 'utf8');
           const payload = JSON.parse(payloadRaw);
