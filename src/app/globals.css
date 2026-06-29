@@ -1,26 +1,389 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans-stack);
+  --font-mono: var(--font-mono-stack);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --font-sans-stack: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono-stack: "SFMono-Regular", "Consolas", "Liberation Mono", "Courier New", monospace;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ─── EDA / Schematic 스타일 오버라이드 ─── */
+
+/* 캔버스 배경: 짙은 도면용 다크 컬러 */
+.react-flow__renderer {
+  background: var(--mm-rf-renderer-bg, #070d18);
+}
+
+/* ── 컨트롤 버튼 (각진 스타일) ── */
+.react-flow__controls {
+  gap: 0;
+  border: 1px solid var(--mm-rf-controls-border, #334155);
+  border-radius: 0 !important;
+  overflow: hidden;
+  box-shadow: none !important;
+  background: var(--mm-rf-controls-bg, #0d1117);
+}
+
+.react-flow__controls-button {
+  background: var(--mm-rf-controls-button-bg, #0d1117) !important;
+  border: none !important;
+  border-bottom: 1px solid var(--mm-rf-controls-border, #334155) !important;
+  border-radius: 0 !important;
+  color: var(--mm-rf-controls-button-color, #64748b) !important;
+  width: 28px !important;
+  height: 28px !important;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--mm-rf-controls-button-hover-bg, #1e293b) !important;
+  color: var(--mm-rf-controls-button-hover-color, #e2e8f0) !important;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}
+
+/* ── 미니맵 ── */
+.react-flow__minimap {
+  background: var(--mm-rf-minimap-bg, #0a0f1a) !important;
+  border: 1px solid var(--mm-rf-controls-border, #334155) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* ── 선택 박스 ── */
+.react-flow__selection {
+  background: var(--mm-rf-selection-bg, rgba(234, 179, 8, 0.05)) !important;
+  border: 1px dashed var(--mm-rf-selection-border, #eab308) !important;
+}
+
+/* ── 전선 (엣지) ── */
+.react-flow__edge-path {
+  transition: none; /* EDA는 전선이 정적 */
+}
+
+@keyframes mm-ghost-dash {
+  from {
+    stroke-dashoffset: 10;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.mm-ghost-wire-edge {
+  animation: mm-ghost-dash 1s linear infinite;
+}
+
+/* 선택된 엣지 강조 */
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke-width: 2.5 !important;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+/* ── 노드 선택 시 outline 제거 (자체 border로 처리) ── */
+.react-flow__node.selected > div {
+  outline: none;
+}
+.react-flow__node:focus {
+  outline: none;
+}
+
+/* ── 연결선 연결점 ── */
+.react-flow__handle {
+  border-radius: 0 !important;
+}
+
+/* ── 노드 래퍼 그림자 제거 ── */
+.react-flow__node {
+  filter: none !important;
+}
+
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"],
+[data-mm-shell-theme="light"] [data-mm-scope="comments-panel"],
+[data-mm-shell-theme="light"] [data-mm-scope="inspector-panel"],
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] {
+  color: var(--mm-shell-fg, #0f172a);
+}
+
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .text-slate-100,
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .text-slate-200,
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .text-slate-300,
+[data-mm-shell-theme="light"] [data-mm-scope="comments-panel"] .text-slate-100,
+[data-mm-shell-theme="light"] [data-mm-scope="comments-panel"] .text-slate-200,
+[data-mm-shell-theme="light"] [data-mm-scope="comments-panel"] .text-slate-300,
+[data-mm-shell-theme="light"] [data-mm-scope="inspector-panel"] .text-slate-100,
+[data-mm-shell-theme="light"] [data-mm-scope="inspector-panel"] .text-slate-200,
+[data-mm-shell-theme="light"] [data-mm-scope="inspector-panel"] .text-slate-300,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .text-slate-100,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .text-slate-200,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .text-slate-300 {
+  color: var(--mm-shell-fg, #0f172a) !important;
+}
+
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .text-slate-400,
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .text-slate-500,
+[data-mm-shell-theme="light"] [data-mm-scope="comments-panel"] .text-slate-400,
+[data-mm-shell-theme="light"] [data-mm-scope="comments-panel"] .text-slate-500,
+[data-mm-shell-theme="light"] [data-mm-scope="inspector-panel"] .text-slate-400,
+[data-mm-shell-theme="light"] [data-mm-scope="inspector-panel"] .text-slate-500,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .text-slate-400,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .text-slate-500,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .text-gray-500,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .text-gray-600 {
+  color: var(--mm-shell-muted, #334155) !important;
+}
+
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .bg-slate-950\/40,
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .bg-slate-950\/55,
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .bg-slate-950\/60,
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .bg-slate-950\/70,
+[data-mm-shell-theme="light"] [data-mm-scope="comments-panel"] .bg-slate-950\/40,
+[data-mm-shell-theme="light"] [data-mm-scope="comments-panel"] .bg-slate-950\/55,
+[data-mm-shell-theme="light"] [data-mm-scope="comments-panel"] .bg-slate-950\/60,
+[data-mm-shell-theme="light"] [data-mm-scope="comments-panel"] .bg-slate-950\/70,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .bg-slate-950\/40,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .bg-slate-950\/50,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .bg-slate-950\/60,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .bg-slate-950\/70,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .bg-slate-800\/60 {
+  background-color: #ffffff !important;
+}
+
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .border-slate-800,
+[data-mm-shell-theme="light"] [data-mm-scope="comments-panel"] .border-slate-800,
+[data-mm-shell-theme="light"] [data-mm-scope="inspector-panel"] .border-slate-800,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .border-slate-800,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .border-slate-700\/50 {
+  border-color: var(--mm-shell-border, #cbd5e1) !important;
+}
+
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .text-amber-200,
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .text-amber-300,
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .text-yellow-200,
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] [class*="text-[#fcd34d]"],
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] [class*="text-[#eab308]"],
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .text-amber-200,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .text-amber-300,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .text-yellow-200 {
+  color: #92400e !important;
+}
+
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .text-red-300,
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .text-red-400,
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] [class*="text-[#fca5a5]"],
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] [class*="text-[#f87171]"],
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .text-red-400 {
+  color: #991b1b !important;
+}
+
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .text-sky-200,
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .text-sky-300,
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] [class*="text-[#93c5fd]"],
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] [class*="text-[#60a5fa]"],
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] [class*="text-[#bfdbfe]"],
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .text-blue-400,
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .text-sky-300 {
+  color: #075985 !important;
+}
+
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .text-emerald-200,
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] .text-emerald-300,
+[data-mm-shell-theme="light"] [data-mm-scope="review-panel"] [class*="text-[#86efac]"],
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] .text-emerald-300 {
+  color: #166534 !important;
+}
+
+[data-mm-shell-theme="light"] [data-mm-scope="sidebar"] input::placeholder {
+  color: #64748b !important;
+  opacity: 1;
+}
+
+.mm-comment-glyph {
+  width: 14px;
+  height: 14px;
+  margin-left: 2px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, #fde68a, #f59e0b 68%);
+  border: 1px solid rgba(251, 191, 36, 0.9);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.65);
+}
+
+.mm-comment-glyph-active {
+  background: radial-gradient(circle at 30% 30%, #bfdbfe, #38bdf8 68%);
+  border-color: rgba(96, 165, 250, 0.95);
+}
+
+.mm-comment-glyph-highlighted {
+  background: radial-gradient(circle at 30% 30%, #ddd6fe, #8b5cf6 68%);
+  border-color: rgba(196, 181, 253, 0.95);
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.65),
+    0 0 16px rgba(139, 92, 246, 0.42);
+}
+
+@keyframes mm-comment-line-flash {
+  0% {
+    background: rgba(139, 92, 246, 0.34);
+    box-shadow: inset 3px 0 0 rgba(196, 181, 253, 0.95);
+  }
+  100% {
+    background: transparent;
+    box-shadow: inset 3px 0 0 transparent;
+  }
+}
+
+.monaco-editor .mm-comment-line-flash {
+  animation: mm-comment-line-flash 1.2s ease-out;
+  border-radius: 4px;
+}
+
+/* ── 폰트: 회로도 전체 모노스페이스 ── */
+.react-flow__canvas,
+.react-flow__node {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+}
+
+.react-flow__node-importedSchematicOverlayNode {
+  pointer-events: none !important;
+}
+
+/* ── 스크롤바 ── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #070d18;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e3a5f;
+  border-radius: 0;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
 }

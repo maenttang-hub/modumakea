@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modumake.local/schemas/interpretation-engine/coord-validation.schema.json",
+  "title": "CoordValidation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "mean_error_mm",
+    "max_error_mm",
+    "anchors_checked",
+    "thresholds_version"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["pass", "warn", "block"]
+    },
+    "mean_error_mm": {
+      "type": "number",
+      "minimum": 0
+    },
+    "max_error_mm": {
+      "type": "number",
+      "minimum": 0
+    },
+    "anchors_checked": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "thresholds_version": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

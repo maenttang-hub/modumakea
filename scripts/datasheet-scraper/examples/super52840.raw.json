@@ -1,0 +1,23 @@
+{
+  "board": {
+    "id": "super52840",
+    "name": "Super52840",
+    "chipset": "nRF52840",
+    "logicVoltage": "3.3V",
+    "targetLanguage": "C++",
+    "description": "nRF52840 기반 보드. BLE, ADC, PWM, 저전력 GPIO 포함.",
+    "icon": "Radio"
+  },
+  "pins": [
+    { "name": "P0.02", "features": ["GPIO", "ADC"] },
+    { "name": "P0.03", "features": ["GPIO", "ADC"] },
+    { "name": "P0.13", "features": ["GPIO", "PWM"] },
+    { "name": "P0.14", "features": ["GPIO", "PWM"] },
+    { "name": "P1.00", "features": ["GPIO"] },
+    { "name": "P1.01", "features": ["GPIO", "UART", "RX"] },
+    { "name": "P1.02", "features": ["GPIO", "UART", "TX"] },
+    { "name": "3V3", "features": ["POWER"] },
+    { "name": "VBUS", "features": ["POWER"] },
+    { "name": "GND", "features": ["GND"] }
+  ]
+}

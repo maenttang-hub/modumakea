@@ -1,0 +1,39 @@
+{
+  "_comment": "All values are initial estimates and should be retuned after gold-set evaluation.",
+  "version": "v1-initial",
+  "calibration": {
+    "max_error_mm_warn": 1.0,
+    "max_error_mm_block": 2.5
+  },
+  "crop_expansion": {
+    "default_margin_mm": 5.0,
+    "margin_increment_mm": 2.0,
+    "max_margin_attempts": 3
+  },
+  "geometry_match": {
+    "min_iou_for_match": 0.5
+  },
+  "pattern_match": {
+    "high_confidence_score": 0.8,
+    "medium_confidence_low_bound": 0.4
+  },
+  "region_dedup": {
+    "merge_iou_threshold": 0.6,
+    "containment_ratio_for_suppress": 0.9
+  },
+  "llm_hypothesis": {
+    "trigger_if_pattern_score_below": 0.8,
+    "max_calls_per_schematic": 20,
+    "timeout_seconds": 20
+  },
+  "vision_pass": {
+    "max_fine_pass_calls_per_schematic": 30,
+    "coarse_timeout_seconds": 30,
+    "fine_timeout_seconds": 30
+  },
+  "api_policy": {
+    "max_retries": 3,
+    "backoff_seconds": [1, 2, 4],
+    "max_concurrency": 4
+  }
+}

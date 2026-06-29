@@ -1,0 +1,8 @@
+{
+  "name": "modumake-sandbox-launcher",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ./server.mjs"
+  }
+}

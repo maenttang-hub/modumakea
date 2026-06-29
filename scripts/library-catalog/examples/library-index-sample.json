@@ -1,0 +1,31 @@
+{
+  "libraries": [
+    {
+      "name": "DHT sensor library",
+      "author": "Adafruit",
+      "sentence": "DHT sensors support",
+      "paragraph": "Reads DHT11 and DHT22 sensors.",
+      "category": "Sensors",
+      "website": "https://github.com/adafruit/DHT-sensor-library",
+      "versions": [
+        {
+          "version": "1.4.6",
+          "headers": ["DHT.h", "DHT_U.h"],
+          "url": "https://downloads.arduino.cc/libraries/github.com/adafruit/DHT_sensor_library-1.4.6.zip"
+        }
+      ]
+    },
+    {
+      "name": "Adafruit GFX Library",
+      "author": "Adafruit",
+      "sentence": "Graphics core for displays",
+      "category": "Display",
+      "versions": [
+        {
+          "version": "1.11.9",
+          "url": "https://downloads.arduino.cc/libraries/github.com/adafruit/Adafruit_GFX_Library-1.11.9.zip"
+        }
+      ]
+    }
+  ]
+}

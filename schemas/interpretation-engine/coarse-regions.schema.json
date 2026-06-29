@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modumake.local/schemas/interpretation-engine/coarse-regions.schema.json",
+  "title": "CoarseRegions",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["regions"],
+  "properties": {
+    "regions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/region" }
+    },
+    "dedup_log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action"],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["merged", "suppressed", "sub_candidate"]
+          },
+          "from": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "into": { "type": "string" },
+          "region_id": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "bboxPx": {
+      "type": "array",
+      "items": { "type": "integer" },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "region": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["region_id", "bbox_px", "observed_shape_tags", "ocr_like_texts", "visual_density"],
+      "properties": {
+        "region_id": { "type": "string" },
+        "bbox_px": { "$ref": "#/$defs/bboxPx" },
+        "observed_shape_tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "ocr_like_texts": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "visual_density": {
+          "type": "string",
+          "enum": ["low", "medium", "high"]
+        },
+        "sub_candidates": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "freeform_observation": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

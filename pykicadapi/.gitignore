@@ -1,0 +1,154 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.uv/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+*.backup
+*.log
+function_calls.log
+unique_function_calls.txt
+Dead_Code_Analysis_Report.md
+
+# Test outputs
+*.tmp
+
+# Development artifacts
+.mypy_cache/
+.black_cache/
+.isort_cache/
+
+# Documentation builds
+docs/_build/
+docs/build/
+
+# MCP server artifacts
+mcp-server/dist/
+mcp-server/node_modules/
+mcp-server/.npm/
+
+# Python development
+*.pyi
+.python-version
+
+# Performance profiling
+*.prof
+*.pstats
+
+# Temporary files
+*.temp
+*.temporary
+
+# PyPI credentials
+.pypirc
+*.pypirc
+
+# Example output
+examples/output/
+build_env/
+
+# Generated test schematic files
+*_demo.kicad_sch
+*_output.kicad_sch
+test_*.kicad_sch
+*.kicad_prl
+*.kicad_pro
+*-backups/
+~*.kicad_sch.lck
+
+# Generated schematic files in root (from running examples)
+/*.kicad_sch
+!examples/*.kicad_sch
+!tests/**/*.kicad_sch
+
+# Test files in root directory
+/example_circuit.py
+/example_circuit.kicad_sch
+/test.kicad_sch
+/demo_*.kicad_sch
+/demo_*.pdf
+/stm32_*.kicad_sch
+/stm32_*.pdf
+/generate_*.py
+/test_*.py
+
+# Temporary directories
+/logs/
+/manual_tests/
+/temp_test_env/
+
+# Hook logs (runtime generated)
+.claude/hook_logs/
+agents/hook_logs/

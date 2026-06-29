@@ -1,0 +1,558 @@
+{
+  "boards": {
+    "uno": {
+      "kicadLibrary": "MCU_Module",
+      "kicadSymbol": "Arduino_Uno_R3",
+      "referencePrefix": "A",
+      "footprint": "Module:Arduino_Uno_R3",
+      "pinMap": {
+        "5V": "5",
+        "3.3V": "4",
+        "GND": "6",
+        "A0": "19",
+        "A1": "20",
+        "A2": "21",
+        "A3": "22",
+        "A4": "23",
+        "A5": "24",
+        "D0": "27",
+        "D1": "28",
+        "D2": "30",
+        "D3": "31",
+        "D4": "32",
+        "D5": "33",
+        "D6": "34",
+        "D7": "35",
+        "D8": "36",
+        "D9": "37",
+        "D10": "38",
+        "D11": "39",
+        "D12": "40",
+        "D13": "41"
+      }
+    },
+    "nano": {
+      "kicadLibrary": "MCU_Module",
+      "kicadSymbol": "Arduino_Nano_v2.x",
+      "referencePrefix": "A",
+      "footprint": "Module:Arduino_Nano",
+      "pinMap": {
+        "5V": "27",
+        "3.3V": "17",
+        "GND": "29",
+        "A0": "19",
+        "A1": "20",
+        "A2": "21",
+        "A3": "22",
+        "A4": "23",
+        "A5": "24",
+        "D2": "5",
+        "D3": "6",
+        "D4": "7",
+        "D5": "8",
+        "D6": "9",
+        "D7": "10",
+        "D8": "11",
+        "D9": "12",
+        "D10": "13",
+        "D11": "14",
+        "D12": "15",
+        "D13": "16"
+      }
+    },
+    "esp32": {
+      "kicadLibrary": "RF_Module",
+      "kicadSymbol": "ESP32_DevKit_V1_DOIT",
+      "referencePrefix": "A",
+      "footprint": "Module:ESP32_DevKit_V1",
+      "pinMap": {
+        "3.3V": "1",
+        "GND": "14",
+        "G4": "26",
+        "G5": "29",
+        "G12": "13",
+        "G13": "16",
+        "G14": "12",
+        "G15": "23",
+        "G16": "27",
+        "G17": "28",
+        "G18": "30",
+        "G19": "31",
+        "G21": "33",
+        "G22": "36",
+        "G23": "37",
+        "G25": "10",
+        "G26": "11",
+        "G27": "15",
+        "G32": "8",
+        "G33": "9",
+        "G34": "5",
+        "G35": "6"
+      }
+    },
+    "rpi4": {
+      "kicadLibrary": "Connector_Generic",
+      "kicadSymbol": "Conn_02x20_Odd_Even",
+      "referencePrefix": "J",
+      "footprint": "Connector_PinHeader_2.54mm:PinHeader_2x20_P2.54mm_Vertical",
+      "pinMap": {
+        "3.3V": "1",
+        "5V": "2",
+        "GND": "6",
+        "GPIO2": "3",
+        "GPIO3": "5",
+        "GPIO4": "7",
+        "GPIO14": "8",
+        "GPIO15": "10",
+        "GPIO17": "11",
+        "GPIO18": "12",
+        "GPIO27": "13",
+        "GPIO22": "15",
+        "GPIO23": "16",
+        "GPIO24": "18",
+        "GPIO10": "19",
+        "GPIO9": "21",
+        "GPIO25": "22",
+        "GPIO11": "23",
+        "GPIO8": "24",
+        "GPIO7": "26",
+        "GPIO5": "29",
+        "GPIO6": "31",
+        "GPIO12": "32",
+        "GPIO13": "33",
+        "GPIO19": "35",
+        "GPIO16": "36",
+        "GPIO26": "37",
+        "GPIO20": "38",
+        "GPIO21": "40"
+      }
+    },
+    "rpi_pico": {
+      "kicadLibrary": "MCU_RaspberryPi_and_Boards",
+      "kicadSymbol": "RaspberryPi_Pico",
+      "referencePrefix": "A",
+      "footprint": "Module:RaspberryPi_Pico",
+      "pinMap": {
+        "GP0": "1",
+        "GP1": "2",
+        "GP2": "4",
+        "GP3": "5",
+        "GP4": "6",
+        "GP5": "7",
+        "GP6": "9",
+        "GP7": "10",
+        "GP8": "11",
+        "GP9": "12",
+        "GP10": "14",
+        "GP11": "15",
+        "GP12": "16",
+        "GP13": "17",
+        "GP14": "19",
+        "GP15": "20",
+        "GP16": "21",
+        "GP17": "22",
+        "GP18": "24",
+        "GP19": "25",
+        "GP20": "26",
+        "GP21": "27",
+        "GP22": "29",
+        "GP26": "31",
+        "GP27": "32",
+        "GP28": "34",
+        "3.3V": "36",
+        "VBUS": "40",
+        "GND": "3"
+      }
+    },
+    "stm32_bluepill": {
+      "kicadLibrary": "MCU_Module",
+      "kicadSymbol": "BluePill_STM32F103C8",
+      "referencePrefix": "A",
+      "footprint": "Module:BluePill_STM32F103C8",
+      "pinMap": {
+        "PA8": "1",
+        "PA9": "2",
+        "PA10": "3",
+        "PA11": "4",
+        "PA12": "5",
+        "PA15": "6",
+        "PB3": "7",
+        "PB4": "8",
+        "PB5": "9",
+        "PB6": "10",
+        "PB7": "11",
+        "PB8": "12",
+        "PB9": "13",
+        "PA0": "14",
+        "PA1": "15",
+        "PA2": "16",
+        "PA3": "17",
+        "PA4": "18",
+        "PA5": "19",
+        "PA6": "20",
+        "PA7": "21",
+        "PB0": "22",
+        "PB1": "23",
+        "3.3V": "24",
+        "5V": "25",
+        "GND": "26"
+      }
+    }
+  },
+  "templates": {
+    "tpl_ultrasonic": {
+      "kicadLibrary": "Sensor_Proximity",
+      "kicadSymbol": "HC-SR04",
+      "referencePrefix": "U",
+      "footprint": "Module:HC-SR04",
+      "pinMap": {
+        "VCC": "1",
+        "Trig": "2",
+        "Echo": "3",
+        "GND": "4"
+      }
+    },
+    "tpl_pir": {
+      "kicadLibrary": "Sensor_Motion",
+      "kicadSymbol": "HC-SR501",
+      "referencePrefix": "U",
+      "footprint": "Module:HC-SR501",
+      "pinMap": {
+        "VCC": "1",
+        "Signal": "2",
+        "GND": "3"
+      }
+    },
+    "tpl_dht11": {
+      "kicadLibrary": "Sensor",
+      "kicadSymbol": "DHT11",
+      "referencePrefix": "U",
+      "footprint": "Sensor:DHT11",
+      "pinMap": {
+        "VCC": "1",
+        "Data": "2",
+        "GND": "4"
+      }
+    },
+    "tpl_dht22": {
+      "kicadLibrary": "Sensor",
+      "kicadSymbol": "DHT22",
+      "referencePrefix": "U",
+      "footprint": "Sensor:DHT22",
+      "pinMap": {
+        "VCC": "1",
+        "Data": "2",
+        "GND": "4"
+      }
+    },
+    "tpl_photoresistor": {
+      "kicadLibrary": "Sensor_Optical",
+      "kicadSymbol": "LDR03",
+      "referencePrefix": "R",
+      "footprint": "Sensor:LDR_5mm",
+      "pinMap": {
+        "VCC": "1",
+        "AOut": "2",
+        "GND": "3"
+      }
+    },
+    "tpl_soil_moisture": {
+      "kicadLibrary": "Connector_Generic",
+      "kicadSymbol": "Conn_01x03_Male",
+      "referencePrefix": "J",
+      "footprint": "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical",
+      "pinMap": {
+        "VCC": "1",
+        "GND": "2",
+        "AOut": "3"
+      }
+    },
+    "tpl_gas_mq2": {
+      "kicadLibrary": "Sensor_Gas",
+      "kicadSymbol": "MQ-2",
+      "referencePrefix": "U",
+      "footprint": "Module:MQ-2",
+      "pinMap": {
+        "VCC": "1",
+        "GND": "2",
+        "DOut": "3",
+        "AOut": "4"
+      }
+    },
+    "tpl_sound": {
+      "kicadLibrary": "Connector_Generic",
+      "kicadSymbol": "Conn_01x04_Male",
+      "referencePrefix": "J",
+      "footprint": "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical",
+      "pinMap": {
+        "VCC": "1",
+        "GND": "2",
+        "DOut": "3",
+        "AOut": "4"
+      }
+    },
+    "tpl_ir_receiver": {
+      "kicadLibrary": "Sensor_Optical",
+      "kicadSymbol": "IRReceiver",
+      "referencePrefix": "U",
+      "footprint": "Module:IR_Receiver",
+      "pinMap": {
+        "Signal": "1",
+        "GND": "2",
+        "VCC": "3"
+      }
+    },
+    "tpl_button": {
+      "kicadLibrary": "Switch",
+      "kicadSymbol": "SW_Push",
+      "referencePrefix": "SW",
+      "footprint": "Button_Switch_THT:SW_PUSH_6mm",
+      "pinMap": {
+        "Signal": "1",
+        "VCC": "2",
+        "GND": "2"
+      }
+    },
+    "tpl_led": {
+      "kicadLibrary": "Device",
+      "kicadSymbol": "LED",
+      "referencePrefix": "D",
+      "footprint": "LED_THT:LED_D5.0mm",
+      "pinMap": {
+        "Signal": "2",
+        "GND": "1"
+      }
+    },
+    "tpl_rgb_led": {
+      "kicadLibrary": "Device",
+      "kicadSymbol": "LED_RGB",
+      "referencePrefix": "D",
+      "footprint": "LED_THT:LED_RGB_D5.0mm",
+      "pinMap": {
+        "R": "1",
+        "G": "2",
+        "B": "3",
+        "GND": "4"
+      }
+    },
+    "tpl_servo": {
+      "kicadLibrary": "Connector_Generic",
+      "kicadSymbol": "Conn_01x03_Male",
+      "referencePrefix": "M",
+      "footprint": "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical",
+      "pinMap": {
+        "GND": "1",
+        "VCC": "2",
+        "Signal": "3"
+      }
+    },
+    "tpl_dc_motor": {
+      "kicadLibrary": "Driver_Motor",
+      "kicadSymbol": "L298N",
+      "referencePrefix": "U",
+      "footprint": "Package_Multiwatt:Multiwatt-15_Vertical",
+      "pinMap": {
+        "VCC": "4",
+        "GND": "8",
+        "IN1": "5",
+        "IN2": "7",
+        "ENA": "6"
+      }
+    },
+    "tpl_buzzer": {
+      "kicadLibrary": "Device",
+      "kicadSymbol": "Buzzer",
+      "referencePrefix": "BZ",
+      "footprint": "Buzzer_Beeper:Buzzer_12x9.5RM7.6",
+      "pinMap": {
+        "Signal": "1",
+        "GND": "2"
+      }
+    },
+    "tpl_relay": {
+      "kicadLibrary": "Relay",
+      "kicadSymbol": "SANYOU_SRD_FormC",
+      "referencePrefix": "K",
+      "footprint": "Relay_THT:Relay_SPDT_Songle_SRD",
+      "pinMap": {
+        "VCC": "1",
+        "GND": "2",
+        "Signal": "5"
+      }
+    },
+    "tpl_oled": {
+      "kicadLibrary": "Display",
+      "kicadSymbol": "OLED_0.96_I2C",
+      "referencePrefix": "DS",
+      "footprint": "Display:OLED_0.96_I2C",
+      "pinMap": {
+        "GND": "1",
+        "VCC": "2",
+        "SCL": "3",
+        "SDA": "4"
+      }
+    },
+    "tpl_lcd1602": {
+      "kicadLibrary": "Display",
+      "kicadSymbol": "LCD-16x2",
+      "referencePrefix": "DS",
+      "footprint": "Display:LCD1602_I2C",
+      "pinMap": {
+        "GND": "1",
+        "VCC": "2",
+        "SDA": "3",
+        "SCL": "4"
+      }
+    },
+    "tpl_7segment": {
+      "kicadLibrary": "Display",
+      "kicadSymbol": "TM1637",
+      "referencePrefix": "DS",
+      "footprint": "Display:TM1637_4Digit",
+      "pinMap": {
+        "VCC": "1",
+        "GND": "2",
+        "DIO": "3",
+        "CLK": "4"
+      }
+    },
+    "tpl_bluetooth_hc05": {
+      "kicadLibrary": "RF_Module",
+      "kicadSymbol": "HC-05",
+      "referencePrefix": "U",
+      "footprint": "Module:HC-05",
+      "pinMap": {
+        "VCC": "2",
+        "GND": "3",
+        "TX": "4",
+        "RX": "5"
+      }
+    },
+    "tpl_rfid_rc522": {
+      "kicadLibrary": "RF_Module",
+      "kicadSymbol": "MFRC522",
+      "referencePrefix": "U",
+      "footprint": "Module:MFRC522",
+      "pinMap": {
+        "VCC": "1",
+        "RST": "2",
+        "GND": "3",
+        "MISO": "4",
+        "MOSI": "5",
+        "SCK": "6",
+        "SDA": "7"
+      }
+    },
+    "tpl_resistor": {
+      "kicadLibrary": "Device",
+      "kicadSymbol": "R",
+      "referencePrefix": "R",
+      "footprint": "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal",
+      "pinMap": {
+        "1": "1",
+        "2": "2"
+      }
+    },
+    "tpl_capacitor": {
+      "kicadLibrary": "Device",
+      "kicadSymbol": "C",
+      "referencePrefix": "C",
+      "footprint": "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm",
+      "pinMap": {
+        "1": "1",
+        "2": "2"
+      }
+    },
+    "tpl_inductor": {
+      "kicadLibrary": "Device",
+      "kicadSymbol": "L",
+      "referencePrefix": "L",
+      "footprint": "Inductor_THT:L_Axial_L9.0mm_D3.5mm_P12.00mm_Horizontal",
+      "pinMap": {
+        "1": "1",
+        "2": "2"
+      }
+    },
+    "tpl_diode": {
+      "kicadLibrary": "Device",
+      "kicadSymbol": "D",
+      "referencePrefix": "D",
+      "footprint": "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
+      "pinMap": {
+        "A": "2",
+        "K": "1"
+      }
+    },
+    "tpl_transistor_npn": {
+      "kicadLibrary": "Device",
+      "kicadSymbol": "Q_NPN_BCE",
+      "referencePrefix": "Q",
+      "footprint": "Package_TO_SOT_THT:TO-92_Inline",
+      "pinMap": {
+        "B": "1",
+        "C": "2",
+        "E": "3"
+      }
+    },
+    "tpl_level_shifter": {
+      "kicadLibrary": "Logic_LevelTranslator",
+      "kicadSymbol": "BSS138_4CH",
+      "referencePrefix": "U",
+      "footprint": "Module:Logic_Level_Shifter_4CH",
+      "pinMap": {
+        "HV": "1",
+        "LV": "2",
+        "GND": "3",
+        "HV1": "4",
+        "LV1": "5"
+      }
+    },
+    "tpl_driver_ic": {
+      "kicadLibrary": "Transistor_Array",
+      "kicadSymbol": "ULN2003",
+      "referencePrefix": "U",
+      "footprint": "Package_DIP:DIP-16_W7.62mm",
+      "pinMap": {
+        "IN": "1",
+        "GND": "8",
+        "VCC": "9",
+        "OUT": "16"
+      }
+    },
+    "tpl_adc_module": {
+      "kicadLibrary": "Analog_ADC",
+      "kicadSymbol": "ADS1115",
+      "referencePrefix": "U",
+      "footprint": "Module:ADS1115_Breakout",
+      "pinMap": {
+        "GND": "3",
+        "A0": "4",
+        "VCC": "8",
+        "SCL": "9",
+        "SDA": "10"
+      }
+    },
+    "tpl_op_amp_buffer": {
+      "kicadLibrary": "Amplifier_Operational",
+      "kicadSymbol": "LM358",
+      "referencePrefix": "U",
+      "footprint": "Package_DIP:DIP-8_W7.62mm",
+      "pinMap": {
+        "OUT": "1",
+        "IN": "3",
+        "GND": "4",
+        "VCC": "8"
+      }
+    },
+    "tpl_external_power": {
+      "kicadLibrary": "Connector",
+      "kicadSymbol": "Barrel_Jack",
+      "referencePrefix": "J",
+      "footprint": "Connector_BarrelJack:BarrelJack_Horizontal",
+      "pinMap": {
+        "V+": "1",
+        "GND": "2"
+      }
+    }
+  }
+}

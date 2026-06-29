@@ -1,0 +1,9 @@
+{
+  "name": "modumake-compile-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ./server.mjs"
+  }
+}
+

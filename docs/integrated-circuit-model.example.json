@@ -1,0 +1,199 @@
+{
+  "schemaVersion": "2026-06-19",
+  "project": {
+    "projectName": "Smart_IoT_Sensor_Hub",
+    "boardId": "esp32_wroom_32e",
+    "boardName": "ESP32-WROOM-32E DevKit",
+    "sourceKind": "kicad_import",
+    "importedComponentCount": 4,
+    "importedConnectionCount": 7,
+    "generatedCustomComponentCount": 0
+  },
+  "board": {
+    "boardId": "esp32_wroom_32e",
+    "boardName": "ESP32-WROOM-32E DevKit",
+    "logicVoltage": "3.3V",
+    "netLabels": ["3V3", "GND", "SDA", "SCL", "D2"],
+    "pinNames": ["G21", "G22", "G23", "GND", "3V3"]
+  },
+  "components": [
+    {
+      "instanceId": "mcu-1",
+      "reference": "U1",
+      "displayName": "ESP32-WROOM-32E",
+      "value": "ESP32-WROOM-32E",
+      "category": "MCU",
+      "sourceKind": "imported_symbol",
+      "templateId": "tpl_mcu_esp32",
+      "libraryId": "MCU_Espressif:ESP32-WROOM-32",
+      "footprint": "RF_Module:ESP32-WROOM-32",
+      "symbolName": "MCU_Espressif:ESP32-WROOM-32",
+      "referencePrefix": "U",
+      "pinNames": ["3V3", "GND", "GPIO21", "GPIO22"],
+      "netLabels": ["3V3", "GND", "SDA", "SCL"],
+      "connectedNetIds": ["net-1", "net-2", "net-3", "net-4"],
+      "mpnCandidates": ["ESP32-WROOM-32E"],
+      "manufacturerCandidates": ["ESP32"],
+      "tags": ["MCU", "imported"],
+      "pins": [
+        {
+          "pinId": "3V3",
+          "pinName": "3V3",
+          "direction": "power_in",
+          "connectedNetIds": ["net-1"],
+          "netLabels": ["3V3"],
+          "protocols": ["POWER"]
+        },
+        {
+          "pinId": "GND",
+          "pinName": "GND",
+          "direction": "ground",
+          "connectedNetIds": ["net-2"],
+          "netLabels": ["GND"],
+          "protocols": ["GND"]
+        },
+        {
+          "pinId": "GPIO21",
+          "pinName": "GPIO21",
+          "assignedBoardPin": "G21",
+          "direction": "bidirectional",
+          "connectedNetIds": ["net-3"],
+          "netLabels": ["SDA"],
+          "protocols": ["I2C", "GPIO"]
+        },
+        {
+          "pinId": "GPIO22",
+          "pinName": "GPIO22",
+          "assignedBoardPin": "G22",
+          "direction": "bidirectional",
+          "connectedNetIds": ["net-4"],
+          "netLabels": ["SCL"],
+          "protocols": ["I2C", "GPIO"]
+        }
+      ]
+    }
+  ],
+  "nets": [
+    {
+      "netId": "net-1",
+      "label": "3V3",
+      "kind": "power",
+      "memberRefs": [
+        { "ownerType": "board", "ownerId": "esp32_wroom_32e", "pinId": "3V3" },
+        { "ownerType": "component", "ownerId": "mcu-1", "ownerReference": "U1", "pinId": "3V3", "pinName": "3V3" }
+      ]
+    },
+    {
+      "netId": "net-2",
+      "label": "GND",
+      "kind": "ground",
+      "memberRefs": [
+        { "ownerType": "board", "ownerId": "esp32_wroom_32e", "pinId": "GND" },
+        { "ownerType": "component", "ownerId": "mcu-1", "ownerReference": "U1", "pinId": "GND", "pinName": "GND" }
+      ]
+    },
+    {
+      "netId": "net-3",
+      "label": "SDA",
+      "kind": "bus",
+      "memberRefs": [
+        { "ownerType": "board", "ownerId": "esp32_wroom_32e", "pinId": "G21" },
+        { "ownerType": "component", "ownerId": "mcu-1", "ownerReference": "U1", "pinId": "GPIO21", "pinName": "GPIO21" }
+      ]
+    }
+  ],
+  "codePinUsage": [
+    {
+      "operationType": "pinMode",
+      "pinArgument": "G21",
+      "matchedMcuPinLabel": "G21",
+      "lineNumber": 12,
+      "scope": "setup",
+      "mode": "INPUT",
+      "conditional": false,
+      "conditions": [],
+      "callPath": [],
+      "connectedNetLabels": ["SDA"],
+      "connectedComponentReferences": ["U1"]
+    },
+    {
+      "operationType": "digitalWrite",
+      "pinArgument": "D2",
+      "matchedMcuPinLabel": null,
+      "lineNumber": 42,
+      "scope": "loop",
+      "value": "HIGH",
+      "conditional": false,
+      "conditions": [],
+      "callPath": [],
+      "connectedNetLabels": [],
+      "connectedComponentReferences": []
+    }
+  ],
+  "validationFlags": [
+    {
+      "source": "rule_based",
+      "severity": "warning",
+      "code": "audit.i2c-pullup-missing",
+      "ruleId": "audit.i2c-pullup-missing",
+      "title": "I2C Pull-up Missing",
+      "message": "SCL/SDA pull-up resistor is missing.",
+      "recommendation": "Add 4.7k pull-up resistors to SDA and SCL."
+    },
+    {
+      "source": "formal_verifier",
+      "severity": "error",
+      "code": "formal.unwired-pin-reference",
+      "ruleId": "formal.unwired-pin-reference",
+      "title": "HW/SW Pin Mismatch",
+      "message": "Code uses D2, but the imported schematic has no matching connected MCU pin.",
+      "boardPin": "D2",
+      "lineNumber": 42,
+      "operation": "digitalWrite",
+      "recommendation": "Reconnect the signal or change the code pin."
+    }
+  ],
+  "ruleFindings": [
+    {
+      "severity": "warning",
+      "ruleId": "audit.i2c-pullup-missing",
+      "title": "I2C Pull-up Missing",
+      "message": "SCL/SDA pull-up resistor is missing.",
+      "recommendation": "Add 4.7k pull-up resistors to SDA and SCL."
+    }
+  ],
+  "extractionPlan": {
+    "strategy": "focused-sections",
+    "globalSections": [
+      "pin-description",
+      "recommended-operating-conditions",
+      "absolute-maximum-ratings"
+    ],
+    "targets": [
+      {
+        "reference": "U1",
+        "displayName": "ESP32-WROOM-32E",
+        "libraryId": "MCU_Espressif:ESP32-WROOM-32",
+        "footprint": "RF_Module:ESP32-WROOM-32",
+        "mpnCandidates": ["ESP32-WROOM-32E"],
+        "manufacturerCandidates": ["ESP32"],
+        "requestedSections": [
+          "pin-description",
+          "recommended-operating-conditions",
+          "absolute-maximum-ratings",
+          "power-supply",
+          "application-circuit",
+          "package-information"
+        ],
+        "searchQueries": [
+          "ESP32-WROOM-32E datasheet pdf",
+          "ESP32-WROOM-32E pinout"
+        ],
+        "reviewQuestions": [
+          "U1의 전원 핀 구성이 데이터시트 권장 전원 회로와 맞는지 확인해 주세요.",
+          "U1의 핀 이름과 현재 연결 넷이 데이터시트 핀 설명과 충돌하지 않는지 확인해 주세요."
+        ]
+      }
+    ]
+  }
+}

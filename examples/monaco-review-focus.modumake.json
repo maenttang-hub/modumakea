@@ -1,0 +1,29 @@
+{
+  "version": 3,
+  "savedAt": "2026-06-18T00:00:00.000Z",
+  "projectName": "monaco_review_focus_demo",
+  "appLanguage": "ko",
+  "activeBoardId": "uno",
+  "components": [
+    {
+      "instanceId": "button-review-demo",
+      "templateId": "tpl_button",
+      "name": "버튼 1",
+      "position": { "x": 320, "y": 220 },
+      "rotation": 0,
+      "assignedPins": {
+        "Signal": "D2",
+        "GND": "GND"
+      },
+      "isFullyRouted": true
+    }
+  ],
+  "manualConnections": [],
+  "generatedCode": "void setup() {\n  pinMode(D2, INPUT); digitalWrite(D2, HIGH);\n}\n",
+  "codeError": null,
+  "powerInputMode": "usb-5v",
+  "workspaceMode": "simulation",
+  "wiringMode": "auto",
+  "showGrid": true,
+  "showMinimap": true
+}

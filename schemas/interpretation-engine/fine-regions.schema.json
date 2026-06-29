@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modumake.local/schemas/interpretation-engine/fine-regions.schema.json",
+  "title": "FineRegions",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["region_id", "visible_texts", "observed_shape_tags"],
+    "properties": {
+      "region_id": { "type": "string" },
+      "visible_texts": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "observed_shape_tags": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "structural_observation": { "type": "string" },
+      "confidence_hint": {
+        "type": "string",
+        "enum": ["low", "medium", "high"]
+      }
+    }
+  }
+}

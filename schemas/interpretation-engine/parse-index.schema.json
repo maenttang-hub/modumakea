@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modumake.local/schemas/interpretation-engine/parse-index.schema.json",
+  "title": "ParseIndex",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entity_ids",
+    "labels_by_text",
+    "sheet_links_by_signal"
+  ],
+  "properties": {
+    "entity_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "labels_by_text": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "sheet_links_by_signal": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "bbox_grid": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "schema_version": "2026-06-19",
+  "source": {
+    "source_file_kind": "kicad_sch",
+    "project_name": "Smart_IoT_Sensor_Hub",
+    "generator": "eeschema",
+    "version": "20211123"
+  },
+  "components": [
+    {
+      "instance_id": "mcu-1",
+      "ref": "U1",
+      "lib_id": "MCU_Espressif:ESP32-WROOM-32",
+      "symbol_name": "ESP32-WROOM-32E",
+      "value": "ESP32-WROOM-32E",
+      "footprint": "RF_Module:ESP32-WROOM-32",
+      "mpn_candidates": ["ESP32-WROOM-32E"],
+      "pins": [
+        {
+          "pin_number": "1",
+          "pin_name": "3V3",
+          "electrical_type": "power_in",
+          "direction": "power_in",
+          "net_id": "net-1",
+          "net_label": "3V3",
+          "net_aliases": []
+        },
+        {
+          "pin_number": "11",
+          "pin_name": "GPIO21",
+          "electrical_type": "bidirectional",
+          "direction": "bidirectional",
+          "net_id": "net-3",
+          "net_label": "SDA",
+          "net_aliases": []
+        },
+        {
+          "pin_number": "12",
+          "pin_name": "GPIO22",
+          "electrical_type": "bidirectional",
+          "direction": "bidirectional",
+          "net_id": "net-4",
+          "net_label": "SCL",
+          "net_aliases": []
+        }
+      ]
+    },
+    {
+      "instance_id": "sensor-1",
+      "ref": "U2",
+      "lib_id": "Sensor:DHT11",
+      "symbol_name": "DHT11",
+      "value": "DHT11",
+      "footprint": "DHT11",
+      "mpn_candidates": ["DHT11"],
+      "pins": [
+        {
+          "pin_number": "1",
+          "pin_name": "VCC",
+          "electrical_type": "power_in",
+          "direction": "power_in",
+          "net_id": "net-1",
+          "net_label": "3V3",
+          "net_aliases": []
+        },
+        {
+          "pin_number": "2",
+          "pin_name": "DATA",
+          "electrical_type": "bidirectional",
+          "direction": "bidirectional",
+          "net_id": "net-5",
+          "net_label": "D2",
+          "net_aliases": []
+        }
+      ]
+    }
+  ],
+  "nets": [
+    {
+      "net_id": "net-1",
+      "label": "3V3",
+      "aliases": [],
+      "kind": "power",
+      "connected_pins": [
+        {
+          "ref": "U1",
+          "lib_id": "MCU_Espressif:ESP32-WROOM-32",
+          "pin_number": "1",
+          "pin_name": "3V3",
+          "electrical_type": "power_in"
+        },
+        {
+          "ref": "U2",
+          "lib_id": "Sensor:DHT11",
+          "pin_number": "1",
+          "pin_name": "VCC",
+          "electrical_type": "power_in"
+        }
+      ]
+    },
+    {
+      "net_id": "net-5",
+      "label": "D2",
+      "aliases": [],
+      "kind": "signal",
+      "connected_pins": [
+        {
+          "ref": "U2",
+          "lib_id": "Sensor:DHT11",
+          "pin_number": "2",
+          "pin_name": "DATA",
+          "electrical_type": "bidirectional"
+        }
+      ]
+    }
+  ],
+  "unresolved": {
+    "symbols": [
+      {
+        "instanceId": "sensor-unknown-1",
+        "reference": "U9",
+        "libId": "Custom:VendorModule",
+        "value": "VendorModule",
+        "reason": "No stable part identity was extracted from the imported symbol."
+      }
+    ]
+  },
+  "code_pin_usage": [
+    {
+      "operationType": "pinMode",
+      "pinArgument": "D2",
+      "matchedMcuPinLabel": null,
+      "lineNumber": 42,
+      "scope": "setup",
+      "mode": "INPUT",
+      "conditional": false,
+      "conditions": [],
+      "callPath": [],
+      "connectedNetLabels": [],
+      "connectedComponentReferences": []
+    }
+  ],
+  "validation_flags": [
+    {
+      "source": "formal_verifier",
+      "severity": "error",
+      "code": "formal.unwired-pin-reference",
+      "ruleId": "formal.unwired-pin-reference",
+      "title": "HW/SW Pin Mismatch",
+      "message": "Code uses D2, but the imported schematic has no matching connected MCU pin.",
+      "boardPin": "D2",
+      "lineNumber": 42,
+      "operation": "pinMode",
+      "recommendation": "Reconnect the signal or change the code pin."
+    }
+  ],
+  "rule_findings": [
+    {
+      "severity": "warning",
+      "ruleId": "audit.i2c-pullup-missing",
+      "title": "I2C Pull-up Missing",
+      "message": "SCL/SDA pull-up resistor is missing.",
+      "componentReference": "U1",
+      "recommendation": "Add 4.7k pull-up resistors to SDA and SCL."
+    }
+  ],
+  "stats": {
+    "component_count": 2,
+    "net_count": 2,
+    "unresolved_symbol_count": 1,
+    "wire_segment_count": 7,
+    "junction_count": 2,
+    "label_count": 3
+  }
+}

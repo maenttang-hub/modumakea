@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/tests/kicad_samples/
+.pytest_cache/
 
 # next.js
 /.next/
@@ -23,15 +25,30 @@
 # misc
 .DS_Store
 *.pem
+.codex-artifacts/
+.modumake/
+.venv/
+/downloads/
+__pycache__/
+*.py[cod]
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+pykicadapi/agents/hook_logs/
+pykicadapi/agents/security_logs/
+
+# local ML artifacts
+*.pth
+*.pt
+*.onnx
+*.ckpt
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +56,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated wasm glue
+/src/generated/modumake-kernel/

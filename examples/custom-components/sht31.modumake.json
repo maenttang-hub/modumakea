@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "templateId": "user_custom_sht31",
+  "name": "SHT31 온습도 센서 (I2C)",
+  "category": "SENSOR",
+  "description": "Adafruit SHT31 계열 I2C 온습도 센서",
+  "icon": "Thermometer",
+  "compatibleVoltage": "BOTH",
+  "requiredPins": [
+    { "name": "VCC", "allowedTypes": ["POWER"] },
+    { "name": "GND", "allowedTypes": ["GND"] },
+    { "name": "SDA", "allowedTypes": ["DIGITAL"] },
+    { "name": "SCL", "allowedTypes": ["DIGITAL"] }
+  ],
+  "dependencies": {
+    "arduino": [
+      { "name": "Adafruit SHT31 Library", "version": "2.2.2" },
+      { "name": "Adafruit BusIO", "version": "1.14.5" }
+    ]
+  },
+  "schematic": {
+    "symbol": "sht31_i2c",
+    "referencePrefix": "U"
+  },
+  "aiHints": {
+    "initialize": "Adafruit_SHT31 sht31 = Adafruit_SHT31();\nif (!sht31.begin(0x44)) { while (1) { delay(100); } }",
+    "readTemp": "float temp = sht31.readTemperature();",
+    "readHumid": "float humid = sht31.readHumidity();"
+  },
+  "design": {
+    "datasheetStatus": "official-complete",
+    "preferredInterface": "I2C",
+    "datasheetSources": [
+      {
+        "label": "Adafruit SHT31 Guide",
+        "url": "https://learn.adafruit.com/adafruit-sht31-d-temperature-and-humidity-sensor-breakout"
+      }
+    ],
+    "warnings": [
+      {
+        "severity": "warning",
+        "title": "I2C 풀업 확인",
+        "message": "센서 보드의 SDA/SCL 라인에 기본 풀업 저항이 있는지 확인하세요."
+      }
+    ]
+  }
+}

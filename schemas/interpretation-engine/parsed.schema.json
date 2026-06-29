@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modumake.local/schemas/interpretation-engine/parsed.schema.json",
+  "title": "ParsedSchematic",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schematic_file",
+    "symbols",
+    "nets",
+    "wires",
+    "labels",
+    "rects",
+    "sheets",
+    "cross_sheet_links"
+  ],
+  "properties": {
+    "schematic_file": { "type": "string", "minLength": 1 },
+    "kicad_version": { "type": ["string", "null"] },
+    "symbols": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/symbol" }
+    },
+    "nets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/net" }
+    },
+    "wires": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/wire" }
+    },
+    "labels": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/label" }
+    },
+    "rects": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/rect" }
+    },
+    "sheets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/sheet" }
+    },
+    "cross_sheet_links": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/crossSheetLink" }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "errors": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "bboxMm": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "pointMm": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "pin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number", "name", "position_mm"],
+      "properties": {
+        "number": { "type": "string" },
+        "name": { "type": "string" },
+        "electrical_type": { "type": ["string", "null"] },
+        "position_mm": { "$ref": "#/$defs/pointMm" }
+      }
+    },
+    "symbol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "reference", "lib_id", "position_mm", "rotation_deg", "pins"],
+      "properties": {
+        "id": { "type": "string" },
+        "reference": { "type": "string" },
+        "value": { "type": ["string", "null"] },
+        "footprint": { "type": ["string", "null"] },
+        "lib_id": { "type": "string" },
+        "lib_name": { "type": ["string", "null"] },
+        "position_mm": { "$ref": "#/$defs/pointMm" },
+        "rotation_deg": { "type": "number" },
+        "mirror": { "type": ["boolean", "string", "null"] },
+        "bbox_mm": { "$ref": "#/$defs/bboxMm" },
+        "pins": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/pin" }
+        }
+      }
+    },
+    "net": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "connected_pins"],
+      "properties": {
+        "name": { "type": "string" },
+        "connected_pins": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        }
+      }
+    },
+    "wire": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "label": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label_type", "text", "position_mm"],
+      "properties": {
+        "label_type": { "type": "string", "enum": ["local", "global", "hierarchical"] },
+        "text": { "type": "string" },
+        "position_mm": { "$ref": "#/$defs/pointMm" }
+      }
+    },
+    "rect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "bbox_mm", "contained_entities", "nearby_labels"],
+      "properties": {
+        "id": { "type": "string" },
+        "bbox_mm": { "$ref": "#/$defs/bboxMm" },
+        "contained_entities": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "nearby_labels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["text"],
+            "properties": {
+              "text": { "type": "string" },
+              "distance_mm": { "type": "number", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "sheetPin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "position_mm"],
+      "properties": {
+        "name": { "type": "string" },
+        "position_mm": { "$ref": "#/$defs/pointMm" },
+        "direction": { "type": ["string", "null"] }
+      }
+    },
+    "sheet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sheet_file", "bbox_mm", "sheet_pins"],
+      "properties": {
+        "id": { "type": "string" },
+        "sheet_name": { "type": ["string", "null"] },
+        "sheet_file": { "type": "string" },
+        "bbox_mm": { "$ref": "#/$defs/bboxMm" },
+        "sheet_pins": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sheetPin" }
+        },
+        "nearby_labels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["text"],
+            "properties": {
+              "text": { "type": "string" },
+              "distance_mm": { "type": "number", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "crossSheetLink": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signal", "from", "to"],
+      "properties": {
+        "signal": { "type": "string" },
+        "from": { "type": "string" },
+        "to": { "type": "string" }
+      }
+    }
+  }
+}

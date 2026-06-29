@@ -1,0 +1,41 @@
+[
+  {
+    "id": "tpl_bme280",
+    "name": "BME280 환경 센서",
+    "category": "SENSOR",
+    "description": "온도, 습도, 기압을 읽는 I2C 센서",
+    "icon": "Thermometer",
+    "compatibleVoltage": "BOTH",
+    "requiredPins": [
+      { "name": "VCC", "allowedTypes": ["POWER"] },
+      { "name": "GND", "allowedTypes": ["GND"] },
+      { "name": "SDA", "allowedTypes": ["DIGITAL"] },
+      { "name": "SCL", "allowedTypes": ["DIGITAL"] }
+    ],
+    "libraryIncludes": ["Wire.h", "Adafruit_BME280.h"],
+    "design": {
+      "datasheetStatus": "official-complete"
+    },
+    "popularityRank": 12
+  },
+  {
+    "id": "tpl_mcp3008",
+    "name": "MCP3008 ADC 모듈",
+    "category": "COMMUNICATION",
+    "description": "SPI 기반 8채널 ADC",
+    "icon": "Microchip",
+    "compatibleVoltage": "3.3V",
+    "requiredPins": [
+      { "name": "VCC", "allowedTypes": ["POWER"] },
+      { "name": "GND", "allowedTypes": ["GND"] },
+      { "name": "MISO", "allowedTypes": ["DIGITAL"] },
+      { "name": "MOSI", "allowedTypes": ["DIGITAL"] },
+      { "name": "SCK", "allowedTypes": ["DIGITAL"] },
+      { "name": "CS", "allowedTypes": ["DIGITAL"] }
+    ],
+    "design": {
+      "datasheetStatus": "official-partial"
+    },
+    "popularityRank": 21
+  }
+]

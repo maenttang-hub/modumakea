@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modumake.local/schemas/interpretation-engine/geometry-matches.schema.json",
+  "title": "GeometryMatches",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["region_id", "iou_score", "nearby_labels"],
+    "properties": {
+      "region_id": { "type": "string" },
+      "matched_entity_id": { "type": ["string", "null"] },
+      "matched_entity_type": { "type": ["string", "null"] },
+      "iou_score": { "type": "number", "minimum": 0, "maximum": 1 },
+      "nearby_labels": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    }
+  }
+}

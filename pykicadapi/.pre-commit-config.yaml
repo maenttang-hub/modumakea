@@ -1,0 +1,119 @@
+# Pre-commit configuration for kicad-sch-api
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.md$
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: detect-private-key
+        name: Detect Private Keys (API tokens, SSH keys)
+
+  # Secret detection using gitleaks
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.2
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/psf/black
+    rev: 23.3.0
+    hooks:
+      - id: black
+        language_version: python3
+        args: [--line-length=100]
+        files: ^(python/kicad_sch_api/|python/tests/).*\.py$
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: [--profile=black, --line-length=100]
+        files: ^(python/kicad_sch_api/|python/tests/).*\.py$
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.0.0
+    hooks:
+      - id: flake8
+        args: [--max-line-length=100, --extend-ignore=E203,W503]
+        files: ^(python/kicad_sch_api/|python/tests/).*\.py$
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.3.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+        files: ^python/kicad_sch_api/.*\.py$
+        args: [--ignore-missing-imports]
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.0.0
+    hooks:
+      - id: prettier
+        files: \.(json|yaml|yml|md)$
+        exclude: ^(submodules/|python/tests/reference_kicad_projects/)
+
+  - repo: local
+    hooks:
+      - id: check-root-pollution
+        name: Prevent root directory pollution
+        entry: bash -c '
+          if git diff --cached --name-only | grep -E "^[^/]+\.(kicad_sch|kicad_prl|kicad_pro)$" | grep -v "^examples/" | grep -v "^tests/"; then
+            echo "❌ ERROR: Trying to commit generated schematic files to root directory!"
+            echo "These files should be in examples/ or tests/ directories."
+            echo "Run: ./scripts/clean_root.sh to clean up."
+            exit 1
+          fi
+        '
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
+
+      - id: check-demo-scripts
+        name: Prevent demo/test scripts in root
+        entry: bash -c '
+          if git diff --cached --name-only | grep -E "^(test_circuit_|demo_|generate_).*\.py$"; then
+            echo "⚠️  WARNING: Committing demo/test scripts to root directory."
+            echo "Consider moving to examples/ or tests/ directories."
+            exit 1
+          fi
+        '
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
+
+      - id: check-marketing-language
+        name: Detect AI-slop marketing buzzwords
+        entry: bash -c '
+          BANNED_WORDS="professional|seamless|revolutionary|game-changing|industry-leading|cutting-edge|state-of-the-art|enterprise-ready|enterprise-grade|AI-powered|next-generation|future-proof|world-class|complete solution"
+          FILES=$(git diff --cached --name-only | grep -E "\.(md|rst)$" | grep -v "CLAUDE.md" | grep -v "_PRD.md" | grep -v "REPO_REVIEW" | grep -v "FORUM_POST")
+          if [ -n "$FILES" ]; then
+            MATCHES=$(echo "$FILES" | xargs grep -iE "($BANNED_WORDS)" 2>/dev/null || true)
+            if [ -n "$MATCHES" ]; then
+              echo "❌ ERROR: Marketing buzzwords detected in documentation!"
+              echo ""
+              echo "Found banned words (see CLAUDE.md for style guidelines):"
+              echo "$MATCHES"
+              echo ""
+              echo "Replace with specific technical claims:"
+              echo "  ❌ professional → ✅ object-oriented / tested"
+              echo "  ❌ seamless → ✅ includes / provides"
+              echo "  ❌ AI-powered → ✅ MCP server for programmatic manipulation"
+              echo ""
+              echo "See CLAUDE.md for complete writing guidelines."
+              exit 1
+            fi
+          fi
+        '
+        language: system
+        pass_filenames: false
+        always_run: false
+        stages: [commit]

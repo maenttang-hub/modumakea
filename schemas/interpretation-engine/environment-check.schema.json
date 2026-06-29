@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modumake.local/schemas/interpretation-engine/environment-check.schema.json",
+  "title": "EnvironmentCheck",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "kicad_cli_found",
+    "kicad_cli_version",
+    "svg_export_supported"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["pass", "fail"]
+    },
+    "kicad_cli_found": {
+      "type": "boolean"
+    },
+    "kicad_cli_version": {
+      "type": ["string", "null"]
+    },
+    "svg_export_supported": {
+      "type": "boolean"
+    },
+    "min_required_version": {
+      "type": "string"
+    },
+    "exit_code": {
+      "type": "integer"
+    },
+    "message": {
+      "type": "string"
+    }
+  }
+}

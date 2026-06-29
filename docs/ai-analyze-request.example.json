@@ -1,0 +1,26 @@
+{
+  "validationInput": {
+    "schema_version": "2026-06-19",
+    "source": {
+      "source_file_kind": "kicad_sch",
+      "project_name": "Example Project"
+    },
+    "components": [],
+    "nets": [],
+    "unresolved": {
+      "symbols": []
+    },
+    "code_pin_usage": [],
+    "validation_flags": [],
+    "rule_findings": [],
+    "stats": {
+      "component_count": 0,
+      "net_count": 0,
+      "unresolved_symbol_count": 0,
+      "wire_segment_count": 0,
+      "junction_count": 0,
+      "label_count": 0
+    }
+  },
+  "preferredProvider": "anthropic"
+}

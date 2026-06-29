@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modumake.local/schemas/interpretation-engine/llm-hypotheses.schema.json",
+  "title": "LLMHypotheses",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["region_id", "hypotheses"],
+    "properties": {
+      "region_id": { "type": "string" },
+      "hypotheses": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "block_type",
+            "role",
+            "freeform_description",
+            "evidence",
+            "self_estimated_likelihood"
+          ],
+          "properties": {
+            "block_type": { "type": "string" },
+            "role": { "type": "string" },
+            "freeform_description": { "type": "string" },
+            "evidence": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "self_estimated_likelihood": {
+              "type": "string",
+              "enum": ["low", "medium", "high"]
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modumake.local/schemas/interpretation-engine/interpretation-report.schema.json",
+  "title": "InterpretationReport",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source_file",
+    "generated_at",
+    "thresholds_version",
+    "environment_check",
+    "blocks",
+    "review_needed"
+  ],
+  "properties": {
+    "source_file": { "type": "string" },
+    "generated_at": { "type": "string" },
+    "thresholds_version": { "type": "string" },
+    "environment_check": { "type": "string" },
+    "blocks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/block" }
+    },
+    "review_needed": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reviewItem" }
+    },
+    "errors": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "bboxMm": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "block_id",
+        "block_type",
+        "role",
+        "freeform_description",
+        "confidence",
+        "evidence_sources",
+        "member_entities",
+        "bbox_mm",
+        "needs_review"
+      ],
+      "properties": {
+        "block_id": { "type": "string" },
+        "block_type": {
+          "type": "string",
+          "enum": [
+            "mcu_core",
+            "connector_block",
+            "power_block",
+            "passive_cluster",
+            "repeated_channel",
+            "sheet_interface",
+            "unknown"
+          ]
+        },
+        "role": { "type": "string" },
+        "freeform_description": { "type": "string" },
+        "confidence": {
+          "type": "string",
+          "enum": ["high", "medium", "low", "needs_review"]
+        },
+        "evidence_sources": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "member_entities": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "bbox_mm": { "$ref": "#/$defs/bboxMm" },
+        "needs_review": { "type": "boolean" },
+        "cross_sheet_resolved": { "type": "boolean" }
+      }
+    },
+    "reviewItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["block_id", "reason"],
+      "properties": {
+        "block_id": { "type": "string" },
+        "reason": { "type": "string" },
+        "conflicting_evidence_sources": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modumake.local/schemas/interpretation-engine/pattern-matches.schema.json",
+  "title": "PatternMatches",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["region_id", "pattern_candidates"],
+    "properties": {
+      "region_id": { "type": "string" },
+      "pattern_candidates": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pattern_name", "score"],
+          "properties": {
+            "pattern_name": { "type": "string" },
+            "score": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      }
+    }
+  }
+}

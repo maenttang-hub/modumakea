@@ -1,0 +1,12 @@
+export * from '@/lib/kicad-interpretation/contracts';
+export * from '@/lib/kicad-interpretation/pipeline';
+export * from '@/lib/kicad-interpretation/thresholds';
+export * from '@/lib/kicad-interpretation/renderer';
+export * from '@/lib/kicad-interpretation/calibration';
+export * from '@/lib/kicad-interpretation/matcher/geometry';
+export * from '@/lib/kicad-interpretation/matcher/pattern';
+export * from '@/lib/kicad-interpretation/matcher/rules';
+export * from '@/lib/kicad-interpretation/hierarchy';
+export * from '@/lib/kicad-interpretation/llm/hypothesis';
+export * from '@/lib/kicad-interpretation/vision/adapter';
+export { adaptKiCadSourceToInterpretationParsed } from '@/lib/kicad-interpretation/parser/adapter';

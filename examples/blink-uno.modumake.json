@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "savedAt": "2026-06-17T00:00:00.000Z",
+  "projectName": "Blink UNO Example",
+  "activeBoardId": "uno",
+  "pins": {},
+  "components": [
+    {
+      "instanceId": "resistor-1",
+      "templateId": "tpl_resistor",
+      "name": "LED 저항",
+      "value": "220",
+      "position": { "x": 380, "y": 220 },
+      "rotation": 0,
+      "assignedPins": {
+        "1": "D13"
+      },
+      "isFullyRouted": true
+    },
+    {
+      "instanceId": "led-1",
+      "templateId": "tpl_led",
+      "name": "상태 LED",
+      "position": { "x": 560, "y": 220 },
+      "rotation": 0,
+      "assignedPins": {
+        "GND": "GND"
+      },
+      "isFullyRouted": true
+    }
+  ],
+  "manualConnections": [
+    {
+      "id": "conn-led-chain",
+      "source": { "ownerType": "component", "ownerId": "resistor-1", "pinId": "2" },
+      "target": { "ownerType": "component", "ownerId": "led-1", "pinId": "Signal" }
+    }
+  ],
+  "generatedCode": "const int LED_PIN = 13;\\n\\nvoid setup() {\\n  pinMode(LED_PIN, OUTPUT);\\n}\\n\\nvoid loop() {\\n  digitalWrite(LED_PIN, HIGH);\\n  delay(500);\\n  digitalWrite(LED_PIN, LOW);\\n  delay(500);\\n}",
+  "codeError": null,
+  "powerInputMode": "usb-5v",
+  "workspaceMode": "schematic",
+  "wiringMode": "manual",
+  "showGrid": true,
+  "showMinimap": true
+}

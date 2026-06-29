@@ -1,0 +1,107 @@
+{
+  "version": 3,
+  "savedAt": "2026-06-17T09:30:00.000Z",
+  "projectName": "SHT31 Review Demo",
+  "activeBoardId": "uno",
+  "pins": {},
+  "components": [
+    {
+      "instanceId": "sht31-1",
+      "templateId": "user_custom_sht31",
+      "name": "SHT31 온습도 센서 1",
+      "value": "0x44",
+      "position": { "x": 555, "y": 195 },
+      "rotation": 0,
+      "assignedPins": {
+        "VCC": "5V",
+        "GND": "GND",
+        "SDA": "A4",
+        "SCL": "A5"
+      },
+      "isFullyRouted": true
+    },
+    {
+      "instanceId": "cap-1",
+      "templateId": "tpl_capacitor",
+      "name": "바이패스 콘덴서",
+      "value": "0.1uF",
+      "position": { "x": 735, "y": 180 },
+      "rotation": 90,
+      "assignedPins": {},
+      "isFullyRouted": true
+    }
+  ],
+  "manualConnections": [
+    {
+      "id": "conn-cap-vcc",
+      "source": { "ownerType": "component", "ownerId": "cap-1", "pinId": "1" },
+      "target": { "ownerType": "component", "ownerId": "sht31-1", "pinId": "VCC" },
+      "suggestedNetName": "SHT31_VCC_BYPASS"
+    },
+    {
+      "id": "conn-cap-gnd",
+      "source": { "ownerType": "component", "ownerId": "cap-1", "pinId": "2" },
+      "target": { "ownerType": "component", "ownerId": "sht31-1", "pinId": "GND" },
+      "suggestedNetName": "SHT31_GND_BYPASS"
+    }
+  ],
+  "generatedCode": "#include <Wire.h>\n#include <Adafruit_SHT31.h>\n\nAdafruit_SHT31 sht31 = Adafruit_SHT31();\n\nvoid setup() {\n  Wire.begin();\n  sht31.begin(0x44);\n}\n\nvoid loop() {\n  float temp = sht31.readTemperature();\n  float humid = sht31.readHumidity();\n  delay(1000);\n}\n",
+  "codeError": null,
+  "lastCodeGenerationMeta": {
+    "provider": "gemini",
+    "model": "gemini-flash-latest",
+    "label": "Gemini · 검수 통과",
+    "repaired": false,
+    "fallback": false,
+    "reviewIssueCount": 0,
+    "reviewErrorCount": 0
+  },
+  "customComponentPackages": [
+    {
+      "version": "1.0.0",
+      "templateId": "user_custom_sht31",
+      "name": "SHT31 온습도 센서 (I2C)",
+      "category": "SENSOR",
+      "description": "Adafruit SHT31 계열 I2C 온습도 센서",
+      "icon": "Thermometer",
+      "compatibleVoltage": "BOTH",
+      "requiredPins": [
+        { "name": "VCC", "allowedTypes": ["POWER"] },
+        { "name": "GND", "allowedTypes": ["GND"] },
+        { "name": "SDA", "allowedTypes": ["DIGITAL"] },
+        { "name": "SCL", "allowedTypes": ["DIGITAL"] }
+      ],
+      "dependencies": {
+        "arduino": [
+          { "name": "Adafruit SHT31 Library", "version": "2.2.2" },
+          { "name": "Adafruit BusIO", "version": "1.14.5" }
+        ]
+      },
+      "schematic": {
+        "symbol": "sht31_i2c",
+        "referencePrefix": "U"
+      },
+      "aiHints": {
+        "initialize": "Adafruit_SHT31 sht31 = Adafruit_SHT31();\nif (!sht31.begin(0x44)) { while (1) { delay(100); } }",
+        "readTemp": "float temp = sht31.readTemperature();",
+        "readHumid": "float humid = sht31.readHumidity();"
+      },
+      "design": {
+        "datasheetStatus": "official-complete",
+        "preferredInterface": "I2C",
+        "datasheetSources": [
+          {
+            "label": "Adafruit SHT31 Guide",
+            "url": "https://learn.adafruit.com/adafruit-sht31-d-temperature-and-humidity-sensor-breakout"
+          }
+        ]
+      }
+    }
+  ],
+  "isGuestStudentMode": false,
+  "powerInputMode": "usb-5v",
+  "workspaceMode": "simulation",
+  "wiringMode": "manual",
+  "showGrid": true,
+  "showMinimap": true
+}

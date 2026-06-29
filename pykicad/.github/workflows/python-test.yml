@@ -1,0 +1,52 @@
+# This workflow will install Python dependencies and runs the unittest with different python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Python Unittests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  python-unittest:
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.10", "3.9", "3.8", "3.7"]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -r requirements_dev.txt
+    - name: Build and install kiutils on Windows
+      if: matrix.os == 'windows-latest'
+      run: |
+        python -m build
+        python -m pip install (Get-ChildItem -Path dist -Recurse -Filter "*.whl").Fullname
+    - name: Build and install kiutils on Unix & macOS
+      if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+      run: |
+        python -m build
+        python -m pip install dist/$(ls dist | grep none-any.whl)
+    - name: Test with unittest
+      run: |
+        mkdir reports
+        python3 test.py
+        python3 -m unittest
+    - name: 'Upload test report'
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-report
+        path: reports

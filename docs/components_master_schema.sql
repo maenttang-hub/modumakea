@@ -1,0 +1,6 @@
+-- Legacy note:
+-- 기존 ETL 문서에서 사용하던 `components_master` 기준 스키마입니다.
+-- 현재 권장 기준은 `docs/supabase_schema.sql`이며, 새 테이블 이름은 `components`입니다.
+--
+-- 앱은 현재 `components`를 먼저 조회하고, 없으면 `components_master`를 fallback으로 조회합니다.
+-- 즉, 기존 데이터를 유지해도 동작하고, 새 프로젝트는 `components` 기준으로 세팅하면 됩니다.

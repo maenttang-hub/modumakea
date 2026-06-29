@@ -1,0 +1,15 @@
+.git
+.next
+node_modules
+.colima
+.modumake
+.venv
+.DS_Store
+
+*
+!services/
+!services/compile-server/
+!services/compile-server/lib/
+!services/compile-server/lib/**
+!services/sandbox-runtime/
+!services/sandbox-runtime/**
