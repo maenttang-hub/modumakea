@@ -309,6 +309,19 @@ export function buildProjectVerificationReport(input: ProjectVerificationReportI
   const verificationLimitedCount = input.audit.partialCount + input.audit.genericCount;
   const formalCriticalCount = formalIssues.filter(issue => classifyIssueActionBucket(issue) === 'must-fix').length;
   const pcbIssueCount = reportIssues.filter(issue => issue.ruleId?.startsWith('pcb.') || issue.code?.startsWith('pcb.')).length;
+  const kicadPcbIssueCount = reportIssues.filter(issue => issue.sourceLabel === 'KiCad PCB DRC').length;
+  const modumakePcbIssueCount = reportIssues.filter(issue => issue.sourceLabel === 'ModuMake PCB DRC').length;
+  const pcbSourceSummaryLine = pcbIssueCount > 0
+    ? kicadPcbIssueCount > 0
+      ? t(
+          `PCB 검증 출처: KiCad 공식 DRC ${kicadPcbIssueCount}건 / ModuMake 자체 사전 검사 ${modumakePcbIssueCount}건`,
+          `PCB validation source: ${kicadPcbIssueCount} KiCad official DRC findings / ${modumakePcbIssueCount} ModuMake pre-check findings`
+        )
+      : t(
+          `PCB 검증 출처: KiCad 공식 DRC 미반영 / ModuMake 자체 사전 검사 ${modumakePcbIssueCount}건`,
+          `PCB validation source: KiCad official DRC not included / ${modumakePcbIssueCount} ModuMake pre-check findings`
+        )
+    : null;
   const reviewSummaryLines = [
     mustFixIssues[0] ? `- ${t('즉시 수정 필요', 'Immediate fix')}: ${translateEngineIssue(mustFixIssues[0], input.language).title}` : null,
     reviewIssues[0] ? `- ${t('확인 권장', 'Review next')}: ${translateEngineIssue(reviewIssues[0], input.language).title}` : null,
@@ -316,10 +329,15 @@ export function buildProjectVerificationReport(input: ProjectVerificationReportI
   ].filter(Boolean);
   const limitations = [
     pcbIssueCount > 0
-      ? t(
-          '가져온 PCB의 형상, 넷 연속성, 제조성 관련 점검 결과를 함께 반영했습니다. 제조사별 공정값과 실제 생산 조건은 별도 확인이 필요합니다.',
-          'Imported PCB geometry, net-continuity, and manufacturability-related findings are included. Manufacturer-specific process limits and production conditions still need separate review.'
-        )
+      ? kicadPcbIssueCount > 0
+        ? t(
+            'KiCad 공식 DRC 결과와 ModuMake 자체 사전 검사를 함께 반영했습니다. 제조사별 공정값과 실제 생산 조건은 별도 확인이 필요합니다.',
+            'KiCad official DRC results and ModuMake PCB pre-checks are both included. Manufacturer-specific process limits and production conditions still need separate review.'
+          )
+        : t(
+            '현재 PCB 항목은 ModuMake 자체 사전 검사 결과입니다. KiCad 공식 DRC와 제조사 DFM을 대체하지 않습니다.',
+            'Current PCB findings are ModuMake pre-check results. They do not replace KiCad official DRC or manufacturer DFM.'
+          )
       : t(
           '이 리포트는 schematic/netlist 기준 자동 검증 결과이며 실제 PCB trace 길이와 copper area는 반영하지 않습니다.',
           'This report is generated from schematic and netlist analysis and does not yet include real PCB trace length or copper area.'
@@ -398,6 +416,7 @@ export function buildProjectVerificationReport(input: ProjectVerificationReportI
     '',
     `## 8. ${t('룰 엔진 / DRC 세부 이슈', 'Rule Engine / DRC Findings')}`,
     '',
+    ...(pcbSourceSummaryLine ? [pcbSourceSummaryLine, ''] : []),
     drcIssues.length > 0
       ? drcIssues.slice(0, 12).map((issue, index) => buildIssueBlock(issue, index + 1, input.language, input.components)).join('\n\n')
       : t('No datasheet or DRC findings are blocking the current design.', 'No datasheet or DRC findings are blocking the current design.'),

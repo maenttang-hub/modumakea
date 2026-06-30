@@ -220,3 +220,32 @@ test('project verification report includes schematic PCB augmentation candidates
   assert.match(report.markdown, /자동 반영 안 함/);
   assert.match(report.markdown, /TP1/);
 });
+
+test('project verification report separates ModuMake PCB pre-checks from official KiCad DRC', () => {
+  const audit = buildReportFixture();
+  audit.issues = [
+    {
+      severity: 'warning',
+      code: 'pcb.PCB_CLEARANCE_TRACK_PAD',
+      ruleId: 'pcb.PCB_CLEARANCE_TRACK_PAD',
+      title: '배선과 패드 간격 확인 필요',
+      message: 'ModuMake local clearance pre-check found a close track.',
+      recommendation: 'KiCad DRC로 최종 확인하세요.',
+      sourceLabel: 'ModuMake PCB DRC',
+      confidence: 'needs-review',
+    },
+  ];
+  audit.issueCount = 1;
+
+  const report = buildProjectVerificationReport({
+    projectName: 'pcb_source_split',
+    boardId: 'kicad_generic',
+    audit,
+    components: [],
+    language: 'ko',
+    generatedAt: new Date('2026-06-29T10:28:00.000Z'),
+  });
+
+  assert.match(report.markdown, /PCB 검증 출처: KiCad 공식 DRC 미반영 \/ ModuMake 자체 사전 검사 1건/);
+  assert.match(report.markdown, /KiCad 공식 DRC와 제조사 DFM을 대체하지 않습니다/);
+});

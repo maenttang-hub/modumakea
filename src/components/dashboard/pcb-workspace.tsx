@@ -332,7 +332,7 @@ export function PcbWorkspace() {
           resolveTemplate: getTemplateById,
         },
       });
-      const kicadReport = mapKiCadPcbDrcReport(payload.report);
+      const kicadReport = mapKiCadPcbDrcReport(payload.report, { drcMode: payload.drcMode });
       const merged = mergeImportedPcbValidationReports(localReport, kicadReport);
       setImportedPcbValidation(merged);
       setSelectedPcbIssueId(merged.issues[0]?.id ?? null);

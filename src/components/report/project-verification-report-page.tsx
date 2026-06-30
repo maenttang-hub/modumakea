@@ -167,8 +167,13 @@ function mappingSourceLabel(sourceInfo: IssueSourceBucketInfo, t: (ko: string, e
   }
 }
 
-function sourceBadges(sourceInfo: IssueSourceBucketInfo, t: (ko: string, en: string) => string) {
+function sourceBadges(
+  sourceInfo: IssueSourceBucketInfo,
+  t: (ko: string, en: string) => string,
+  issue?: ProjectAuditIssue
+) {
   return [
+    issue?.sourceLabel,
     sourceBucketLabel(sourceInfo, t),
     sourceQualityLabel(sourceInfo, t),
     mappingConfidenceLabel(sourceInfo, t),
@@ -232,6 +237,42 @@ function formatGeneratedAt(value: Date, locale: string) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(value);
+}
+
+function countImportedPcbIssuesBySource(
+  report: ImportedPcbValidationReport | null | undefined,
+  source: ImportedPcbValidationReport['issues'][number]['source']
+) {
+  const issues = report?.issues.filter(issue => issue.source === source) ?? [];
+  return {
+    total: issues.length,
+    error: issues.filter(issue => issue.severity === 'error').length,
+    warning: issues.filter(issue => issue.severity === 'warning').length,
+    info: issues.filter(issue => issue.severity === 'info').length,
+  };
+}
+
+function formatPcbSourceCounts(
+  counts: ReturnType<typeof countImportedPcbIssuesBySource>,
+  t: (ko: string, en: string) => string
+) {
+  return t(
+    `오류 ${counts.error} · 경고 ${counts.warning} · 정보 ${counts.info}`,
+    `${counts.error} errors · ${counts.warning} warnings · ${counts.info} info`
+  );
+}
+
+function kicadDrcModeLabel(
+  mode: ImportedPcbValidationReport['checks']['kicadDrcMode'],
+  t: (ko: string, en: string) => string
+) {
+  if (mode === 'schematic-parity') {
+    return t('schematic parity 포함', 'schematic parity included');
+  }
+  if (mode === 'board-only') {
+    return t('board-only', 'board-only');
+  }
+  return t('실행 모드 미기록', 'mode not recorded');
 }
 
 function readWorkspaceSnapshot(): ReportWorkspaceSnapshot {
@@ -399,6 +440,12 @@ export function ProjectVerificationReportPage() {
       ? t('Schematic / Netlist / Code / PCB DRC', 'Schematic / Netlist / Code / PCB DRC')
       : t('PCB 형상 / Net 연속성 / 제조성 DRC', 'PCB Geometry / Net Continuity / Manufacturing DRC')
     : t('Schematic / Netlist / Code', 'Schematic / Netlist / Code');
+  const pcbSourceStats = useMemo(() => ({
+    kicad: countImportedPcbIssuesBySource(effectiveImportedPcbValidation, 'kicad-cli'),
+    modumake: countImportedPcbIssuesBySource(effectiveImportedPcbValidation, 'modumake-pcb'),
+    hasKiCadDrc: Boolean(effectiveImportedPcbValidation?.checks.kicadDrc),
+    kicadDrcMode: effectiveImportedPcbValidation?.checks.kicadDrcMode,
+  }), [effectiveImportedPcbValidation]);
 
   const issues = useMemo<ProjectAuditIssue[]>(() => {
     if (!audit || !workspace) {
@@ -738,6 +785,47 @@ export function ProjectVerificationReportPage() {
               <div className="mt-2 text-[24px] font-semibold text-[#3d6d47]">{workspace.components.length}</div>
             </div>
             </div>
+            {hasImportedPcbReview ? (
+              <div data-testid="report-pcb-drc-source" className="mt-4 border border-[#dcd0bf] bg-white">
+                <div className="border-b border-[#e3d7c8] bg-[#fbf7f0] px-4 py-3">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('PCB 검증 출처', 'PCB validation source')}</div>
+                  <div className="mt-1 text-[12px] leading-6 text-[#5f5145]">
+                    {pcbSourceStats.hasKiCadDrc
+                      ? t('KiCad 공식 DRC 결과와 ModuMake 자체 PCB 검사를 분리 집계했습니다.', 'KiCad official DRC and ModuMake PCB pre-checks are counted separately.')
+                      : t('KiCad 공식 DRC 미실행 상태입니다. 현재 PCB 항목은 ModuMake 자체 사전 검사 결과입니다.', 'KiCad official DRC has not been run. Current PCB findings come from ModuMake pre-checks.')}
+                  </div>
+                </div>
+                <div className="grid gap-0 md:grid-cols-3">
+                  <div className="border-b border-[#e3d7c8] px-4 py-3 md:border-b-0 md:border-r">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('공식 KiCad DRC', 'Official KiCad DRC')}</div>
+                    <div className="mt-2 text-[12px] font-semibold leading-6 text-[#3d332c]">
+                      {pcbSourceStats.hasKiCadDrc
+                        ? formatPcbSourceCounts(pcbSourceStats.kicad, t)
+                        : t('KiCad 공식 DRC 미실행', 'KiCad official DRC not run')}
+                    </div>
+                    {pcbSourceStats.hasKiCadDrc ? (
+                      <div className="mt-1 text-[11px] leading-5 text-[#6b5d50]">
+                        {kicadDrcModeLabel(pcbSourceStats.kicadDrcMode, t)}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="border-b border-[#e3d7c8] px-4 py-3 md:border-b-0 md:border-r">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('ModuMake 자체 PCB 검사', 'ModuMake PCB pre-check')}</div>
+                    <div className="mt-2 text-[12px] font-semibold leading-6 text-[#3d332c]">
+                      {formatPcbSourceCounts(pcbSourceStats.modumake, t)}
+                    </div>
+                  </div>
+                  <div className="px-4 py-3">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('판정 기준', 'Interpretation')}</div>
+                    <div className="mt-2 text-[12px] font-semibold leading-6 text-[#3d332c]">
+                      {pcbSourceStats.hasKiCadDrc
+                        ? t('공식 결과 우선 + 자체 보조 신호', 'Official result first + local support signals')
+                        : t('자체 사전 검사만 반영', 'Pre-check only')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </section>
 
           {([
@@ -766,7 +854,7 @@ export function ProjectVerificationReportPage() {
                     const facts = issue.evidence?.observedFacts ?? [];
                     const assumptions = issue.evidence?.assumptions ?? [];
                     const sourceInfo = resolveIssueSourceBucketInfo(issue, workspace.components);
-                    const badges = sourceBadges(sourceInfo, t);
+                    const badges = sourceBadges(sourceInfo, t, issue);
                     return (
                       <article key={`${issue.ruleId ?? issue.code ?? issue.title}-${index}`} className="mm-report-finding border border-[#dcd0bf] bg-white px-4 py-4">
                         <div className="flex flex-wrap items-center gap-2">
@@ -1038,10 +1126,15 @@ export function ProjectVerificationReportPage() {
                 <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('PCB 반영 범위', 'PCB coverage')}</div>
                 <div className="mt-2">
                   {hasImportedPcbReview
-                    ? t(
-                        '가져온 PCB의 형상, net 연속성, clearance/제조성 점검을 함께 반영했습니다. 다만 제조사별 공정 한계와 실제 양산 조건은 별도 확인이 필요합니다.',
-                        'Imported PCB geometry, net continuity, clearance, and manufacturability checks are included. Manufacturer-specific limits and production conditions still need separate confirmation.'
-                      )
+                    ? pcbSourceStats.hasKiCadDrc
+                      ? t(
+                          'KiCad 공식 DRC 결과와 ModuMake 자체 사전 검사를 함께 반영했습니다. 제조사별 공정 한계와 실제 양산 조건은 별도 확인이 필요합니다.',
+                          'KiCad official DRC results and ModuMake PCB pre-checks are both included. Manufacturer-specific limits and production conditions still need separate confirmation.'
+                        )
+                      : t(
+                          '가져온 PCB의 형상, net 연속성, clearance/제조성 사전 검사를 반영했습니다. 아직 KiCad 공식 DRC는 포함되지 않았으므로 최종 판정으로 보지 마세요.',
+                          'Imported PCB geometry, net continuity, clearance, and manufacturability pre-checks are included. KiCad official DRC is not included yet, so do not treat this as final sign-off.'
+                        )
                     : t(
                         '현재 리포트는 schematic/netlist 기준이며 실제 trace 길이, copper area, 배치 열 분산은 직접 반영하지 않습니다.',
                         'This report is schematic/netlist-driven and does not directly model final trace length, copper area, or placement thermal spread.'

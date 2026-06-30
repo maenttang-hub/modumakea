@@ -161,6 +161,8 @@ test('editor and report show matching imported PCB validation counts', async ({ 
   await page.waitForURL('**/report');
   await expect(page.getByText('Motor_driver_A4988.kicad_pcb').first()).toBeVisible();
   await expect(page.getByText('PCB 형상 / Net 연속성 / 제조성 DRC')).toBeVisible();
+  await expect(page.getByTestId('report-pcb-drc-source')).toContainText('KiCad 공식 DRC 미실행');
+  await expect(page.getByTestId('report-pcb-drc-source')).toContainText('ModuMake 자체 PCB 검사');
   await expect(page.getByText('가져온 PCB의 형상', { exact: false })).toBeVisible();
 
   const reportCounts = {

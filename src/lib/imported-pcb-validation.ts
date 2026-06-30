@@ -1710,7 +1710,10 @@ function normalizeViolationArray(value: unknown): DrcJsonViolation[] {
   return value.filter((item): item is DrcJsonViolation => Boolean(item) && typeof item === 'object');
 }
 
-export function mapKiCadPcbDrcReport(report: unknown): ImportedPcbValidationReport {
+export function mapKiCadPcbDrcReport(
+  report: unknown,
+  options: { drcMode?: ImportedPcbValidationReport['checks']['kicadDrcMode'] } = {}
+): ImportedPcbValidationReport {
   const raw = report && typeof report === 'object' ? report as KiCadDrcJsonReport : {};
   const violations = normalizeViolationArray(raw.violations);
   const unconnected = normalizeViolationArray(raw.unconnected_items);
@@ -1726,6 +1729,7 @@ export function mapKiCadPcbDrcReport(report: unknown): ImportedPcbValidationRepo
     netContinuity: false,
     manufacturability: false,
     kicadDrc: true,
+    kicadDrcMode: options.drcMode,
   });
 }
 
@@ -1762,5 +1766,6 @@ export function mergeImportedPcbValidationReports(
     schematicParityContextKey: extra.checks.schematicParityContextKey ?? base.checks.schematicParityContextKey,
     renderFidelity: Boolean(base.checks.renderFidelity || extra.checks.renderFidelity),
     kicadDrc: base.checks.kicadDrc || extra.checks.kicadDrc,
+    kicadDrcMode: extra.checks.kicadDrcMode ?? base.checks.kicadDrcMode,
   });
 }

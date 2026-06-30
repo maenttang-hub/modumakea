@@ -6,12 +6,22 @@ import type {
 } from '@/types';
 
 function confidenceForPcbIssue(issue: ImportedPcbValidationIssue): ProjectAuditIssueConfidence {
+  if (issue.source === 'kicad-cli') {
+    return 'confirmed';
+  }
+
   if (issue.severity === 'info') {
     return 'informational';
   }
 
-  if (issue.source === 'kicad-cli' || issue.severity === 'error') {
-    return 'confirmed';
+  if (
+    issue.code === 'PCB_EMPTY_GEOMETRY' ||
+    issue.code === 'PCB_NO_EDGE_CUTS' ||
+    issue.code === 'PCB_DUPLICATE_REFERENCE' ||
+    issue.code === 'PCB_STRAY_COPPER' ||
+    issue.code === 'PCB_NET_DISCONNECTED'
+  ) {
+    return 'strong-inference';
   }
 
   return 'needs-review';
@@ -39,6 +49,16 @@ function buildObservedFacts(issue: ImportedPcbValidationIssue) {
   ].filter((item): item is string => Boolean(item));
 }
 
+function buildAssumptions(issue: ImportedPcbValidationIssue) {
+  if (issue.source === 'kicad-cli') {
+    return [];
+  }
+
+  return [
+    'ModuMake 자체 PCB 검사는 사전 검토 신호이며 KiCad 공식 DRC와 제조사 DFM을 대체하지 않습니다.',
+  ];
+}
+
 export function isImportedPcbAuditIssue(issue: ProjectAuditIssue) {
   return issue.ruleId?.startsWith('pcb.') || issue.code?.startsWith('pcb.');
 }
@@ -58,6 +78,7 @@ export function mapImportedPcbValidationIssuesToProjectAuditIssues(
   return report.issues.map(issue => {
     const confidence = confidenceForPcbIssue(issue);
     const observedFacts = buildObservedFacts(issue);
+    const assumptions = buildAssumptions(issue);
 
     return {
       severity: issue.severity,
@@ -77,7 +98,7 @@ export function mapImportedPcbValidationIssuesToProjectAuditIssues(
         confidence,
         evidenceSummary: issue.message,
         observedFacts,
-        assumptions: [],
+        assumptions,
         checkedBy: ['kicad-import'],
         affectedNets: issue.netName ? [issue.netName] : undefined,
         howToVerify: issue.recommendation,

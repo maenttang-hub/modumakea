@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { buildEffectiveImportedPcbValidation } from '@/lib/effective-imported-pcb-validation';
-import { validateImportedPcbDocument } from '@/lib/imported-pcb-validation';
+import { mapImportedPcbValidationIssuesToProjectAuditIssues } from '@/lib/imported-pcb-audit-issues';
+import { mapKiCadPcbDrcReport, validateImportedPcbDocument } from '@/lib/imported-pcb-validation';
 import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
 import { createProjectDocument, normalizeProjectDocument } from '@/store/project-document';
 import { buildDefaultProjectState } from '@/store/store-defaults';
@@ -259,6 +260,32 @@ test('effective PCB validation refreshes stale schematic parity context', () => 
   assert.equal(effectiveValidation?.issues.some(issue => issue.code === 'PCB_SCHEMATIC_NET_MISSING' && issue.netName === 'MISSING_NET'), false);
   assert.equal(effectiveValidation?.checks.schematicParity, true);
   assert.ok(effectiveValidation?.checks.schematicParityContextKey);
+});
+
+test('KiCad PCB DRC mapping keeps official source mode metadata', () => {
+  const report = mapKiCadPcbDrcReport({
+    violations: [{ type: 'clearance', severity: 'error', description: 'official clearance finding' }],
+    unconnected_items: [],
+  }, { drcMode: 'board-only' });
+
+  assert.equal(report.source, 'kicad-cli');
+  assert.equal(report.checks.kicadDrc, true);
+  assert.equal(report.checks.kicadDrcMode, 'board-only');
+  assert.equal(report.issues[0]?.source, 'kicad-cli');
+});
+
+test('ModuMake PCB findings map as pre-check evidence instead of official DRC', () => {
+  const document = parseKiCadPcb(ADVANCED_RULE_PROJECT, { sourceFilename: 'advanced.kicad_pcb' });
+  const report = validateImportedPcbDocument(document);
+  const clearanceIssue = report.issues.find(issue => issue.code === 'PCB_COPPER_TO_EDGE_CLEARANCE');
+
+  assert.ok(clearanceIssue);
+  const auditIssue = mapImportedPcbValidationIssuesToProjectAuditIssues(report)
+    .find(issue => issue.params?.pcbIssueId === clearanceIssue.id);
+
+  assert.equal(auditIssue?.sourceLabel, 'ModuMake PCB DRC');
+  assert.equal(auditIssue?.confidence, 'needs-review');
+  assert.match(auditIssue?.evidence?.assumptions.join('\n') ?? '', /KiCad 공식 DRC/);
 });
 
 test('PCB clearance ignores tracks on copper layers that do not touch the pad', () => {

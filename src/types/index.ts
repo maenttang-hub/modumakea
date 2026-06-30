@@ -493,6 +493,7 @@ export interface PcbDocument {
 
 export type ImportedPcbLayerId = string;
 export type ImportedPcbValidationSource = 'modumake-pcb' | 'kicad-cli';
+export type ImportedPcbKiCadDrcMode = 'schematic-parity' | 'board-only';
 
 export interface ImportedPcbPoint {
   x: number;
@@ -730,6 +731,7 @@ export interface ImportedPcbValidationReport {
     schematicParityContextKey?: string;
     renderFidelity?: boolean;
     kicadDrc: boolean;
+    kicadDrcMode?: ImportedPcbKiCadDrcMode;
   };
   issues: ImportedPcbValidationIssue[];
 }
