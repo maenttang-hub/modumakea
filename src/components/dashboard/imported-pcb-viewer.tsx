@@ -44,6 +44,8 @@ const LAYER_COLORS: Record<string, string> = {
 };
 
 const MAX_VISIBLE_ISSUE_MARKERS = 240;
+const BOARD_OUTLINE_STROKE = '#1f2937';
+const BOARD_OUTLINE_HALO = '#fffdf9';
 
 function layerColor(layer: ImportedPcbLayerId) {
   return LAYER_COLORS[layer] ?? '#94a3b8';
@@ -164,8 +166,44 @@ function polygonPoints(points: Array<{ x: number; y: number }>) {
   return points.map(point => `${point.x},${point.y}`).join(' ');
 }
 
-function GraphicShape({ graphic }: { graphic: ImportedPcbGraphic }) {
-  const color = layerColor(graphic.layer);
+type GraphicShapeVariant = 'default' | 'outline-halo' | 'outline';
+
+function isBoardOutlineGraphic(graphic: ImportedPcbGraphic) {
+  return graphic.layer === 'Edge.Cuts';
+}
+
+function graphicStroke(graphic: ImportedPcbGraphic, variant: GraphicShapeVariant) {
+  if (variant === 'outline-halo') {
+    return BOARD_OUTLINE_HALO;
+  }
+  if (variant === 'outline') {
+    return BOARD_OUTLINE_STROKE;
+  }
+  return layerColor(graphic.layer);
+}
+
+function graphicStrokeWidth(graphic: ImportedPcbGraphic, variant: GraphicShapeVariant) {
+  if (variant === 'outline-halo') {
+    return 5;
+  }
+  if (variant === 'outline') {
+    return 2.25;
+  }
+  return Math.max(graphic.width, 0.04);
+}
+
+function graphicOpacity(graphic: ImportedPcbGraphic, variant: GraphicShapeVariant) {
+  if (variant !== 'default') {
+    return 1;
+  }
+  return graphic.layer.includes('Fab') || graphic.layer.includes('CrtYd') ? 0.55 : 0.9;
+}
+
+function GraphicShape({ graphic, variant = 'default' }: { graphic: ImportedPcbGraphic; variant?: GraphicShapeVariant }) {
+  const color = graphicStroke(graphic, variant);
+  const strokeWidth = graphicStrokeWidth(graphic, variant);
+  const opacity = graphicOpacity(graphic, variant);
+  const fill = variant === 'default' && graphic.fill ? `${color}22` : 'none';
 
   switch (graphic.kind) {
     case 'line':
@@ -176,10 +214,10 @@ function GraphicShape({ graphic }: { graphic: ImportedPcbGraphic }) {
           x2={graphic.end.x}
           y2={graphic.end.y}
           stroke={color}
-          strokeWidth={Math.max(graphic.width, 0.04)}
+          strokeWidth={strokeWidth}
           strokeLinecap="round"
           vectorEffect="non-scaling-stroke"
-          opacity={graphic.layer.includes('Fab') || graphic.layer.includes('CrtYd') ? 0.55 : 0.9}
+          opacity={opacity}
         />
       );
     case 'polyline':
@@ -187,10 +225,12 @@ function GraphicShape({ graphic }: { graphic: ImportedPcbGraphic }) {
         <polyline
           points={polygonPoints(graphic.points)}
           stroke={color}
-          strokeWidth={Math.max(graphic.width, 0.04)}
-          fill={graphic.fill ? `${color}22` : 'none'}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill={fill}
           vectorEffect="non-scaling-stroke"
-          opacity={graphic.layer.includes('Fab') || graphic.layer.includes('CrtYd') ? 0.5 : 0.85}
+          opacity={variant === 'default' ? (graphic.layer.includes('Fab') || graphic.layer.includes('CrtYd') ? 0.5 : 0.85) : opacity}
         />
       );
     case 'circle':
@@ -200,10 +240,10 @@ function GraphicShape({ graphic }: { graphic: ImportedPcbGraphic }) {
           cy={graphic.center.y}
           r={graphic.radius}
           stroke={color}
-          strokeWidth={Math.max(graphic.width, 0.04)}
-          fill={graphic.fill ? `${color}22` : 'none'}
+          strokeWidth={strokeWidth}
+          fill={fill}
           vectorEffect="non-scaling-stroke"
-          opacity={graphic.layer.includes('Fab') || graphic.layer.includes('CrtYd') ? 0.5 : 0.85}
+          opacity={variant === 'default' ? (graphic.layer.includes('Fab') || graphic.layer.includes('CrtYd') ? 0.5 : 0.85) : opacity}
         />
       );
     case 'arc':
@@ -211,10 +251,11 @@ function GraphicShape({ graphic }: { graphic: ImportedPcbGraphic }) {
         <path
           d={pathForArc(graphic)}
           stroke={color}
-          strokeWidth={Math.max(graphic.width, 0.04)}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
           fill="none"
           vectorEffect="non-scaling-stroke"
-          opacity={0.85}
+          opacity={variant === 'default' ? 0.85 : opacity}
         />
       );
     case 'text':
@@ -233,6 +274,15 @@ function GraphicShape({ graphic }: { graphic: ImportedPcbGraphic }) {
         </text>
       );
   }
+}
+
+function BoardOutlineShape({ graphic }: { graphic: ImportedPcbGraphic }) {
+  return (
+    <g pointerEvents="none">
+      <GraphicShape graphic={graphic} variant="outline-halo" />
+      <GraphicShape graphic={graphic} variant="outline" />
+    </g>
+  );
 }
 
 function PadShape({ pad, visibleLayers }: { pad: ImportedPcbPad; visibleLayers: Set<string> }) {
@@ -429,7 +479,7 @@ export function ImportedPcbViewer({
         {document.zones.filter(zone => visibleLayers.has(zone.layer)).map(zone => (
           <ZoneShape key={zone.id} zone={zone} />
         ))}
-        {document.drawings.filter(graphic => visibleLayers.has(graphic.layer)).map(graphic => (
+        {document.drawings.filter(graphic => visibleLayers.has(graphic.layer) && !isBoardOutlineGraphic(graphic)).map(graphic => (
           <GraphicShape key={graphic.id} graphic={graphic} />
         ))}
         {document.footprints.flatMap(footprint =>
@@ -461,6 +511,9 @@ export function ImportedPcbViewer({
             .filter(pad => isPadVisible(pad, visibleLayers))
             .map(pad => <PadShape key={pad.id} pad={pad} visibleLayers={visibleLayers} />)
         )}
+        {document.drawings.filter(graphic => visibleLayers.has(graphic.layer) && isBoardOutlineGraphic(graphic)).map(graphic => (
+          <BoardOutlineShape key={`${graphic.id}:outline`} graphic={graphic} />
+        ))}
         {issueMarkerState.visible.map(issue => (
           <g
             key={issue.id}
