@@ -1,14 +1,16 @@
 import testRunner from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 
 import { getStaticTemplateById } from '@/constants/component-templates';
 import { analyzeCircuitNetlist } from '@/lib/circuit-netlist';
+import { customComponentPackageToTemplate } from '@/lib/custom-component-packages';
+import { runProjectDrc } from '@/lib/drc-engine';
+import { getImportedNetLabelDisplay } from '@/lib/imported-schematic-render';
 import { importKiCadSchematic } from '@/lib/kicad-sch-parser';
 import { parseKiCadSchematicToLightweightValidationJson, parseKiCadSchematicToUnifiedCircuitModel } from '@/lib/v3-kicad-parser';
 import type { ImportedSchematicPrimitive, ImportedSchematicScene, ImportedSchematicSceneSymbol } from '@/types';
-
-const test = process.env.MODUMAKE_REAL_FIXTURES === '1' ? testRunner : testRunner.skip;
 
 type ImportedTextPrimitive = Extract<ImportedSchematicPrimitive, { kind: 'text' }>;
 type ImportedPolylinePrimitive = Extract<ImportedSchematicPrimitive, { kind: 'polyline' }>;
@@ -124,6 +126,18 @@ const REAL_KICAD_PROJECTS = [
       lightweightNets: 14,
     },
   },
+  {
+    name: 'transmier',
+    filePath: '/Users/gimdong-il/Downloads/KICAD-main/transmier circuit/transmier.kicad_sch',
+    expected: {
+      legacySceneSymbols: 18,
+      legacyWireSegments: 49,
+      legacyLabels: 4,
+      unifiedComponents: 18,
+      unifiedUnresolved: 0,
+      lightweightNets: 13,
+    },
+  },
 ] as const;
 
 const ADDITIONAL_STRESS_FIXTURES = [
@@ -168,6 +182,17 @@ const ADDITIONAL_STRESS_FIXTURES = [
     },
   },
 ] as const;
+
+const REAL_FIXTURE_PATHS = [
+  ...REAL_KICAD_PROJECTS.map(project => project.filePath),
+  ...ADDITIONAL_STRESS_FIXTURES.map(project => project.filePath),
+];
+
+const hasRealFixtures =
+  process.env.MODUMAKE_REAL_FIXTURES === '1' ||
+  REAL_FIXTURE_PATHS.every(filePath => existsSync(filePath));
+
+const test = hasRealFixtures ? testRunner : testRunner.skip;
 
 function findSymbolText(
   symbol: ImportedSchematicSceneSymbol | undefined,
@@ -588,6 +613,75 @@ test('rasphat_proj2 keeps connector and resistor scene anchors available after i
   );
 });
 
+test('rasphat_proj2 preserves no-connect markers and suppresses intentional header pin errors', async () => {
+  const source = await readFile('/Users/gimdong-il/Downloads/KICAD-main/rasphat_proj2/rasphat_proj2.kicad_sch', 'utf8');
+  const imported = importKiCadSchematic(source);
+  const scene = imported.document.importedSchematicScene;
+  const connector = imported.document.components.find(component => component.importedReference === 'J1');
+
+  assert.ok(scene);
+  assert.ok(connector);
+  const connectorSymbol = (scene.symbols ?? []).find(symbol => symbol.instanceId === connector.instanceId);
+  assert.ok(connectorSymbol);
+  const noConnects = scene.noConnects ?? [];
+  assert.ok(
+    noConnects.length >= 30,
+    'expected KiCad no-connect X markers to survive import instead of becoming unconnected-pin errors'
+  );
+
+  const hasNoConnectOnPin = (pinId: string) => {
+    const anchors = connectorSymbol.pinAnchors.filter(anchor => anchor.pinId === pinId);
+    return anchors.some(anchor =>
+      noConnects.some(point => Math.hypot(point.x - anchor.at.x, point.y - anchor.at.y) <= 2)
+    );
+  };
+
+  assert.equal(hasNoConnectOnPin('3V3'), true);
+  assert.equal(hasNoConnectOnPin('5V'), true);
+  assert.equal(hasNoConnectOnPin('GND'), true);
+
+  const customTemplates = new Map(
+    (imported.document.customComponentPackages ?? []).map(pkg => [
+      pkg.templateId,
+      customComponentPackageToTemplate(pkg),
+    ])
+  );
+  const resolveTemplate = (templateId: string) => getStaticTemplateById(templateId) ?? customTemplates.get(templateId);
+
+  const report = runProjectDrc({
+    components: imported.document.components,
+    manualConnections: imported.document.manualConnections ?? [],
+    boardId: imported.document.activeBoardId,
+    resolveTemplate,
+    importedSchematicScene: scene,
+    powerInputMode: imported.document.powerInputMode,
+    componentPowerModes: imported.document.componentPowerModes ?? {},
+    componentUnusedPinModes: imported.document.componentUnusedPinModes ?? {},
+    generatedCode: imported.document.generatedCode,
+    footprintPinPadOverrideCache: {},
+  });
+
+  assert.equal(
+    report.issues.some(issue =>
+      issue.componentName === 'Raspberry_Pi_2_3' &&
+      (issue.ruleId === 'imported.power-pin-unconnected' ||
+        issue.ruleId === 'imported.ground-pin-unconnected')
+    ),
+    false
+  );
+  assert.equal(
+    report.issues.some(issue =>
+      issue.componentName === 'GND' &&
+      issue.ruleId === 'power.dead-short.power-to-ground'
+    ),
+    false
+  );
+  assert.deepEqual(
+    report.issues.filter(issue => issue.severity === 'error').map(issue => issue.ruleId),
+    []
+  );
+});
+
 test('P_supply keeps rectifier and LED diode direction consistent with pin polarity', async () => {
   const source = await readFile('/Users/gimdong-il/Downloads/KICAD-main/Breadboard-powersupply/P_supply.kicad_sch', 'utf8');
   const imported = importKiCadSchematic(source);
@@ -935,6 +1029,45 @@ test('Flamingo project keeps native USB connector, charger IC, and power symbol 
   const groundValue = findTextByRole(ground?.primitives, 'value');
   assert.equal(groundValue?.textAnchor, 'middle');
   assert.equal(groundValue?.baseline, 'hanging');
+});
+
+test('Flamingo project restores rotated USB power pins before DRC audit', async () => {
+  const source = await readFile('/Users/gimdong-il/Downloads/KICAD-main/Flamingo cotnrol project/Flamingo p.kicad_sch', 'utf8');
+  const imported = importKiCadSchematic(source);
+  const customTemplates = new Map(
+    (imported.document.customComponentPackages ?? []).map(pkg => [
+      pkg.templateId,
+      customComponentPackageToTemplate(pkg),
+    ])
+  );
+  const resolveTemplate = (templateId: string) => getStaticTemplateById(templateId) ?? customTemplates.get(templateId);
+
+  const report = runProjectDrc({
+    components: imported.document.components,
+    manualConnections: imported.document.manualConnections ?? [],
+    boardId: imported.document.activeBoardId,
+    resolveTemplate,
+    importedSchematicScene: imported.document.importedSchematicScene,
+    powerInputMode: imported.document.powerInputMode,
+    componentPowerModes: imported.document.componentPowerModes ?? {},
+    componentUnusedPinModes: imported.document.componentUnusedPinModes ?? {},
+    generatedCode: imported.document.generatedCode,
+    footprintPinPadOverrideCache: {},
+  });
+
+  assert.equal(
+    report.issues.some(issue =>
+      issue.componentName === 'USB_A' &&
+      (issue.ruleId === 'imported.power-pin-unconnected' ||
+        issue.ruleId === 'imported.ground-pin-unconnected' ||
+        issue.ruleId === 'imported.symbol-isolated')
+    ),
+    false
+  );
+  assert.equal(
+    report.issues.some(issue => issue.componentName === 'FP6291' && issue.ruleId === 'mcu.boot-strap-audit'),
+    false
+  );
 });
 
 test('MATRIX PROJECT keeps connector, shift-register, and power symbol text layout stable', async () => {
@@ -1319,6 +1452,157 @@ test('L9779WD-breakout_adc keeps multi-unit op-amp, resistor network, and TVS te
   assert.ok(
     Math.abs((d40Value?.at.x ?? 0) - (d40Geometry?.bounds.minX ?? 0)) <= 3.2,
     'expected D40 value to stay near the left body edge instead of drifting too far outward'
+  );
+});
+
+test('transmier preserves KiCad VCC/GND label anchors and capacitor property text', async () => {
+  const source = await readFile('/Users/gimdong-il/Downloads/KICAD-main/transmier circuit/transmier.kicad_sch', 'utf8');
+  const imported = importKiCadSchematic(source);
+  const scene = imported.document.importedSchematicScene;
+  const symbols = scene?.symbols ?? [];
+
+  assert.ok(scene);
+
+  const verticalVccLabels = scene?.labels.filter(
+    label => label.text === 'VCC' && label.angle === 90
+  ) ?? [];
+  assert.equal(verticalVccLabels.length, 2);
+  assert.ok(
+    verticalVccLabels.every(
+      label => label.textAnchor === 'start' && label.baseline === 'ideographic'
+    ),
+    'expected VCC local labels to keep KiCad left/bottom justification'
+  );
+  assert.ok(
+    verticalVccLabels.every(label => {
+      const display = getImportedNetLabelDisplay(label);
+      return (
+        display.angle === label.angle &&
+        display.textAnchor === label.textAnchor &&
+        display.baseline === label.baseline &&
+        display.x === label.at.x &&
+        display.y === label.at.y
+      );
+    }),
+    'expected VCC local labels to preserve KiCad source anchors in original rendering'
+  );
+  const crowdedJ1VccLabel = verticalVccLabels.find(label => label.at.x > 1400);
+  assert.ok(crowdedJ1VccLabel);
+  const crowdedJ1VccDisplay = getImportedNetLabelDisplay({ ...crowdedJ1VccLabel, side: 'left' });
+  assert.equal(crowdedJ1VccDisplay.textAnchor, crowdedJ1VccLabel.textAnchor);
+  assert.equal(crowdedJ1VccDisplay.x, crowdedJ1VccLabel.at.x);
+
+  const horizontalGndLabel = scene?.labels.find(
+    label => label.text === 'GND' && label.angle === 0
+  );
+  assert.ok(horizontalGndLabel);
+  const horizontalGndDisplay = getImportedNetLabelDisplay(horizontalGndLabel);
+  assert.equal(horizontalGndDisplay.angle, 0);
+  assert.equal(horizontalGndDisplay.baseline, horizontalGndLabel.baseline);
+  assert.equal(horizontalGndDisplay.x, horizontalGndLabel.at.x);
+  assert.equal(horizontalGndDisplay.y, horizontalGndLabel.at.y);
+
+  for (const reference of ['C1', 'C2'] as const) {
+    const capacitor = symbols.find(symbol => symbol.reference === reference);
+    const referenceText = findSymbolText(capacitor, reference, 'reference');
+    const valueText = findSymbolText(capacitor, reference === 'C1' ? '0.1uf' : '0.1uF', 'value');
+
+    assert.ok(capacitor, `expected ${reference} to exist`);
+    assert.ok(referenceText, `expected ${reference} reference text to survive`);
+    assert.ok(valueText, `expected ${reference} value text to survive`);
+    assert.equal(valueText?.angle, 90);
+    assert.equal(valueText?.originalAngle, 90);
+    assert.equal(valueText?.preserveNativeOrientation, true);
+    assert.equal(valueText?.textAnchor, 'middle');
+    const shapePoints = capacitor.primitives
+      .filter((primitive): primitive is Extract<ImportedSchematicPrimitive, { kind: 'polyline' }> => primitive.kind === 'polyline')
+      .flatMap(primitive => primitive.points);
+    assert.ok(shapePoints.length > 0, `expected ${reference} to have visible capacitor body lines`);
+    assert.ok(
+      referenceText.angle === 90 && valueText.angle === 90,
+      `expected ${reference} property text to preserve the vertical source orientation`
+    );
+    assert.ok(
+      valueText.at.x >= Math.min(...shapePoints.map(point => point.x)) - 2 &&
+        valueText.at.x <= Math.max(...shapePoints.map(point => point.x)) + 18,
+      `expected ${reference} value text to stay near the source capacitor position`
+    );
+  }
+
+  for (const reference of ['C3', 'C5'] as const) {
+    const capacitor = symbols.find(symbol => symbol.reference === reference);
+    const valueText = findSymbolText(capacitor, reference === 'C3' ? '0.01uF' : '4.7uF', 'value');
+
+    assert.ok(capacitor, `expected ${reference} to exist`);
+    assert.ok(valueText, `expected ${reference} value text to survive`);
+    assert.equal(valueText?.angle, 0);
+    assert.equal(valueText?.textAnchor, 'end');
+  }
+
+  const terminal = imported.document.components.find(component => component.importedReference === 'J1');
+  assert.ok(terminal, 'expected terminal block to exist');
+  const importedValuesByReference = new Map(
+    imported.document.components.map(component => [component.importedReference, component.value])
+  );
+  assert.equal(importedValuesByReference.get('C1'), '0.1uf');
+  assert.equal(importedValuesByReference.get('C2'), '0.1uF');
+  assert.equal(importedValuesByReference.get('R1'), '10k');
+  assert.equal(importedValuesByReference.get('J1'), 'OSTTC020162');
+  assert.deepEqual(
+    terminal?.importedGeometry?.pinAnchors.map(pin => `${pin.pinId}:${pin.number}`),
+    ['1:1', '2:2'],
+    'expected unnamed KiCad terminal pins to use stable numeric pin IDs'
+  );
+
+  const customTemplates = new Map(
+    (imported.document.customComponentPackages ?? []).map(pkg => [
+      pkg.templateId,
+      customComponentPackageToTemplate(pkg),
+    ])
+  );
+  const resolveTemplate = (templateId: string) => getStaticTemplateById(templateId) ?? customTemplates.get(templateId);
+  const circuitReport = analyzeCircuitNetlist(
+    imported.document.components,
+    imported.document.activeBoardId,
+    resolveTemplate,
+    imported.document.manualConnections ?? []
+  );
+  const componentById = new Map(imported.document.components.map(component => [component.instanceId, component]));
+  const capacitorByReference = new Map(
+    (circuitReport.capacitors ?? []).map(capacitor => [
+      componentById.get(capacitor.componentId)?.importedReference,
+      capacitor,
+    ])
+  );
+  const assertCloseFarads = (actual: number | undefined, expected: number) => {
+    assert.equal(typeof actual, 'number');
+    assert.ok(Math.abs((actual ?? 0) - expected) <= expected * 1e-9);
+  };
+
+  assert.equal(capacitorByReference.get('C1')?.value, '0.1uf');
+  assertCloseFarads(capacitorByReference.get('C1')?.capacitanceFarads, 0.1e-6);
+  assert.equal(capacitorByReference.get('C2')?.value, '0.1uF');
+  assertCloseFarads(capacitorByReference.get('C2')?.capacitanceFarads, 0.1e-6);
+
+  const labeledNets = circuitReport.nets.filter(net => net.sourceLabels.length > 0);
+  assert.ok(labeledNets.some(net => net.sourceLabels.includes('VCC') && !net.sourceLabels.includes('GND')));
+  assert.ok(labeledNets.some(net => net.sourceLabels.includes('GND') && !net.sourceLabels.includes('VCC')));
+  assert.equal(
+    circuitReport.issues.some(issue => issue.ruleId === 'electrical.pinout-mismatch'),
+    false,
+    'expected Central 2N2222A TO-18 pinout to match the imported symbol'
+  );
+  assert.equal(
+    circuitReport.issues.some(issue => issue.ruleId === 'netlist.solver-convergence'),
+    false,
+    'expected labeled GND to give the DC solver a stable reference'
+  );
+  assert.deepEqual(
+    circuitReport.issues
+      .filter(issue => issue.ruleId === 'electrical.symbol-footprint-family-mismatch')
+      .map(issue => issue.componentName)
+      .sort(),
+    ['Microphone', 'OSTTC020162']
   );
 });
 

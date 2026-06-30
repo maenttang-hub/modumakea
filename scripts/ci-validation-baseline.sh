@@ -17,4 +17,5 @@ node --test --experimental-strip-types --import ./tests/register-alias-loader.mj
   tests/datasheet-rules.test.ts \
   tests/drc-engine.test.ts \
   tests/circuit-netlist.test.ts \
-  tests/real-board-netlist-validation.test.ts
+  tests/real-board-netlist-validation.test.ts \
+  tests/kicad-public-fixtures.test.ts

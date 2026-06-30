@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "generatedAt": "2026-06-30",
+  "scope": "agent-review-only",
+  "sourceCorpus": "config/golden-corpus/clean-kicad-golden-corpus-v1.json",
+  "sourceSvgExport": "tmp/clean-kicad-golden-corpus-v1-svg/export-results.json",
+  "humanLabelsModified": false,
+  "summary": {
+    "entries": 50,
+    "svgExport": {
+      "ok": 49,
+      "failed": 1,
+      "failedEntryId": "text-placement-01-19ce5fdf93610e6b-bretbouchard-kicad-agent-arduino-mega",
+      "failedReason": "KiCad CLI could not load this schematic; keep it pending manual review or replace it in v2."
+    },
+    "safeToFixImmediately": [],
+    "fixedCodeBuckets": [
+      "report-count-divergence",
+      "targeted-transmier-source-anchor-preservation"
+    ],
+    "requiresHumanVisualReview": [
+      "text-placement",
+      "power-label-anchor"
+    ],
+    "notParserBugsFromAutomaticReview": [
+      "passive-value",
+      "low-confidence-mapping"
+    ]
+  },
+  "bucketReviews": [
+    {
+      "bucket": "text-placement",
+      "agentConclusion": "pending-visual-review",
+      "confidence": "medium",
+      "evidence": [
+        "49 of 50 corpus entries exported to original KiCad SVG successfully, so visual comparison artifacts are available.",
+        "Text-distance anomalies can be caused either by a ModuMake transform bug or by original KiCad properties intentionally placed far from the symbol.",
+        "One high-count text-placement entry failed KiCad CLI export and should not be auto-labeled."
+      ],
+      "recommendedAction": "Do not change property placement rules globally until each selected SVG is compared with the ModuMake render."
+    },
+    {
+      "bucket": "power-label-anchor",
+      "agentConclusion": "pending-visual-review",
+      "confidence": "medium",
+      "evidence": [
+        "Power-label-off-connection can represent a real VCC/GND anchor bug.",
+        "The same signal can also appear in old schematics as annotation-like text rather than an electrical label.",
+        "SVG export artifacts are available for manual source-vs-render comparison."
+      ],
+      "recommendedAction": "Only fix parser/render anchor behavior for entries where the original KiCad SVG shows the label attached but ModuMake detaches it."
+    },
+    {
+      "bucket": "passive-value",
+      "agentConclusion": "source-data-missing",
+      "confidence": "high",
+      "evidence": [
+        "The sampled R/C/L components in all 10 passive-value corpus entries have a Value property present but empty in the source S-expression.",
+        "No automatic evidence showed a populated alternate value field for those sampled anomalies.",
+        "The current warning is therefore a conservative data-quality warning, not a parser extraction failure."
+      ],
+      "recommendedAction": "Keep these as conservative warnings unless manual review finds a non-standard alternate value field that should be parsed."
+    },
+    {
+      "bucket": "low-confidence-mapping",
+      "agentConclusion": "mapping-backlog",
+      "confidence": "high",
+      "evidence": [
+        "The sampled low-confidence entries are dominated by custom, legacy, Altium-imported, prototyping-pad, connector, and family-library symbols.",
+        "The parser imports the symbols; the weak point is template/part-family classification.",
+        "Adding exact part records for every symbol would overfit this dataset."
+      ],
+      "recommendedAction": "Treat as mapper/catalog backlog. Add family-level rules for recurring custom libraries before adding exact SKU records."
+    },
+    {
+      "bucket": "report-count-divergence",
+      "agentConclusion": "fixed-regression-coverage",
+      "confidence": "high",
+      "evidence": [
+        "No-pin custom symbols are now preserved as symbol-only components in the lightweight path while unresolved evidence remains visible.",
+        "Reportable component counting now uses a shared policy across imported/integrated report paths.",
+        "The report-count regression set covers the previous final lightweight mismatch and the integrated-count side effects found during the fix; both integrated and lightweight count-divergence findings are now zero in that set."
+      ],
+      "recommendedAction": "Keep these entries as regression coverage. Do not use report-count-divergence as the next active code-fix bucket unless it reappears in a fresh full dataset pass."
+    }
+  ],
+  "completedFixes": [
+    {
+      "id": "custom-symbol-without-pins-lightweight-preservation",
+      "bucket": "report-count-divergence",
+      "priority": "P0",
+      "problem": "Some custom KiCad library symbols have no parsed pins in the lightweight path and disappear from lightweight components while integrated/imported paths still retain them.",
+      "expectedFix": "Preserve them as symbol-only/import-confidence-limited components instead of dropping them silently."
+    },
+    {
+      "id": "reportable-helper-counting-semantics",
+      "bucket": "report-count-divergence",
+      "priority": "P1",
+      "problem": "Testpoints, power helpers, and schematic helper symbols are counted differently by legacy/imported/integrated/lightweight report paths.",
+      "expectedFix": "Define one reportable-component policy and use it across validation JSON builders."
+    },
+    {
+      "id": "transmier-native-label-and-property-text-preservation",
+      "bucket": "text-placement",
+      "priority": "P0",
+      "problem": "The transmier schematic showed VCC/GND labels and C1/C2 capacitor property text detached or visually normalized away from the original KiCad source placement.",
+      "expectedFix": "Preserve KiCad source anchors, text anchors, baselines, and native property-text orientation for imported original rendering."
+    }
+  ],
+  "nextFixBacklog": [
+    {
+      "id": "text-placement-source-vs-render-review",
+      "bucket": "text-placement",
+      "priority": "P1",
+      "problem": "Some property text appears far from symbols, but automatic review cannot distinguish source-authored placement from ModuMake transform bugs.",
+      "expectedFix": "Compare original KiCad SVG/source with ModuMake render and only patch confirmed transform/anchor bugs."
+    },
+    {
+      "id": "power-label-anchor-source-vs-render-review",
+      "bucket": "power-label-anchor",
+      "priority": "P1",
+      "problem": "Some VCC/GND/power labels appear detached, but automatic review cannot distinguish real labels from annotation-like legacy text.",
+      "expectedFix": "Patch parser/render anchor handling only for entries where original KiCad shows an attached electrical label."
+    },
+    {
+      "id": "mapping-family-backlog",
+      "bucket": "low-confidence-mapping",
+      "priority": "P2",
+      "problem": "Recurring custom and legacy symbol families still fall back to low-confidence mappings.",
+      "expectedFix": "Add family-level mapper/catalog rules for recurring libraries before exact SKU expansion."
+    }
+  ],
+  "manualReviewRule": "Only write humanLabel in the corpus manifest after comparing original KiCad SVG/source with ModuMake render/report. Agent review labels must not be copied into humanLabel automatically."
+}

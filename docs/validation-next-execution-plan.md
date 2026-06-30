@@ -35,25 +35,28 @@
 - `tests/drc-engine.test.ts`
 - `tests/circuit-netlist.test.ts`
 - `tests/real-board-netlist-validation.test.ts`
+- `tests/kicad-public-fixtures.test.ts`
 
 ### 권장 실행 명령
 
 ```bash
 npx next typegen
 npx tsc --noEmit
-node --test --experimental-strip-types --loader ./tests/alias-loader.mjs \
+node --test --experimental-strip-types --import ./tests/register-alias-loader.mjs \
   tests/virtual-circuit-e2e.test.ts \
   tests/validation-regression-scenarios.test.ts \
   tests/datasheet-rules.test.ts \
   tests/drc-engine.test.ts \
   tests/circuit-netlist.test.ts \
-  tests/real-board-netlist-validation.test.ts
+  tests/real-board-netlist-validation.test.ts \
+  tests/kicad-public-fixtures.test.ts
 ```
 
 ### P1 보조 게이트
 
 주기 실행 또는 nightly에 적합:
 
+- `tests/kicad-public-fixtures.test.ts`
 - `tests/kicad-import.test.ts`
 - `tests/kicad-real-projects.test.ts`
 - `tests/build-integrated-validation-json.test.ts`
@@ -64,6 +67,8 @@ node --test --experimental-strip-types --loader ./tests/alias-loader.mjs \
 
 ### 실패 시 해석 규칙
 
+- `kicad-public-fixtures` 실패:
+  - 공개 KiCad sample subset 기준 파서/렌더링/통합 회귀 가능성 높음
 - `virtual-circuit-e2e` 실패:
   - 대표 회로 패턴 회귀 가능성 높음
 - `real-board-netlist-validation` 실패:
@@ -78,6 +83,7 @@ node --test --experimental-strip-types --loader ./tests/alias-loader.mjs \
 - P0 명령이 CI에 고정된다.
 - 실패 로그에 어떤 묶음이 깨졌는지 바로 보인다.
 - 최소 weekly 또는 nightly에 P1 묶음이 돈다.
+- baseline은 저장소 포함 public fixture만 사용하고, 로컬/대형 fixture는 extended로 분리된다.
 
 ---
 

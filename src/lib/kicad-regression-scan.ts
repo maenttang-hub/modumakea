@@ -30,6 +30,14 @@ export interface KiCadRegressionSuspiciousFile {
     kind: string;
     expected: 'ground' | 'power';
   }>;
+  ambiguousRails: Array<{
+    label: string;
+    expected: 'ground' | 'power';
+  }>;
+  mixedRails: Array<{
+    labels: string[];
+    kind: string;
+  }>;
   zeroNetFragment: boolean;
 }
 
@@ -45,6 +53,8 @@ export interface KiCadRegressionScanSummary {
     unresolvedFiles: number;
     unnamedPowerFiles: number;
     flippedRailFiles: number;
+    ambiguousRailFiles: number;
+    mixedRailFiles: number;
     ignoredNonElectricalFiles: number;
     nonComponentMarkerFiles: number;
   };
@@ -100,6 +110,8 @@ export async function scanKiCadRegression(options: {
     unresolvedFiles: 0,
     unnamedPowerFiles: 0,
     flippedRailFiles: 0,
+    ambiguousRailFiles: 0,
+    mixedRailFiles: 0,
     ignoredNonElectricalFiles: 0,
     nonComponentMarkerFiles: 0,
   };
@@ -117,12 +129,22 @@ export async function scanKiCadRegression(options: {
 
       const unnamedPower = nets.filter(net => net.aliases.length === 0 && net.members.some(member => member.reference.startsWith('#PWR'))).length;
       const flipped: KiCadRegressionSuspiciousFile['flipped'] = [];
+      const ambiguousRails: KiCadRegressionSuspiciousFile['ambiguousRails'] = [];
+      const mixedRails: KiCadRegressionSuspiciousFile['mixedRails'] = [];
 
       for (const net of nets) {
         const labels = [...new Set([...(net.aliases ?? []), net.primaryLabel].filter((label): label is string => Boolean(label)))];
+        const hasGroundLabel = labels.some(label => GROUND_RE.test(label));
+        const hasPowerLabel = labels.some(label => POWER_RE.test(label));
+        if (hasGroundLabel && hasPowerLabel) {
+          mixedRails.push({ labels, kind: net.kind });
+          continue;
+        }
         for (const label of labels) {
           const expected = GROUND_RE.test(label) ? 'ground' : POWER_RE.test(label) ? 'power' : null;
-          if (expected && net.kind !== expected) {
+          if (expected && net.kind === 'unknown') {
+            ambiguousRails.push({ label, expected });
+          } else if (expected && net.kind !== expected) {
             flipped.push({ label, kind: net.kind, expected });
           }
         }
@@ -147,10 +169,16 @@ export async function scanKiCadRegression(options: {
       if (flipped.length > 0) {
         stats.flippedRailFiles += 1;
       }
+      if (ambiguousRails.length > 0) {
+        stats.ambiguousRailFiles += 1;
+      }
+      if (mixedRails.length > 0) {
+        stats.mixedRailFiles += 1;
+      }
 
       if (
         suspicious.length < maxSuspicious &&
-        (zeroNetFragment || unnamedPower > 0 || flipped.length > 0 || unified.unresolvedSymbols.length > 0 || unified.ignoredNonElectricalSymbols.length > 0 || unified.nonComponentMarkers.length > 0)
+        (zeroNetFragment || unnamedPower > 0 || flipped.length > 0 || ambiguousRails.length > 0 || mixedRails.length > 0 || unified.unresolvedSymbols.length > 0 || unified.ignoredNonElectricalSymbols.length > 0 || unified.nonComponentMarkers.length > 0)
       ) {
         suspicious.push({
           file,
@@ -163,6 +191,8 @@ export async function scanKiCadRegression(options: {
           labels: unified.stats.labelCount,
           unnamedPower,
           flipped: flipped.slice(0, 10),
+          ambiguousRails: ambiguousRails.slice(0, 10),
+          mixedRails: mixedRails.slice(0, 10),
           zeroNetFragment,
         });
       }

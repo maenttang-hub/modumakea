@@ -1,4 +1,4 @@
-name: Validation Baseline
+name: Validation Baseline and Nightly Extended
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   baseline:
-    name: Baseline Reliability Gate
+    name: Baseline Reliability Gate (public subset)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -47,7 +47,7 @@ jobs:
         run: npm run test:validation:baseline
 
   extended:
-    name: Extended Validation Nightly
+    name: Extended Validation Nightly (local-heavy / broader coverage)
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 30

@@ -1,0 +1,3479 @@
+{
+  "version": 1,
+  "generatedAt": "2026-06-30",
+  "source": "./tmp/clean-kicad-render-report-diff-full-pass3.jsonl",
+  "expectedHumanLabels": [
+    "true-bug",
+    "source-as-authored",
+    "conservative-warning",
+    "mapping-improvement"
+  ],
+  "entries": [
+    {
+      "id": "text-placement-01-19ce5fdf93610e6b-bretbouchard-kicad-agent-arduino-mega",
+      "bucket": "text-placement",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/19ce5fdf93610e6b_bretbouchard_kicad-agent_Arduino_Mega.kicad_sch",
+      "sourceReason": "render.property-text-far-from-symbol",
+      "sourceCount": 258,
+      "autoProposedLabel": "source-as-authored",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "원본 KiCad에서도 reference/value 텍스트가 심볼에서 멀리 떨어져 있는가?",
+      "actionIfConfirmed": "원본과 다르면 property transform/anchor를 수정하고, 원본 그대로면 quality info로 유지한다.",
+      "stats": {
+        "components": 143,
+        "reportableComponents": 136,
+        "sceneSymbols": 143,
+        "sceneLabels": 76,
+        "sceneWires": 95,
+        "manualConnections": 6,
+        "integratedComponents": 136,
+        "lightweightComponents": 14,
+        "lightweightUnresolved": 129,
+        "netlistNets": 345,
+        "netlistIssues": 130
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "J1 reference text is far from the symbol body.",
+          "componentId": "00000000-0000-0000-0000-000056d71773",
+          "reference": "J1",
+          "detail": {
+            "text": "J1",
+            "distance": 1000.4,
+            "shapeDiagonal": 118.3
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "J1 value text is far from the symbol body.",
+          "componentId": "00000000-0000-0000-0000-000056d71773",
+          "reference": "J1",
+          "detail": {
+            "text": "Power",
+            "distance": 949.5,
+            "shapeDiagonal": 118.3
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R? reference text is far from the symbol body.",
+          "componentId": "75860d9d-3695-49c4-b40c-6926ae85489a",
+          "reference": "R?",
+          "detail": {
+            "text": "R?",
+            "distance": 323.9,
+            "shapeDiagonal": 115.5
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R? value text is far from the symbol body.",
+          "componentId": "75860d9d-3695-49c4-b40c-6926ae85489a",
+          "reference": "R?",
+          "detail": {
+            "text": "",
+            "distance": 323.9,
+            "shapeDiagonal": 115.5
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R? reference text is far from the symbol body.",
+          "componentId": "5436a2ab-7c31-4c92-b230-e533053ff8d1",
+          "reference": "R?",
+          "detail": {
+            "text": "R?",
+            "distance": 323.9,
+            "shapeDiagonal": 115.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-placement-02-fee1d255a97df42a-kicad-kicad-source-mirror-dcdc",
+      "bucket": "text-placement",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/fee1d255a97df42a_KiCad_kicad-source-mirror_dcdc.kicad_sch",
+      "sourceReason": "render.property-text-far-from-symbol",
+      "sourceCount": 172,
+      "autoProposedLabel": "source-as-authored",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "원본 KiCad에서도 reference/value 텍스트가 심볼에서 멀리 떨어져 있는가?",
+      "actionIfConfirmed": "원본과 다르면 property transform/anchor를 수정하고, 원본 그대로면 quality info로 유지한다.",
+      "stats": {
+        "components": 374,
+        "reportableComponents": 198,
+        "sceneSymbols": 374,
+        "sceneLabels": 88,
+        "sceneWires": 719,
+        "manualConnections": 427,
+        "integratedComponents": 198,
+        "lightweightComponents": 374,
+        "lightweightUnresolved": 0,
+        "netlistNets": 261,
+        "netlistIssues": 55
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R41 value text is far from the symbol body.",
+          "componentId": "00e5ffac-5904-4077-b454-ba94b781ffbb",
+          "reference": "R41",
+          "detail": {
+            "text": "R_200k_0402",
+            "distance": 119.3,
+            "shapeDiagonal": 29.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "D7 value text is far from the symbol body.",
+          "componentId": "013ffa32-0c54-47ff-9314-c27e555c2ea0",
+          "reference": "D7",
+          "detail": {
+            "text": "ESDA25P35-1U1M",
+            "distance": 133.5,
+            "shapeDiagonal": 30.4
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "D8 value text is far from the symbol body.",
+          "componentId": "02546f65-bfec-4fb8-a08b-195343166be0",
+          "reference": "D8",
+          "detail": {
+            "text": "PESD5Z5.0F",
+            "distance": 133.5,
+            "shapeDiagonal": 30.4
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C268 value text is far from the symbol body.",
+          "componentId": "029274fa-ff98-404d-ba6d-cf0e024711bb",
+          "reference": "C268",
+          "detail": {
+            "text": "C_22u_25V_0805",
+            "distance": 114.2,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C304 value text is far from the symbol body.",
+          "componentId": "02a33878-2431-478a-b4e3-09977bf9dac9",
+          "reference": "C304",
+          "detail": {
+            "text": "C_100n_0402",
+            "distance": 111.6,
+            "shapeDiagonal": 32.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-placement-03-309f447586550989-kicad-kicad-source-mirror-usb-hub",
+      "bucket": "text-placement",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/309f447586550989_KiCad_kicad-source-mirror_usb_hub.kicad_sch",
+      "sourceReason": "render.property-text-far-from-symbol",
+      "sourceCount": 102,
+      "autoProposedLabel": "source-as-authored",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "원본 KiCad에서도 reference/value 텍스트가 심볼에서 멀리 떨어져 있는가?",
+      "actionIfConfirmed": "원본과 다르면 property transform/anchor를 수정하고, 원본 그대로면 quality info로 유지한다.",
+      "stats": {
+        "components": 194,
+        "reportableComponents": 131,
+        "sceneSymbols": 194,
+        "sceneLabels": 133,
+        "sceneWires": 525,
+        "manualConnections": 301,
+        "integratedComponents": 131,
+        "lightweightComponents": 194,
+        "lightweightUnresolved": 0,
+        "netlistNets": 206,
+        "netlistIssues": 52
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C93 value text is far from the symbol body.",
+          "componentId": "005d555e-c212-4e75-a6d1-76ed75cc9732",
+          "reference": "C93",
+          "detail": {
+            "text": "C_100n_0402",
+            "distance": 144.1,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R337 value text is far from the symbol body.",
+          "componentId": "0226e973-f945-4750-a3c5-70233081cd64",
+          "reference": "R337",
+          "detail": {
+            "text": "R_2R2_0402",
+            "distance": 119.3,
+            "shapeDiagonal": 29.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R87 value text is far from the symbol body.",
+          "componentId": "03b96aae-a430-4930-a7a2-84ed961b6e61",
+          "reference": "R87",
+          "detail": {
+            "text": "R_10k_0402",
+            "distance": 119.3,
+            "shapeDiagonal": 29.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C97 value text is far from the symbol body.",
+          "componentId": "077d6acf-ad73-405d-80d1-629bc78d9447",
+          "reference": "C97",
+          "detail": {
+            "text": "C_100n_0402",
+            "distance": 144.1,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "D45 value text is far from the symbol body.",
+          "componentId": "078ecc98-60b7-4646-ac4b-b620bdfe4be7",
+          "reference": "D45",
+          "detail": {
+            "text": "PESD5Z5.0F",
+            "distance": 133.5,
+            "shapeDiagonal": 30.4
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-placement-04-b615997cd5c536cf-connorlirette-kicad-controller-pcb-io",
+      "bucket": "text-placement",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/b615997cd5c536cf_connorlirette_KiCad-Controller-PCB_io.kicad_sch",
+      "sourceReason": "render.property-text-far-from-symbol",
+      "sourceCount": 80,
+      "autoProposedLabel": "source-as-authored",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "원본 KiCad에서도 reference/value 텍스트가 심볼에서 멀리 떨어져 있는가?",
+      "actionIfConfirmed": "원본과 다르면 property transform/anchor를 수정하고, 원본 그대로면 quality info로 유지한다.",
+      "stats": {
+        "components": 84,
+        "reportableComponents": 80,
+        "sceneSymbols": 86,
+        "sceneLabels": 240,
+        "sceneWires": 480,
+        "manualConnections": 83,
+        "integratedComponents": 82,
+        "lightweightComponents": 86,
+        "lightweightUnresolved": 0,
+        "netlistNets": 40,
+        "netlistIssues": 78
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "D555 value text is far from the symbol body.",
+          "componentId": "0301af31-cb15-4ebb-961a-83437aedd86e",
+          "reference": "D555",
+          "detail": {
+            "text": "D_TVS_Small",
+            "distance": 81.4,
+            "shapeDiagonal": 30.4
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "D552 value text is far from the symbol body.",
+          "componentId": "04e50d40-ca12-4cd8-9bca-a67ff4d041d3",
+          "reference": "D552",
+          "detail": {
+            "text": "D_TVS_Small",
+            "distance": 81.4,
+            "shapeDiagonal": 30.4
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "D510 value text is far from the symbol body.",
+          "componentId": "08b96389-e80f-4832-ba47-82831c0805a2",
+          "reference": "D510",
+          "detail": {
+            "text": "D_TVS_Small",
+            "distance": 81.4,
+            "shapeDiagonal": 30.4
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "D526 value text is far from the symbol body.",
+          "componentId": "095fc00b-fd7d-49b4-a2b1-217ec0687d03",
+          "reference": "D526",
+          "detail": {
+            "text": "D_TVS_Small",
+            "distance": 81.4,
+            "shapeDiagonal": 30.4
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "D513 value text is far from the symbol body.",
+          "componentId": "0b232b0b-6139-4ea1-bf1e-c2f6560177bc",
+          "reference": "D513",
+          "detail": {
+            "text": "D_TVS_Small",
+            "distance": 81.4,
+            "shapeDiagonal": 30.4
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-placement-05-60d94bc61e32de2c-kicad-kicad-source-mirror-usb-debug-pd",
+      "bucket": "text-placement",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/60d94bc61e32de2c_KiCad_kicad-source-mirror_usb_debug_pd.kicad_sch",
+      "sourceReason": "render.property-text-far-from-symbol",
+      "sourceCount": 74,
+      "autoProposedLabel": "source-as-authored",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "원본 KiCad에서도 reference/value 텍스트가 심볼에서 멀리 떨어져 있는가?",
+      "actionIfConfirmed": "원본과 다르면 property transform/anchor를 수정하고, 원본 그대로면 quality info로 유지한다.",
+      "stats": {
+        "components": 146,
+        "reportableComponents": 97,
+        "sceneSymbols": 146,
+        "sceneLabels": 93,
+        "sceneWires": 349,
+        "manualConnections": 193,
+        "integratedComponents": 97,
+        "lightweightComponents": 146,
+        "lightweightUnresolved": 0,
+        "netlistNets": 145,
+        "netlistIssues": 45
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R110 value text is far from the symbol body.",
+          "componentId": "0527614e-6e7a-40a8-852d-20e0aa9ebe2c",
+          "reference": "R110",
+          "detail": {
+            "text": "R_0R_0402",
+            "distance": 119.3,
+            "shapeDiagonal": 29.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R382 value text is far from the symbol body.",
+          "componentId": "06343ec8-a156-43aa-817b-27e7f60d31c5",
+          "reference": "R382",
+          "detail": {
+            "text": "R_0R_0402",
+            "distance": 119.3,
+            "shapeDiagonal": 29.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "D23 value text is far from the symbol body.",
+          "componentId": "068a76c4-9b58-4e09-b8d1-910bf46536d6",
+          "reference": "D23",
+          "detail": {
+            "text": "ESDA25P35-1U1M",
+            "distance": 133.5,
+            "shapeDiagonal": 30.4
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "D16 value text is far from the symbol body.",
+          "componentId": "0cd16a69-e812-4abd-b04a-5bf3e0f91317",
+          "reference": "D16",
+          "detail": {
+            "text": "RB521S30T1G",
+            "distance": 139.1,
+            "shapeDiagonal": 30.4
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R120 value text is far from the symbol body.",
+          "componentId": "0ede5849-b913-425d-af7f-8b671d1994f5",
+          "reference": "R120",
+          "detail": {
+            "text": "R_200R_0402",
+            "distance": 119.3,
+            "shapeDiagonal": 29.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-placement-06-ec1d2900a3b68ae9-maxlab-io-tokay-lite-pcb-ai-camera-rev2",
+      "bucket": "text-placement",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/ec1d2900a3b68ae9_maxlab-io_tokay-lite-pcb_ai-camera-rev2.kicad_sch",
+      "sourceReason": "render.property-text-far-from-symbol",
+      "sourceCount": 73,
+      "autoProposedLabel": "source-as-authored",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "원본 KiCad에서도 reference/value 텍스트가 심볼에서 멀리 떨어져 있는가?",
+      "actionIfConfirmed": "원본과 다르면 property transform/anchor를 수정하고, 원본 그대로면 quality info로 유지한다.",
+      "stats": {
+        "components": 299,
+        "reportableComponents": 176,
+        "sceneSymbols": 299,
+        "sceneLabels": 97,
+        "sceneWires": 369,
+        "manualConnections": 479,
+        "integratedComponents": 176,
+        "lightweightComponents": 299,
+        "lightweightUnresolved": 0,
+        "netlistNets": 106,
+        "netlistIssues": 45
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R32 value text is far from the symbol body.",
+          "componentId": "085c2972-940b-48ab-8eef-d7cd30bc0f8d",
+          "reference": "R32",
+          "detail": {
+            "text": "215k_0402_0402WGD2153TCE",
+            "distance": 194.4,
+            "shapeDiagonal": 43.8
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C18 value text is far from the symbol body.",
+          "componentId": "087de02f-78a5-4727-8a5e-99f391199b63",
+          "reference": "C18",
+          "detail": {
+            "text": "10u_0402_CL05A105KA5NQNC",
+            "distance": 235.2,
+            "shapeDiagonal": 48
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "D15 value text is far from the symbol body.",
+          "componentId": "08f4c8a2-320d-4007-80be-da38b0ac1cad",
+          "reference": "D15",
+          "detail": {
+            "text": "0603_IR_850nm_E6C0603IRAC1UDA",
+            "distance": 128,
+            "shapeDiagonal": 50.6
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C12 value text is far from the symbol body.",
+          "componentId": "0b353976-1004-488e-9166-bcae45e65771",
+          "reference": "C12",
+          "detail": {
+            "text": "100u_CASE-B-3528_TAJB107K006RNJ",
+            "distance": 127.7,
+            "shapeDiagonal": 49.4
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R30 value text is far from the symbol body.",
+          "componentId": "0e3069ec-08b5-4a1d-bce8-928d88720f25",
+          "reference": "R30",
+          "detail": {
+            "text": "10k_0402_0402WGF1002TCE",
+            "distance": 194.4,
+            "shapeDiagonal": 43.8
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-placement-07-ffc93857b96128de-maxlab-io-tokay-lite-pcb-ai-camera-rev3",
+      "bucket": "text-placement",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/ffc93857b96128de_maxlab-io_tokay-lite-pcb_ai-camera-rev3.kicad_sch",
+      "sourceReason": "render.property-text-far-from-symbol",
+      "sourceCount": 73,
+      "autoProposedLabel": "source-as-authored",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "원본 KiCad에서도 reference/value 텍스트가 심볼에서 멀리 떨어져 있는가?",
+      "actionIfConfirmed": "원본과 다르면 property transform/anchor를 수정하고, 원본 그대로면 quality info로 유지한다.",
+      "stats": {
+        "components": 299,
+        "reportableComponents": 176,
+        "sceneSymbols": 299,
+        "sceneLabels": 97,
+        "sceneWires": 369,
+        "manualConnections": 479,
+        "integratedComponents": 176,
+        "lightweightComponents": 299,
+        "lightweightUnresolved": 0,
+        "netlistNets": 106,
+        "netlistIssues": 45
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R32 value text is far from the symbol body.",
+          "componentId": "085c2972-940b-48ab-8eef-d7cd30bc0f8d",
+          "reference": "R32",
+          "detail": {
+            "text": "215k_0402_0402WGD2153TCE",
+            "distance": 194.4,
+            "shapeDiagonal": 43.8
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C18 value text is far from the symbol body.",
+          "componentId": "087de02f-78a5-4727-8a5e-99f391199b63",
+          "reference": "C18",
+          "detail": {
+            "text": "10u_0402_CL05A105KA5NQNC",
+            "distance": 235.2,
+            "shapeDiagonal": 48
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "D15 value text is far from the symbol body.",
+          "componentId": "08f4c8a2-320d-4007-80be-da38b0ac1cad",
+          "reference": "D15",
+          "detail": {
+            "text": "0603_IR_850nm_E6C0603IRAC1UDA",
+            "distance": 128,
+            "shapeDiagonal": 50.6
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C12 value text is far from the symbol body.",
+          "componentId": "0b353976-1004-488e-9166-bcae45e65771",
+          "reference": "C12",
+          "detail": {
+            "text": "100u_CASE-B-3528_TAJB107K006RNJ",
+            "distance": 127.7,
+            "shapeDiagonal": 49.4
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R30 value text is far from the symbol body.",
+          "componentId": "0e3069ec-08b5-4a1d-bce8-928d88720f25",
+          "reference": "R30",
+          "detail": {
+            "text": "10k_0402_0402WGF1002TCE",
+            "distance": 194.4,
+            "shapeDiagonal": 43.8
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-placement-08-b12bc985b3034cab-maxlab-io-tokay-lite-pcb-ai-camera-rev3-2",
+      "bucket": "text-placement",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/b12bc985b3034cab_maxlab-io_tokay-lite-pcb_ai-camera-rev3.2.kicad_sch",
+      "sourceReason": "render.property-text-far-from-symbol",
+      "sourceCount": 73,
+      "autoProposedLabel": "source-as-authored",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "원본 KiCad에서도 reference/value 텍스트가 심볼에서 멀리 떨어져 있는가?",
+      "actionIfConfirmed": "원본과 다르면 property transform/anchor를 수정하고, 원본 그대로면 quality info로 유지한다.",
+      "stats": {
+        "components": 298,
+        "reportableComponents": 176,
+        "sceneSymbols": 298,
+        "sceneLabels": 97,
+        "sceneWires": 369,
+        "manualConnections": 478,
+        "integratedComponents": 176,
+        "lightweightComponents": 298,
+        "lightweightUnresolved": 0,
+        "netlistNets": 106,
+        "netlistIssues": 45
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R32 value text is far from the symbol body.",
+          "componentId": "085c2972-940b-48ab-8eef-d7cd30bc0f8d",
+          "reference": "R32",
+          "detail": {
+            "text": "215k_0402_0402WGD2153TCE",
+            "distance": 194.4,
+            "shapeDiagonal": 43.8
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C18 value text is far from the symbol body.",
+          "componentId": "087de02f-78a5-4727-8a5e-99f391199b63",
+          "reference": "C18",
+          "detail": {
+            "text": "10u_0402_CL05A105KA5NQNC",
+            "distance": 235.2,
+            "shapeDiagonal": 48
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "D15 value text is far from the symbol body.",
+          "componentId": "08f4c8a2-320d-4007-80be-da38b0ac1cad",
+          "reference": "D15",
+          "detail": {
+            "text": "0603_IR_850nm_E6C0603IRAC1UDA",
+            "distance": 128,
+            "shapeDiagonal": 50.6
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C12 value text is far from the symbol body.",
+          "componentId": "0b353976-1004-488e-9166-bcae45e65771",
+          "reference": "C12",
+          "detail": {
+            "text": "100u_CASE-B-3528_TAJB107K006RNJ",
+            "distance": 127.7,
+            "shapeDiagonal": 49.4
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R30 value text is far from the symbol body.",
+          "componentId": "0e3069ec-08b5-4a1d-bce8-928d88720f25",
+          "reference": "R30",
+          "detail": {
+            "text": "10k_0402_0402WGF1002TCE",
+            "distance": 194.4,
+            "shapeDiagonal": 43.8
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-placement-09-d3c45a13eb770504-maxlab-io-tokay-lite-pcb-ai-camera-rev3-1",
+      "bucket": "text-placement",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/d3c45a13eb770504_maxlab-io_tokay-lite-pcb_ai-camera-rev3.1.kicad_sch",
+      "sourceReason": "render.property-text-far-from-symbol",
+      "sourceCount": 73,
+      "autoProposedLabel": "source-as-authored",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "원본 KiCad에서도 reference/value 텍스트가 심볼에서 멀리 떨어져 있는가?",
+      "actionIfConfirmed": "원본과 다르면 property transform/anchor를 수정하고, 원본 그대로면 quality info로 유지한다.",
+      "stats": {
+        "components": 298,
+        "reportableComponents": 176,
+        "sceneSymbols": 298,
+        "sceneLabels": 97,
+        "sceneWires": 369,
+        "manualConnections": 478,
+        "integratedComponents": 176,
+        "lightweightComponents": 298,
+        "lightweightUnresolved": 0,
+        "netlistNets": 106,
+        "netlistIssues": 45
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R32 value text is far from the symbol body.",
+          "componentId": "085c2972-940b-48ab-8eef-d7cd30bc0f8d",
+          "reference": "R32",
+          "detail": {
+            "text": "215k_0402_0402WGD2153TCE",
+            "distance": 194.4,
+            "shapeDiagonal": 43.8
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C18 value text is far from the symbol body.",
+          "componentId": "087de02f-78a5-4727-8a5e-99f391199b63",
+          "reference": "C18",
+          "detail": {
+            "text": "10u_0402_CL05A105KA5NQNC",
+            "distance": 235.2,
+            "shapeDiagonal": 48
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "D15 value text is far from the symbol body.",
+          "componentId": "08f4c8a2-320d-4007-80be-da38b0ac1cad",
+          "reference": "D15",
+          "detail": {
+            "text": "0603_IR_850nm_E6C0603IRAC1UDA",
+            "distance": 128,
+            "shapeDiagonal": 50.6
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C12 value text is far from the symbol body.",
+          "componentId": "0b353976-1004-488e-9166-bcae45e65771",
+          "reference": "C12",
+          "detail": {
+            "text": "100u_CASE-B-3528_TAJB107K006RNJ",
+            "distance": 127.7,
+            "shapeDiagonal": 49.4
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R30 value text is far from the symbol body.",
+          "componentId": "0e3069ec-08b5-4a1d-bce8-928d88720f25",
+          "reference": "R30",
+          "detail": {
+            "text": "10k_0402_0402WGF1002TCE",
+            "distance": 194.4,
+            "shapeDiagonal": 43.8
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-placement-10-56ab100b1132c96b-maxlab-io-tokay-lite-pcb-ai-camera",
+      "bucket": "text-placement",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/56ab100b1132c96b_maxlab-io_tokay-lite-pcb_ai-camera.kicad_sch",
+      "sourceReason": "render.property-text-far-from-symbol",
+      "sourceCount": 71,
+      "autoProposedLabel": "source-as-authored",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "원본 KiCad에서도 reference/value 텍스트가 심볼에서 멀리 떨어져 있는가?",
+      "actionIfConfirmed": "원본과 다르면 property transform/anchor를 수정하고, 원본 그대로면 quality info로 유지한다.",
+      "stats": {
+        "components": 297,
+        "reportableComponents": 174,
+        "sceneSymbols": 297,
+        "sceneLabels": 96,
+        "sceneWires": 365,
+        "manualConnections": 474,
+        "integratedComponents": 174,
+        "lightweightComponents": 297,
+        "lightweightUnresolved": 0,
+        "netlistNets": 106,
+        "netlistIssues": 44
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R31 value text is far from the symbol body.",
+          "componentId": "085c2972-940b-48ab-8eef-d7cd30bc0f8d",
+          "reference": "R31",
+          "detail": {
+            "text": "215k_0402_0402WGD2153TCE",
+            "distance": 194.4,
+            "shapeDiagonal": 43.8
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C18 value text is far from the symbol body.",
+          "componentId": "087de02f-78a5-4727-8a5e-99f391199b63",
+          "reference": "C18",
+          "detail": {
+            "text": "100n_0402_CL05B104KB54PNC",
+            "distance": 235.2,
+            "shapeDiagonal": 48
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "D15 value text is far from the symbol body.",
+          "componentId": "08f4c8a2-320d-4007-80be-da38b0ac1cad",
+          "reference": "D15",
+          "detail": {
+            "text": "0603_IR_850nm_E6C0603IRAC1UDA",
+            "distance": 128,
+            "shapeDiagonal": 50.6
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C12 value text is far from the symbol body.",
+          "componentId": "0b353976-1004-488e-9166-bcae45e65771",
+          "reference": "C12",
+          "detail": {
+            "text": "100u_CASE-B-3528_TAJB107K006RNJ",
+            "distance": 127.7,
+            "shapeDiagonal": 49.4
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R29 value text is far from the symbol body.",
+          "componentId": "0e3069ec-08b5-4a1d-bce8-928d88720f25",
+          "reference": "R29",
+          "detail": {
+            "text": "10k_0402_0402WGF1002TCE",
+            "distance": 194.4,
+            "shapeDiagonal": 43.8
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-placement-11-3df968fe0dc30407-kicad-kicad-source-mirror-som-io2",
+      "bucket": "text-placement",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/3df968fe0dc30407_KiCad_kicad-source-mirror_som_io2.kicad_sch",
+      "sourceReason": "render.property-text-far-from-symbol",
+      "sourceCount": 69,
+      "autoProposedLabel": "source-as-authored",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "원본 KiCad에서도 reference/value 텍스트가 심볼에서 멀리 떨어져 있는가?",
+      "actionIfConfirmed": "원본과 다르면 property transform/anchor를 수정하고, 원본 그대로면 quality info로 유지한다.",
+      "stats": {
+        "components": 103,
+        "reportableComponents": 80,
+        "sceneSymbols": 103,
+        "sceneLabels": 319,
+        "sceneWires": 372,
+        "manualConnections": 108,
+        "integratedComponents": 80,
+        "lightweightComponents": 103,
+        "lightweightUnresolved": 0,
+        "netlistNets": 178,
+        "netlistIssues": 24
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C344 value text is far from the symbol body.",
+          "componentId": "02297417-5ad2-4520-9ce5-92cea76678b5",
+          "reference": "C344",
+          "detail": {
+            "text": "C_100n_0402",
+            "distance": 112,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C314 value text is far from the symbol body.",
+          "componentId": "073fd018-662c-4f4a-8735-543e6d1a72e4",
+          "reference": "C314",
+          "detail": {
+            "text": "C_100n_0402",
+            "distance": 112,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C238 value text is far from the symbol body.",
+          "componentId": "0ad1d895-0961-45e5-a0f7-fcfa4d1cd0bd",
+          "reference": "C238",
+          "detail": {
+            "text": "C_100n_0402",
+            "distance": 160.9,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C320 value text is far from the symbol body.",
+          "componentId": "160cb533-80d1-45be-adf3-2f0eb5be2ad3",
+          "reference": "C320",
+          "detail": {
+            "text": "C_100n_0402",
+            "distance": 112,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R3 value text is far from the symbol body.",
+          "componentId": "16b27d8c-2008-4362-ac5d-64c64c40dd17",
+          "reference": "R3",
+          "detail": {
+            "text": "R_33R_0402",
+            "distance": 119.3,
+            "shapeDiagonal": 29.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-placement-12-adbc3997093bc617-kicad-kicad-source-mirror-som-power",
+      "bucket": "text-placement",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/adbc3997093bc617_KiCad_kicad-source-mirror_som_power.kicad_sch",
+      "sourceReason": "render.property-text-far-from-symbol",
+      "sourceCount": 64,
+      "autoProposedLabel": "source-as-authored",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "원본 KiCad에서도 reference/value 텍스트가 심볼에서 멀리 떨어져 있는가?",
+      "actionIfConfirmed": "원본과 다르면 property transform/anchor를 수정하고, 원본 그대로면 quality info로 유지한다.",
+      "stats": {
+        "components": 175,
+        "reportableComponents": 116,
+        "sceneSymbols": 175,
+        "sceneLabels": 22,
+        "sceneWires": 315,
+        "manualConnections": 199,
+        "integratedComponents": 116,
+        "lightweightComponents": 174,
+        "lightweightUnresolved": 1,
+        "netlistNets": 121,
+        "netlistIssues": 26
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C21 value text is far from the symbol body.",
+          "componentId": "00f5cd37-3e49-4b5d-aa5b-ac77454c3e63",
+          "reference": "C21",
+          "detail": {
+            "text": "C_22u_16V_0603",
+            "distance": 111.6,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R300 value text is far from the symbol body.",
+          "componentId": "0137f19a-1f5d-418a-b2d2-a62234545c51",
+          "reference": "R300",
+          "detail": {
+            "text": "R_10k_0402",
+            "distance": 119.3,
+            "shapeDiagonal": 29.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R289 value text is far from the symbol body.",
+          "componentId": "08fbc647-faf2-481b-8b41-1662e0ce935a",
+          "reference": "R289",
+          "detail": {
+            "text": "R_10k_0402",
+            "distance": 119.3,
+            "shapeDiagonal": 29.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C26 value text is far from the symbol body.",
+          "componentId": "0c221d11-c90e-4c73-a3ef-0946b0c704f1",
+          "reference": "C26",
+          "detail": {
+            "text": "C_22u_25V_0805",
+            "distance": 114.2,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C225 value text is far from the symbol body.",
+          "componentId": "0eb85f77-d2b7-4643-b62c-319a1471d788",
+          "reference": "C225",
+          "detail": {
+            "text": "C_100n_0402",
+            "distance": 139,
+            "shapeDiagonal": 32.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-placement-13-940cb06421de5eae-kicad-kicad-source-mirror-usb",
+      "bucket": "text-placement",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/940cb06421de5eae_KiCad_kicad-source-mirror_USB.kicad_sch",
+      "sourceReason": "render.property-text-far-from-symbol",
+      "sourceCount": 63,
+      "autoProposedLabel": "source-as-authored",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "원본 KiCad에서도 reference/value 텍스트가 심볼에서 멀리 떨어져 있는가?",
+      "actionIfConfirmed": "원본과 다르면 property transform/anchor를 수정하고, 원본 그대로면 quality info로 유지한다.",
+      "stats": {
+        "components": 138,
+        "reportableComponents": 88,
+        "sceneSymbols": 138,
+        "sceneLabels": 73,
+        "sceneWires": 465,
+        "manualConnections": 211,
+        "integratedComponents": 88,
+        "lightweightComponents": 97,
+        "lightweightUnresolved": 41,
+        "netlistNets": 234,
+        "netlistIssues": 27
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C93 value text is far from the symbol body.",
+          "componentId": "005d555e-c212-4e75-a6d1-76ed75cc9732",
+          "reference": "C93",
+          "detail": {
+            "text": "C_100n_50V_X8L_0402",
+            "distance": 144.1,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C116 value text is far from the symbol body.",
+          "componentId": "02ca28f5-f0ba-4aff-920c-354c67fa5c46",
+          "reference": "C116",
+          "detail": {
+            "text": "C_330n_0402",
+            "distance": 111.6,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C115 value text is far from the symbol body.",
+          "componentId": "03cf15ec-45cf-433e-883e-cef930f9236f",
+          "reference": "C115",
+          "detail": {
+            "text": "C_330n_0402",
+            "distance": 111.6,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R91 value text is far from the symbol body.",
+          "componentId": "06107a40-bbf2-4cf4-ac5f-f445ba10bb91",
+          "reference": "R91",
+          "detail": {
+            "text": "R_10k_0402",
+            "distance": 119.3,
+            "shapeDiagonal": 29.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C97 value text is far from the symbol body.",
+          "componentId": "077d6acf-ad73-405d-80d1-629bc78d9447",
+          "reference": "C97",
+          "detail": {
+            "text": "C_100n_16V_X7R_0402",
+            "distance": 144.1,
+            "shapeDiagonal": 32.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-placement-14-88c30801ce6ca909-kicad-kicad-source-mirror-csi",
+      "bucket": "text-placement",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/88c30801ce6ca909_KiCad_kicad-source-mirror_csi.kicad_sch",
+      "sourceReason": "render.property-text-far-from-symbol",
+      "sourceCount": 56,
+      "autoProposedLabel": "source-as-authored",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "원본 KiCad에서도 reference/value 텍스트가 심볼에서 멀리 떨어져 있는가?",
+      "actionIfConfirmed": "원본과 다르면 property transform/anchor를 수정하고, 원본 그대로면 quality info로 유지한다.",
+      "stats": {
+        "components": 125,
+        "reportableComponents": 73,
+        "sceneSymbols": 125,
+        "sceneLabels": 122,
+        "sceneWires": 346,
+        "manualConnections": 154,
+        "integratedComponents": 73,
+        "lightweightComponents": 125,
+        "lightweightUnresolved": 0,
+        "netlistNets": 185,
+        "netlistIssues": 41
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R392 value text is far from the symbol body.",
+          "componentId": "017cbb10-a374-4c0d-8e5b-ec6534761f44",
+          "reference": "R392",
+          "detail": {
+            "text": "R_2k2_0402",
+            "distance": 119.3,
+            "shapeDiagonal": 29.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C156 value text is far from the symbol body.",
+          "componentId": "0648bc69-cbf8-489d-9231-2890bcec735e",
+          "reference": "C156",
+          "detail": {
+            "text": "C_100n_0402",
+            "distance": 139,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C162 value text is far from the symbol body.",
+          "componentId": "08af3b91-0289-4dce-b8d3-d54e1d330ea3",
+          "reference": "C162",
+          "detail": {
+            "text": "C_100n_0402",
+            "distance": 139,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C161 value text is far from the symbol body.",
+          "componentId": "1aeea93d-4f7e-4d33-a0c6-b88817e8d4a5",
+          "reference": "C161",
+          "detail": {
+            "text": "C_1u_0402",
+            "distance": 111.6,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R172 value text is far from the symbol body.",
+          "componentId": "1ec6352f-4210-4c4e-b2d1-1ee96f374fe6",
+          "reference": "R172",
+          "detail": {
+            "text": "R_4k7_0402",
+            "distance": 119.3,
+            "shapeDiagonal": 29.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-placement-15-dedbbbe2842256c3-kicad-kicad-source-mirror-usb-dp",
+      "bucket": "text-placement",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/dedbbbe2842256c3_KiCad_kicad-source-mirror_usb_dp.kicad_sch",
+      "sourceReason": "render.property-text-far-from-symbol",
+      "sourceCount": 52,
+      "autoProposedLabel": "source-as-authored",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "원본 KiCad에서도 reference/value 텍스트가 심볼에서 멀리 떨어져 있는가?",
+      "actionIfConfirmed": "원본과 다르면 property transform/anchor를 수정하고, 원본 그대로면 quality info로 유지한다.",
+      "stats": {
+        "components": 100,
+        "reportableComponents": 65,
+        "sceneSymbols": 100,
+        "sceneLabels": 62,
+        "sceneWires": 273,
+        "manualConnections": 146,
+        "integratedComponents": 65,
+        "lightweightComponents": 100,
+        "lightweightUnresolved": 0,
+        "netlistNets": 113,
+        "netlistIssues": 32
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R122 value text is far from the symbol body.",
+          "componentId": "099372a6-6862-4e12-821f-c3743fd3ecb8",
+          "reference": "R122",
+          "detail": {
+            "text": "R_0R_0402",
+            "distance": 119.3,
+            "shapeDiagonal": 29.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R135 value text is far from the symbol body.",
+          "componentId": "0b4d487f-8ccc-4620-895e-14bcd5ec7b91",
+          "reference": "R135",
+          "detail": {
+            "text": "R_1k_0402",
+            "distance": 119.3,
+            "shapeDiagonal": 29.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C142 value text is far from the symbol body.",
+          "componentId": "0facbced-6952-42a9-b8ee-f6f1555a445d",
+          "reference": "C142",
+          "detail": {
+            "text": "C_100n_0402",
+            "distance": 112,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "C144 value text is far from the symbol body.",
+          "componentId": "0ff744ef-93aa-47ac-8b3d-cc07f798dc19",
+          "reference": "C144",
+          "detail": {
+            "text": "C_100n_0402",
+            "distance": 112,
+            "shapeDiagonal": 32.9
+          }
+        },
+        {
+          "reason": "render.property-text-far-from-symbol",
+          "category": "render",
+          "severity": "warning",
+          "message": "R137 value text is far from the symbol body.",
+          "componentId": "10b8f175-fede-49f0-adbe-b8f5102c230e",
+          "reference": "R137",
+          "detail": {
+            "text": "R_1k_0402",
+            "distance": 119.3,
+            "shapeDiagonal": 29.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "power-label-anchor-01-ca9921245d677df7-cwsimmons-ibm-3174-schematics-66x2491",
+      "bucket": "power-label-anchor",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/ca9921245d677df7_cwsimmons_IBM_3174_schematics_66X2491.kicad_sch",
+      "sourceReason": "render.power-label-off-connection",
+      "sourceCount": 183,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "VCC/GND/전원 라벨이 실제 전기 net label인가, 아니면 주석처럼 배치된 legacy 텍스트인가?",
+      "actionIfConfirmed": "실제 net label이면 label anchor/geometry 파싱을 수정하고, 주석이면 annotation-quality info로 내린다.",
+      "stats": {
+        "components": 78,
+        "reportableComponents": 78,
+        "sceneSymbols": 78,
+        "sceneLabels": 1505,
+        "sceneWires": 0,
+        "manualConnections": 38,
+        "integratedComponents": 78,
+        "lightweightComponents": 78,
+        "lightweightUnresolved": 0,
+        "netlistNets": 62,
+        "netlistIssues": 0
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "12V label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "12V",
+            "distance": 197.6,
+            "at": {
+              "x": 966.611,
+              "y": 2681.111
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "5V label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "5V",
+            "distance": 409.2,
+            "at": {
+              "x": 4155.722,
+              "y": 3287.889
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "5V label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "5V",
+            "distance": 296.3,
+            "at": {
+              "x": 345.722,
+              "y": 2582.333
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 381,
+            "at": {
+              "x": 2236.611,
+              "y": 2554.111
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "5V label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "5V",
+            "distance": 56.4,
+            "at": {
+              "x": 3732.389,
+              "y": 2935.111
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "power-label-anchor-02-50c3ec8cd445f505-darpan1012-16-channel-manual-variable-power-supply-circ",
+      "bucket": "power-label-anchor",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/50c3ec8cd445f505_Darpan1012_16-channel-manual-variable-power-supply-circuit_power_source_16_ch_manual_ver_4.kicad_sch",
+      "sourceReason": "render.power-label-off-connection",
+      "sourceCount": 16,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "VCC/GND/전원 라벨이 실제 전기 net label인가, 아니면 주석처럼 배치된 legacy 텍스트인가?",
+      "actionIfConfirmed": "실제 net label이면 label anchor/geometry 파싱을 수정하고, 주석이면 annotation-quality info로 내린다.",
+      "stats": {
+        "components": 54,
+        "reportableComponents": 50,
+        "sceneSymbols": 54,
+        "sceneLabels": 123,
+        "sceneWires": 188,
+        "manualConnections": 112,
+        "integratedComponents": 50,
+        "lightweightComponents": 54,
+        "lightweightUnresolved": 0,
+        "netlistNets": 56,
+        "netlistIssues": 1
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 124.2,
+            "at": {
+              "x": 945.444,
+              "y": 681.567
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 290.7,
+            "at": {
+              "x": 1132.417,
+              "y": 529.872
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 249.9,
+            "at": {
+              "x": 1449.917,
+              "y": 229.306
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 275.3,
+            "at": {
+              "x": 1125.361,
+              "y": 229.306
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 311.1,
+            "at": {
+              "x": 1132.417,
+              "y": 682.272
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "power-label-anchor-03-d054d19942e5f215-cwsimmons-ibm-3174-schematics-66x2450",
+      "bucket": "power-label-anchor",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/d054d19942e5f215_cwsimmons_IBM_3174_schematics_66X2450.kicad_sch",
+      "sourceReason": "render.power-label-off-connection",
+      "sourceCount": 10,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "VCC/GND/전원 라벨이 실제 전기 net label인가, 아니면 주석처럼 배치된 legacy 텍스트인가?",
+      "actionIfConfirmed": "실제 net label이면 label anchor/geometry 파싱을 수정하고, 주석이면 annotation-quality info로 내린다.",
+      "stats": {
+        "components": 109,
+        "reportableComponents": 109,
+        "sceneSymbols": 109,
+        "sceneLabels": 1206,
+        "sceneWires": 115,
+        "manualConnections": 982,
+        "integratedComponents": 109,
+        "lightweightComponents": 109,
+        "lightweightUnresolved": 0,
+        "netlistNets": 336,
+        "netlistIssues": 0
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "5V label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "5V",
+            "distance": 364.2,
+            "at": {
+              "x": 945.444,
+              "y": 2589.389
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 269.6,
+            "at": {
+              "x": 931.333,
+              "y": 2455.333
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "5V label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "5V",
+            "distance": 261.8,
+            "at": {
+              "x": 959.556,
+              "y": 2716.389
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 63.5,
+            "at": {
+              "x": 1975.556,
+              "y": 2017.889
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 231.4,
+            "at": {
+              "x": 987.778,
+              "y": 2455.333
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "power-label-anchor-04-44fe205eb2edec3d-sid93-urine-dipstick-analyzer-cad-urine-dipstick-analyz",
+      "bucket": "power-label-anchor",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/44fe205eb2edec3d_Sid93_urine-dipstick-analyzer-cad_urine_dipstick_analyzer.kicad_sch",
+      "sourceReason": "render.power-label-off-connection",
+      "sourceCount": 10,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "VCC/GND/전원 라벨이 실제 전기 net label인가, 아니면 주석처럼 배치된 legacy 텍스트인가?",
+      "actionIfConfirmed": "실제 net label이면 label anchor/geometry 파싱을 수정하고, 주석이면 annotation-quality info로 내린다.",
+      "stats": {
+        "components": 57,
+        "reportableComponents": 57,
+        "sceneSymbols": 57,
+        "sceneLabels": 187,
+        "sceneWires": 71,
+        "manualConnections": 44,
+        "integratedComponents": 57,
+        "lightweightComponents": 57,
+        "lightweightUnresolved": 0,
+        "netlistNets": 84,
+        "netlistIssues": 11
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "VBAT label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "VBAT",
+            "distance": 123.2,
+            "at": {
+              "x": 127,
+              "y": 155.222
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 119.9,
+            "at": {
+              "x": 127,
+              "y": 183.444
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 14.1,
+            "at": {
+              "x": 254,
+              "y": 366.889
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 14.1,
+            "at": {
+              "x": 254,
+              "y": 479.778
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 15.8,
+            "at": {
+              "x": 1975.556,
+              "y": 254
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "power-label-anchor-05-3d2a9d40d319f46e-cwsimmons-ibm-3174-schematics-66x2555",
+      "bucket": "power-label-anchor",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/3d2a9d40d319f46e_cwsimmons_IBM_3174_schematics_66X2555.kicad_sch",
+      "sourceReason": "render.power-label-off-connection",
+      "sourceCount": 8,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "VCC/GND/전원 라벨이 실제 전기 net label인가, 아니면 주석처럼 배치된 legacy 텍스트인가?",
+      "actionIfConfirmed": "실제 net label이면 label anchor/geometry 파싱을 수정하고, 주석이면 annotation-quality info로 내린다.",
+      "stats": {
+        "components": 65,
+        "reportableComponents": 65,
+        "sceneSymbols": 65,
+        "sceneLabels": 235,
+        "sceneWires": 136,
+        "manualConnections": 176,
+        "integratedComponents": 65,
+        "lightweightComponents": 65,
+        "lightweightUnresolved": 0,
+        "netlistNets": 176,
+        "netlistIssues": 1
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "VCC label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "VCC",
+            "distance": 211.7,
+            "at": {
+              "x": 268.111,
+              "y": 366.889
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "VCC label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "VCC",
+            "distance": 107.7,
+            "at": {
+              "x": 479.778,
+              "y": 366.889
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "VCC label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "VCC",
+            "distance": 211.7,
+            "at": {
+              "x": 1848.556,
+              "y": 141.111
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 127,
+            "at": {
+              "x": 268.111,
+              "y": 282.222
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 155.2,
+            "at": {
+              "x": 1954.389,
+              "y": 197.556
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "power-label-anchor-06-b5eaa77928c00981-81823650800wzy-sketch-pcb-designer-desktop-controller",
+      "bucket": "power-label-anchor",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/b5eaa77928c00981_81823650800wzy-sketch_pcb-designer_desktop-controller.kicad_sch",
+      "sourceReason": "render.power-label-off-connection",
+      "sourceCount": 5,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "VCC/GND/전원 라벨이 실제 전기 net label인가, 아니면 주석처럼 배치된 legacy 텍스트인가?",
+      "actionIfConfirmed": "실제 net label이면 label anchor/geometry 파싱을 수정하고, 주석이면 annotation-quality info로 내린다.",
+      "stats": {
+        "components": 22,
+        "reportableComponents": 22,
+        "sceneSymbols": 22,
+        "sceneLabels": 12,
+        "sceneWires": 36,
+        "manualConnections": 9,
+        "integratedComponents": 22,
+        "lightweightComponents": 22,
+        "lightweightUnresolved": 0,
+        "netlistNets": 88,
+        "netlistIssues": 2
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "+3V3 label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "+3V3",
+            "distance": 27.8,
+            "at": {
+              "x": 472.222,
+              "y": 666.667
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 30,
+            "at": {
+              "x": 136.667,
+              "y": 583.333
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 27.8,
+            "at": {
+              "x": 722.222,
+              "y": 166.222
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "+3V3 label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "+3V3",
+            "distance": 27.8,
+            "at": {
+              "x": 722.222,
+              "y": 152.111
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "+3V3 label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "+3V3",
+            "distance": 27.8,
+            "at": {
+              "x": 472.222,
+              "y": 666.667
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "power-label-anchor-07-d28f490622856553-shawez17-chandra-chandu",
+      "bucket": "power-label-anchor",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/d28f490622856553_Shawez17_Chandra_chandu.kicad_sch",
+      "sourceReason": "render.power-label-off-connection",
+      "sourceCount": 4,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "VCC/GND/전원 라벨이 실제 전기 net label인가, 아니면 주석처럼 배치된 legacy 텍스트인가?",
+      "actionIfConfirmed": "실제 net label이면 label anchor/geometry 파싱을 수정하고, 주석이면 annotation-quality info로 내린다.",
+      "stats": {
+        "components": 52,
+        "reportableComponents": 35,
+        "sceneSymbols": 52,
+        "sceneLabels": 41,
+        "sceneWires": 140,
+        "manualConnections": 88,
+        "integratedComponents": 35,
+        "lightweightComponents": 52,
+        "lightweightUnresolved": 0,
+        "netlistNets": 75,
+        "netlistIssues": 7
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "12V label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "12V",
+            "distance": 84.7,
+            "at": {
+              "x": 1150.056,
+              "y": 246.944
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "3.3V label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "3.3V",
+            "distance": 84.7,
+            "at": {
+              "x": 1023.056,
+              "y": 246.944
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "12V label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "12V",
+            "distance": 84.7,
+            "at": {
+              "x": 1037.167,
+              "y": 246.944
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "3.3V label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "3.3V",
+            "distance": 84.7,
+            "at": {
+              "x": 1135.944,
+              "y": 246.944
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "power-label-anchor-08-e3f9bc4d7bc5418c-t-dsp-t-dsp-mic-array-module-t-dsp-mic-array-module",
+      "bucket": "power-label-anchor",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/e3f9bc4d7bc5418c_t-dsp_t-dsp_mic_array_module_t-dsp_mic_array_module.kicad_sch",
+      "sourceReason": "render.power-label-off-connection",
+      "sourceCount": 3,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "VCC/GND/전원 라벨이 실제 전기 net label인가, 아니면 주석처럼 배치된 legacy 텍스트인가?",
+      "actionIfConfirmed": "실제 net label이면 label anchor/geometry 파싱을 수정하고, 주석이면 annotation-quality info로 내린다.",
+      "stats": {
+        "components": 55,
+        "reportableComponents": 32,
+        "sceneSymbols": 55,
+        "sceneLabels": 119,
+        "sceneWires": 199,
+        "manualConnections": 104,
+        "integratedComponents": 32,
+        "lightweightComponents": 54,
+        "lightweightUnresolved": 1,
+        "netlistNets": 108,
+        "netlistIssues": 3
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 14.1,
+            "at": {
+              "x": 3055.056,
+              "y": 3069.167
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "GND label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "GND",
+            "distance": 176.5,
+            "at": {
+              "x": 2448.278,
+              "y": 3245.556
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "3.3V label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "3.3V",
+            "distance": 92,
+            "at": {
+              "x": 3182.056,
+              "y": 2723.444
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "power-label-anchor-09-79be3cd94135b8df-branc-00-zmk-config-main-board",
+      "bucket": "power-label-anchor",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/79be3cd94135b8df_branc-00_zmk-config_main_board.kicad_sch",
+      "sourceReason": "render.power-label-off-connection",
+      "sourceCount": 2,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "VCC/GND/전원 라벨이 실제 전기 net label인가, 아니면 주석처럼 배치된 legacy 텍스트인가?",
+      "actionIfConfirmed": "실제 net label이면 label anchor/geometry 파싱을 수정하고, 주석이면 annotation-quality info로 내린다.",
+      "stats": {
+        "components": 230,
+        "reportableComponents": 230,
+        "sceneSymbols": 230,
+        "sceneLabels": 263,
+        "sceneWires": 5,
+        "manualConnections": 332,
+        "integratedComponents": 230,
+        "lightweightComponents": 118,
+        "lightweightUnresolved": 112,
+        "netlistNets": 183,
+        "netlistIssues": 1
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "+3V3 label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "+3V3",
+            "distance": 14.1,
+            "at": {
+              "x": 3228.333,
+              "y": 560.889
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "VBUS label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "VBUS",
+            "distance": 14.1,
+            "at": {
+              "x": 3256.556,
+              "y": 560.889
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "power-label-anchor-10-28b50caf400fea1f-shawez17-chandra-sunny",
+      "bucket": "power-label-anchor",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/28b50caf400fea1f_Shawez17_Chandra_sunny.kicad_sch",
+      "sourceReason": "render.power-label-off-connection",
+      "sourceCount": 2,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "VCC/GND/전원 라벨이 실제 전기 net label인가, 아니면 주석처럼 배치된 legacy 텍스트인가?",
+      "actionIfConfirmed": "실제 net label이면 label anchor/geometry 파싱을 수정하고, 주석이면 annotation-quality info로 내린다.",
+      "stats": {
+        "components": 78,
+        "reportableComponents": 52,
+        "sceneSymbols": 78,
+        "sceneLabels": 16,
+        "sceneWires": 172,
+        "manualConnections": 121,
+        "integratedComponents": 52,
+        "lightweightComponents": 78,
+        "lightweightUnresolved": 0,
+        "netlistNets": 37,
+        "netlistIssues": 2
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "3.3V label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "3.3V",
+            "distance": 84.7,
+            "at": {
+              "x": 1509.889,
+              "y": 409.222
+            }
+          }
+        },
+        {
+          "reason": "render.power-label-off-connection",
+          "category": "render",
+          "severity": "warning",
+          "message": "12V label anchor is not close to any wire, junction, or pin.",
+          "detail": {
+            "text": "12V",
+            "distance": 70.6,
+            "at": {
+              "x": 1495.778,
+              "y": 409.222
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "passive-value-01-aa14b24ee1d79428-lucask07-covg-clamp-bath-clamp-top",
+      "bucket": "passive-value",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/aa14b24ee1d79428_lucask07_covg_clamp_bath_clamp_top.kicad_sch",
+      "sourceReason": "netlist.passive-value-missing",
+      "sourceCount": 48,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "R/C/L 값이 원본에서 정말 비어 있는가, 아니면 다른 property/field에 저장되어 있는가?",
+      "actionIfConfirmed": "다른 field에 값이 있으면 parser value extraction을 확장하고, 없으면 fallback warning으로 유지한다.",
+      "stats": {
+        "components": 163,
+        "reportableComponents": 88,
+        "sceneSymbols": 163,
+        "sceneLabels": 135,
+        "sceneWires": 383,
+        "manualConnections": 250,
+        "integratedComponents": 88,
+        "lightweightComponents": 163,
+        "lightweightUnresolved": 0,
+        "netlistNets": 126,
+        "netlistIssues": 34
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R5 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-0000604e0174",
+          "reference": "R5"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R7 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-0000604e0e09",
+          "reference": "R7"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R8 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-0000604e1783",
+          "reference": "R8"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R6 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-0000604e1bba",
+          "reference": "R6"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C1 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-0000604e3fb8",
+          "reference": "C1"
+        }
+      ]
+    },
+    {
+      "id": "passive-value-02-d60cb365e5039162-shazebengg-projects-ostron-electronics",
+      "bucket": "passive-value",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/d60cb365e5039162_ShazebEngg_projects_Ostron Electronics.kicad_sch",
+      "sourceReason": "netlist.passive-value-missing",
+      "sourceCount": 44,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "R/C/L 값이 원본에서 정말 비어 있는가, 아니면 다른 property/field에 저장되어 있는가?",
+      "actionIfConfirmed": "다른 field에 값이 있으면 parser value extraction을 확장하고, 없으면 fallback warning으로 유지한다.",
+      "stats": {
+        "components": 105,
+        "reportableComponents": 62,
+        "sceneSymbols": 105,
+        "sceneLabels": 48,
+        "sceneWires": 300,
+        "manualConnections": 180,
+        "integratedComponents": 62,
+        "lightweightComponents": 105,
+        "lightweightUnresolved": 0,
+        "netlistNets": 102,
+        "netlistIssues": 14
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C15 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-000062f8befb",
+          "reference": "C15"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C17 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-000062f8eb46",
+          "reference": "C17"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C6 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-000062f9351b",
+          "reference": "C6"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C7 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-000062f93c04",
+          "reference": "C7"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C8 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-000062f93d91",
+          "reference": "C8"
+        }
+      ]
+    },
+    {
+      "id": "passive-value-03-7a0bd0fa4be4c97e-crimier-mykicad-keyboard-whiz",
+      "bucket": "passive-value",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/7a0bd0fa4be4c97e_CRImier_MyKiCad_keyboard_whiz.kicad_sch",
+      "sourceReason": "netlist.passive-value-missing",
+      "sourceCount": 43,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "R/C/L 값이 원본에서 정말 비어 있는가, 아니면 다른 property/field에 저장되어 있는가?",
+      "actionIfConfirmed": "다른 field에 값이 있으면 parser value extraction을 확장하고, 없으면 fallback warning으로 유지한다.",
+      "stats": {
+        "components": 166,
+        "reportableComponents": 78,
+        "sceneSymbols": 166,
+        "sceneLabels": 279,
+        "sceneWires": 309,
+        "manualConnections": 412,
+        "integratedComponents": 78,
+        "lightweightComponents": 162,
+        "lightweightUnresolved": 4,
+        "netlistNets": 161,
+        "netlistIssues": 24
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C2 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005cd27651",
+          "reference": "C2"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C1 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005d481927",
+          "reference": "C1"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R1 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-000062947f39",
+          "reference": "R1"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R7 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-000062f59420",
+          "reference": "R7"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C4 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-000062febbbb",
+          "reference": "C4"
+        }
+      ]
+    },
+    {
+      "id": "passive-value-04-f9495f74c3058dd3-eded2314-kicad-designs-stm32-altimeter-r2",
+      "bucket": "passive-value",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/f9495f74c3058dd3_EDED2314_kicad-designs_STM32_Altimeter_R2.kicad_sch",
+      "sourceReason": "netlist.passive-value-missing",
+      "sourceCount": 34,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "R/C/L 값이 원본에서 정말 비어 있는가, 아니면 다른 property/field에 저장되어 있는가?",
+      "actionIfConfirmed": "다른 field에 값이 있으면 parser value extraction을 확장하고, 없으면 fallback warning으로 유지한다.",
+      "stats": {
+        "components": 114,
+        "reportableComponents": 60,
+        "sceneSymbols": 114,
+        "sceneLabels": 71,
+        "sceneWires": 223,
+        "manualConnections": 203,
+        "integratedComponents": 60,
+        "lightweightComponents": 114,
+        "lightweightUnresolved": 0,
+        "netlistNets": 73,
+        "netlistIssues": 18
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C9 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "04d78395-af15-4264-acca-2e5dd9b8464c",
+          "reference": "C9"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R7 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "0a216b70-12e4-4c3e-8cbe-c54d6c7de612",
+          "reference": "R7"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R9 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "0dfe8b8e-8e9d-4440-8f50-44d1d670caf6",
+          "reference": "R9"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R2 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "22ec1dc9-ed11-4b7b-b7fc-2ce8f14ed42f",
+          "reference": "R2"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C1 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "2665afd5-09aa-401f-81d0-3b4246898230",
+          "reference": "C1"
+        }
+      ]
+    },
+    {
+      "id": "passive-value-05-db20d0d4032509f3-microfarad-de-kicad-water-alarm",
+      "bucket": "passive-value",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/db20d0d4032509f3_microfarad-de_kicad_water-alarm.kicad_sch",
+      "sourceReason": "netlist.passive-value-missing",
+      "sourceCount": 27,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "R/C/L 값이 원본에서 정말 비어 있는가, 아니면 다른 property/field에 저장되어 있는가?",
+      "actionIfConfirmed": "다른 field에 값이 있으면 parser value extraction을 확장하고, 없으면 fallback warning으로 유지한다.",
+      "stats": {
+        "components": 73,
+        "reportableComponents": 52,
+        "sceneSymbols": 73,
+        "sceneLabels": 38,
+        "sceneWires": 144,
+        "manualConnections": 106,
+        "integratedComponents": 52,
+        "lightweightComponents": 73,
+        "lightweightUnresolved": 0,
+        "netlistNets": 48,
+        "netlistIssues": 26
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R6 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005db87461",
+          "reference": "R6"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R12 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005db890d2",
+          "reference": "R12"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R13 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005db89136",
+          "reference": "R13"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R5 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005db89c68",
+          "reference": "R5"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R1 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005db8b58d",
+          "reference": "R1"
+        }
+      ]
+    },
+    {
+      "id": "passive-value-06-e67a1fb86dbd9d15-seantedesco-kicad-projects-usb-rf",
+      "bucket": "passive-value",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/e67a1fb86dbd9d15_SeanTedesco_kicad_projects_usb-rf.kicad_sch",
+      "sourceReason": "netlist.passive-value-missing",
+      "sourceCount": 27,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "R/C/L 값이 원본에서 정말 비어 있는가, 아니면 다른 property/field에 저장되어 있는가?",
+      "actionIfConfirmed": "다른 field에 값이 있으면 parser value extraction을 확장하고, 없으면 fallback warning으로 유지한다.",
+      "stats": {
+        "components": 73,
+        "reportableComponents": 44,
+        "sceneSymbols": 73,
+        "sceneLabels": 37,
+        "sceneWires": 148,
+        "manualConnections": 113,
+        "integratedComponents": 44,
+        "lightweightComponents": 69,
+        "lightweightUnresolved": 0,
+        "netlistNets": 54,
+        "netlistIssues": 7
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C1 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-000061dd5d77",
+          "reference": "C1"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C2 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-000061dd881e",
+          "reference": "C2"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C8 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-000061df6c43",
+          "reference": "C8"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C9 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-000061df6c49",
+          "reference": "C9"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C10 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-000061df6c4f",
+          "reference": "C10"
+        }
+      ]
+    },
+    {
+      "id": "passive-value-07-5992135b6d06aaec-north-x-kicad-projects-booster",
+      "bucket": "passive-value",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/5992135b6d06aaec_north-x_kicad-projects_booster.kicad_sch",
+      "sourceReason": "netlist.passive-value-missing",
+      "sourceCount": 25,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "R/C/L 값이 원본에서 정말 비어 있는가, 아니면 다른 property/field에 저장되어 있는가?",
+      "actionIfConfirmed": "다른 field에 값이 있으면 parser value extraction을 확장하고, 없으면 fallback warning으로 유지한다.",
+      "stats": {
+        "components": 73,
+        "reportableComponents": 41,
+        "sceneSymbols": 73,
+        "sceneLabels": 27,
+        "sceneWires": 169,
+        "manualConnections": 127,
+        "integratedComponents": 41,
+        "lightweightComponents": 73,
+        "lightweightUnresolved": 0,
+        "netlistNets": 37,
+        "netlistIssues": 18
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R3 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005ebfeb21",
+          "reference": "R3"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R10 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005ec39df5",
+          "reference": "R10"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C8 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005ec45352",
+          "reference": "C8"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R8 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005ec460e2",
+          "reference": "R8"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R9 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005ec46853",
+          "reference": "R9"
+        }
+      ]
+    },
+    {
+      "id": "passive-value-08-61c1e426b34995f3-freerouting-freerouting-motorizedopener",
+      "bucket": "passive-value",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/61c1e426b34995f3_freerouting_freerouting_motorizedopener.kicad_sch",
+      "sourceReason": "netlist.passive-value-missing",
+      "sourceCount": 22,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "R/C/L 값이 원본에서 정말 비어 있는가, 아니면 다른 property/field에 저장되어 있는가?",
+      "actionIfConfirmed": "다른 field에 값이 있으면 parser value extraction을 확장하고, 없으면 fallback warning으로 유지한다.",
+      "stats": {
+        "components": 92,
+        "reportableComponents": 44,
+        "sceneSymbols": 92,
+        "sceneLabels": 26,
+        "sceneWires": 180,
+        "manualConnections": 170,
+        "integratedComponents": 44,
+        "lightweightComponents": 92,
+        "lightweightUnresolved": 0,
+        "netlistNets": 78,
+        "netlistIssues": 9
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R8 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "13ac7ade-ae79-4290-a055-dc53d686e552",
+          "reference": "R8"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R13 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "1765412e-1b34-4461-95f9-acf2dff6fee8",
+          "reference": "R13"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C4 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "21ed8cef-a029-4b93-8143-3917d3361ade",
+          "reference": "C4"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C11 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "2a4da5ff-1932-4ab6-9bd2-92f58058ab22",
+          "reference": "C11"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R9 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "2a8a333c-ce71-4afb-bbf5-914275c0e270",
+          "reference": "R9"
+        }
+      ]
+    },
+    {
+      "id": "passive-value-09-82d9a9d6e8c72d73-rebeccapaz-kicad-schematics-adafruit-096-ssd1306",
+      "bucket": "passive-value",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/82d9a9d6e8c72d73_rebeccapaz_kicad-schematics_adafruit-096-ssd1306.kicad_sch",
+      "sourceReason": "netlist.passive-value-missing",
+      "sourceCount": 19,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "R/C/L 값이 원본에서 정말 비어 있는가, 아니면 다른 property/field에 저장되어 있는가?",
+      "actionIfConfirmed": "다른 field에 값이 있으면 parser value extraction을 확장하고, 없으면 fallback warning으로 유지한다.",
+      "stats": {
+        "components": 71,
+        "reportableComponents": 40,
+        "sceneSymbols": 71,
+        "sceneLabels": 25,
+        "sceneWires": 119,
+        "manualConnections": 76,
+        "integratedComponents": 40,
+        "lightweightComponents": 64,
+        "lightweightUnresolved": 7,
+        "netlistNets": 192,
+        "netlistIssues": 106
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C17 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "0a90a3df-995b-4fba-9e2a-4f3995eab4ad",
+          "reference": "C17"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C14 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "365ff9b0-fa92-40e0-9c94-1c66fcd7732c",
+          "reference": "C14"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C3 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "3721e744-7595-49aa-90a6-3be488924cee",
+          "reference": "C3"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R3 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "54270a78-477e-421c-a5b3-5063484da131",
+          "reference": "R3"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R2 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "5c6ae1eb-67e1-4043-a64c-d6015362644b",
+          "reference": "R2"
+        }
+      ]
+    },
+    {
+      "id": "passive-value-10-6bcb1968cd42f394-crimier-mykicad-mpcie-breakout",
+      "bucket": "passive-value",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/6bcb1968cd42f394_CRImier_MyKiCad_mpcie_breakout.kicad_sch",
+      "sourceReason": "netlist.passive-value-missing",
+      "sourceCount": 18,
+      "autoProposedLabel": "conservative-warning",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "R/C/L 값이 원본에서 정말 비어 있는가, 아니면 다른 property/field에 저장되어 있는가?",
+      "actionIfConfirmed": "다른 field에 값이 있으면 parser value extraction을 확장하고, 없으면 fallback warning으로 유지한다.",
+      "stats": {
+        "components": 113,
+        "reportableComponents": 33,
+        "sceneSymbols": 113,
+        "sceneLabels": 15,
+        "sceneWires": 86,
+        "manualConnections": 187,
+        "integratedComponents": 33,
+        "lightweightComponents": 113,
+        "lightweightUnresolved": 0,
+        "netlistNets": 35,
+        "netlistIssues": 5
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R1 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005cc07eac",
+          "reference": "R1"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R3 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005cc07fad",
+          "reference": "R3"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "R2 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005cc08d1b",
+          "reference": "R2"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C7 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005cc08e2d",
+          "reference": "C7"
+        },
+        {
+          "reason": "netlist.passive-value-missing",
+          "category": "netlist",
+          "severity": "warning",
+          "message": "C8 has no parsed value, so netlist electrical estimates may fall back.",
+          "componentId": "00000000-0000-0000-0000-00005cc08ec1",
+          "reference": "C8"
+        }
+      ]
+    },
+    {
+      "id": "low-confidence-mapping-01-0e85ac1d16e5ec63-feastorg-protokit-project-board-grid-smt",
+      "bucket": "low-confidence-mapping",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/0e85ac1d16e5ec63_feastorg_protokit_project-board-grid-smt.kicad_sch",
+      "sourceReason": "mapping.low-confidence-heavy",
+      "sourceCount": 1,
+      "autoProposedLabel": "mapping-improvement",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "대부분이 custom/legacy/connector 계열인가, 아니면 흔한 IC/모듈인데 매핑이 약한가?",
+      "actionIfConfirmed": "custom/connector면 family rule을 보강하고, 흔한 IC/모듈이면 template/part-master mapping을 추가한다.",
+      "stats": {
+        "components": 1755,
+        "reportableComponents": 1755,
+        "sceneSymbols": 1755,
+        "sceneLabels": 0,
+        "sceneWires": 566,
+        "manualConnections": 276,
+        "integratedComponents": 1755,
+        "lightweightComponents": 1755,
+        "lightweightUnresolved": 0,
+        "netlistNets": 1662,
+        "netlistIssues": 0
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "mapping.low-confidence-heavy",
+          "category": "mapping",
+          "severity": "info",
+          "message": "Most imported components are low-confidence mappings.",
+          "detail": {
+            "lowConfidence": 1755,
+            "components": 1755
+          }
+        }
+      ]
+    },
+    {
+      "id": "low-confidence-mapping-02-031bd5931cb89db2-phodina-openwrt-one-05-mt7976c-dbdc",
+      "bucket": "low-confidence-mapping",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/031bd5931cb89db2_phodina_openwrt-one_05_MT7976C_DBDC.kicad_sch",
+      "sourceReason": "mapping.low-confidence-heavy",
+      "sourceCount": 1,
+      "autoProposedLabel": "mapping-improvement",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "대부분이 custom/legacy/connector 계열인가, 아니면 흔한 IC/모듈인데 매핑이 약한가?",
+      "actionIfConfirmed": "custom/connector면 family rule을 보강하고, 흔한 IC/모듈이면 template/part-master mapping을 추가한다.",
+      "stats": {
+        "components": 526,
+        "reportableComponents": 226,
+        "sceneSymbols": 526,
+        "sceneLabels": 84,
+        "sceneWires": 769,
+        "manualConnections": 264,
+        "integratedComponents": 226,
+        "lightweightComponents": 225,
+        "lightweightUnresolved": 301,
+        "netlistNets": 330,
+        "netlistIssues": 0
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "mapping.low-confidence-heavy",
+          "category": "mapping",
+          "severity": "info",
+          "message": "Most imported components are low-confidence mappings.",
+          "detail": {
+            "lowConfidence": 526,
+            "components": 526
+          }
+        }
+      ]
+    },
+    {
+      "id": "low-confidence-mapping-03-d8c76357f65b547b-deltecent-kicad-mits-88-2sio",
+      "bucket": "low-confidence-mapping",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/d8c76357f65b547b_deltecent_KiCad_MITS 88-2SIO.kicad_sch",
+      "sourceReason": "mapping.low-confidence-heavy",
+      "sourceCount": 1,
+      "autoProposedLabel": "mapping-improvement",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "대부분이 custom/legacy/connector 계열인가, 아니면 흔한 IC/모듈인데 매핑이 약한가?",
+      "actionIfConfirmed": "custom/connector면 family rule을 보강하고, 흔한 IC/모듈이면 template/part-master mapping을 추가한다.",
+      "stats": {
+        "components": 360,
+        "reportableComponents": 307,
+        "sceneSymbols": 360,
+        "sceneLabels": 274,
+        "sceneWires": 287,
+        "manualConnections": 469,
+        "integratedComponents": 307,
+        "lightweightComponents": 360,
+        "lightweightUnresolved": 0,
+        "netlistNets": 475,
+        "netlistIssues": 5
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "mapping.low-confidence-heavy",
+          "category": "mapping",
+          "severity": "info",
+          "message": "Most imported components are low-confidence mappings.",
+          "detail": {
+            "lowConfidence": 235,
+            "components": 360
+          }
+        }
+      ]
+    },
+    {
+      "id": "low-confidence-mapping-04-e963ff83d1e6acee-bwack-c64c-250469-kicad-replica-c64-250469-kicad",
+      "bucket": "low-confidence-mapping",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/e963ff83d1e6acee_bwack_C64C-250469-KiCAD-Replica_C64-250469-KiCad.kicad_sch",
+      "sourceReason": "mapping.low-confidence-heavy",
+      "sourceCount": 1,
+      "autoProposedLabel": "mapping-improvement",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "대부분이 custom/legacy/connector 계열인가, 아니면 흔한 IC/모듈인데 매핑이 약한가?",
+      "actionIfConfirmed": "custom/connector면 family rule을 보강하고, 흔한 IC/모듈이면 template/part-master mapping을 추가한다.",
+      "stats": {
+        "components": 357,
+        "reportableComponents": 211,
+        "sceneSymbols": 357,
+        "sceneLabels": 395,
+        "sceneWires": 1120,
+        "manualConnections": 715,
+        "integratedComponents": 211,
+        "lightweightComponents": 338,
+        "lightweightUnresolved": 19,
+        "netlistNets": 400,
+        "netlistIssues": 10
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "mapping.low-confidence-heavy",
+          "category": "mapping",
+          "severity": "info",
+          "message": "Most imported components are low-confidence mappings.",
+          "detail": {
+            "lowConfidence": 293,
+            "components": 357
+          }
+        }
+      ]
+    },
+    {
+      "id": "low-confidence-mapping-05-38802dde61646d1f-phodina-openwrt-one-03-mt7981-pcie-usb-gphy",
+      "bucket": "low-confidence-mapping",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/38802dde61646d1f_phodina_openwrt-one_03_MT7981_PCIe_USB_GPHY.kicad_sch",
+      "sourceReason": "mapping.low-confidence-heavy",
+      "sourceCount": 1,
+      "autoProposedLabel": "mapping-improvement",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "대부분이 custom/legacy/connector 계열인가, 아니면 흔한 IC/모듈인데 매핑이 약한가?",
+      "actionIfConfirmed": "custom/connector면 family rule을 보강하고, 흔한 IC/모듈이면 template/part-master mapping을 추가한다.",
+      "stats": {
+        "components": 291,
+        "reportableComponents": 114,
+        "sceneSymbols": 291,
+        "sceneLabels": 96,
+        "sceneWires": 347,
+        "manualConnections": 96,
+        "integratedComponents": 114,
+        "lightweightComponents": 113,
+        "lightweightUnresolved": 178,
+        "netlistNets": 234,
+        "netlistIssues": 31
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "mapping.low-confidence-heavy",
+          "category": "mapping",
+          "severity": "info",
+          "message": "Most imported components are low-confidence mappings.",
+          "detail": {
+            "lowConfidence": 227,
+            "components": 291
+          }
+        }
+      ]
+    },
+    {
+      "id": "low-confidence-mapping-06-e7cc807e5bc48ef7-yodor-kicad-power-ctrl",
+      "bucket": "low-confidence-mapping",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/e7cc807e5bc48ef7_yodor_kicad_power_ctrl.kicad_sch",
+      "sourceReason": "mapping.low-confidence-heavy",
+      "sourceCount": 1,
+      "autoProposedLabel": "mapping-improvement",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "대부분이 custom/legacy/connector 계열인가, 아니면 흔한 IC/모듈인데 매핑이 약한가?",
+      "actionIfConfirmed": "custom/connector면 family rule을 보강하고, 흔한 IC/모듈이면 template/part-master mapping을 추가한다.",
+      "stats": {
+        "components": 287,
+        "reportableComponents": 188,
+        "sceneSymbols": 287,
+        "sceneLabels": 207,
+        "sceneWires": 575,
+        "manualConnections": 418,
+        "integratedComponents": 188,
+        "lightweightComponents": 287,
+        "lightweightUnresolved": 0,
+        "netlistNets": 309,
+        "netlistIssues": 20
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "mapping.low-confidence-heavy",
+          "category": "mapping",
+          "severity": "info",
+          "message": "Most imported components are low-confidence mappings.",
+          "detail": {
+            "lowConfidence": 189,
+            "components": 287
+          }
+        }
+      ]
+    },
+    {
+      "id": "low-confidence-mapping-07-dc6716fbf8702ed6-phodina-openwrt-one-04-power-external-usb",
+      "bucket": "low-confidence-mapping",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/dc6716fbf8702ed6_phodina_openwrt-one_04_Power_External_USB.kicad_sch",
+      "sourceReason": "mapping.low-confidence-heavy",
+      "sourceCount": 1,
+      "autoProposedLabel": "mapping-improvement",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "대부분이 custom/legacy/connector 계열인가, 아니면 흔한 IC/모듈인데 매핑이 약한가?",
+      "actionIfConfirmed": "custom/connector면 family rule을 보강하고, 흔한 IC/모듈이면 template/part-master mapping을 추가한다.",
+      "stats": {
+        "components": 280,
+        "reportableComponents": 154,
+        "sceneSymbols": 280,
+        "sceneLabels": 34,
+        "sceneWires": 468,
+        "manualConnections": 213,
+        "integratedComponents": 154,
+        "lightweightComponents": 153,
+        "lightweightUnresolved": 127,
+        "netlistNets": 202,
+        "netlistIssues": 19
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "mapping.low-confidence-heavy",
+          "category": "mapping",
+          "severity": "info",
+          "message": "Most imported components are low-confidence mappings.",
+          "detail": {
+            "lowConfidence": 230,
+            "components": 280
+          }
+        }
+      ]
+    },
+    {
+      "id": "low-confidence-mapping-08-232f8236bc89eed2-kicad-kicad-source-mirror-tinytapeout-demo",
+      "bucket": "low-confidence-mapping",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/232f8236bc89eed2_KiCad_kicad-source-mirror_tinytapeout-demo.kicad_sch",
+      "sourceReason": "mapping.low-confidence-heavy",
+      "sourceCount": 1,
+      "autoProposedLabel": "mapping-improvement",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "대부분이 custom/legacy/connector 계열인가, 아니면 흔한 IC/모듈인데 매핑이 약한가?",
+      "actionIfConfirmed": "custom/connector면 family rule을 보강하고, 흔한 IC/모듈이면 template/part-master mapping을 추가한다.",
+      "stats": {
+        "components": 250,
+        "reportableComponents": 131,
+        "sceneSymbols": 250,
+        "sceneLabels": 201,
+        "sceneWires": 584,
+        "manualConnections": 340,
+        "integratedComponents": 131,
+        "lightweightComponents": 247,
+        "lightweightUnresolved": 3,
+        "netlistNets": 226,
+        "netlistIssues": 1
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "mapping.low-confidence-heavy",
+          "category": "mapping",
+          "severity": "info",
+          "message": "Most imported components are low-confidence mappings.",
+          "detail": {
+            "lowConfidence": 169,
+            "components": 250
+          }
+        }
+      ]
+    },
+    {
+      "id": "low-confidence-mapping-09-39fff1d46d5bfbcc-phodina-openwrt-one-07-m2-keym-mikrobus-eeprom-rtc",
+      "bucket": "low-confidence-mapping",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/39fff1d46d5bfbcc_phodina_openwrt-one_07_M2_KEYM_mikroBUS_EEPROM_RTC.kicad_sch",
+      "sourceReason": "mapping.low-confidence-heavy",
+      "sourceCount": 1,
+      "autoProposedLabel": "mapping-improvement",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "대부분이 custom/legacy/connector 계열인가, 아니면 흔한 IC/모듈인데 매핑이 약한가?",
+      "actionIfConfirmed": "custom/connector면 family rule을 보강하고, 흔한 IC/모듈이면 template/part-master mapping을 추가한다.",
+      "stats": {
+        "components": 235,
+        "reportableComponents": 109,
+        "sceneSymbols": 235,
+        "sceneLabels": 38,
+        "sceneWires": 576,
+        "manualConnections": 201,
+        "integratedComponents": 109,
+        "lightweightComponents": 108,
+        "lightweightUnresolved": 127,
+        "netlistNets": 180,
+        "netlistIssues": 18
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "mapping.low-confidence-heavy",
+          "category": "mapping",
+          "severity": "info",
+          "message": "Most imported components are low-confidence mappings.",
+          "detail": {
+            "lowConfidence": 176,
+            "components": 235
+          }
+        }
+      ]
+    },
+    {
+      "id": "low-confidence-mapping-10-0a754113af3293e3-420-enghighneering-projects-kicad-110-000-s1a-phasor-pc",
+      "bucket": "low-confidence-mapping",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/0a754113af3293e3_420-enghighneering_projects-kicad_#110-000-S1A - Phasor PCB.kicad_sch",
+      "sourceReason": "mapping.low-confidence-heavy",
+      "sourceCount": 1,
+      "autoProposedLabel": "mapping-improvement",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "대부분이 custom/legacy/connector 계열인가, 아니면 흔한 IC/모듈인데 매핑이 약한가?",
+      "actionIfConfirmed": "custom/connector면 family rule을 보강하고, 흔한 IC/모듈이면 template/part-master mapping을 추가한다.",
+      "stats": {
+        "components": 234,
+        "reportableComponents": 169,
+        "sceneSymbols": 234,
+        "sceneLabels": 21,
+        "sceneWires": 396,
+        "manualConnections": 273,
+        "integratedComponents": 169,
+        "lightweightComponents": 226,
+        "lightweightUnresolved": 8,
+        "netlistNets": 190,
+        "netlistIssues": 17
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "mapping.low-confidence-heavy",
+          "category": "mapping",
+          "severity": "info",
+          "message": "Most imported components are low-confidence mappings.",
+          "detail": {
+            "lowConfidence": 159,
+            "components": 234
+          }
+        }
+      ]
+    },
+    {
+      "id": "report-count-divergence-01-23d796fa7c1fe190-shazebengg-projects-uno-th-rev3e",
+      "bucket": "report-count-divergence",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/23d796fa7c1fe190_ShazebEngg_projects_UNO-TH_Rev3e.kicad_sch",
+      "sourceReason": "report.integrated-component-count-divergence",
+      "sourceCount": 1,
+      "autoProposedLabel": "true-bug",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "legacy importer, integrated report, lightweight parser 중 어느 쪽 component counting 기준이 틀렸는가?",
+      "actionIfConfirmed": "같은 KiCad source에서 세 파이프라인의 reportable component 정의를 맞춘다.",
+      "stats": {
+        "components": 165,
+        "reportableComponents": 61,
+        "sceneSymbols": 165,
+        "sceneLabels": 113,
+        "sceneWires": 445,
+        "manualConnections": 250,
+        "integratedComponents": 130,
+        "lightweightComponents": 161,
+        "lightweightUnresolved": 4,
+        "netlistNets": 93,
+        "netlistIssues": 6
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "report.integrated-component-count-divergence",
+          "category": "report",
+          "severity": "warning",
+          "message": "Integrated report component count diverges from reportable imported components.",
+          "detail": {
+            "integratedComponents": 130,
+            "reportableComponents": 61,
+            "delta": 69
+          }
+        }
+      ]
+    },
+    {
+      "id": "report-count-divergence-02-8f9dc90f0443b0cb-jotego-jtcores-registers",
+      "bucket": "report-count-divergence",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/8f9dc90f0443b0cb_jotego_jtcores_registers.kicad_sch",
+      "sourceReason": "report.lightweight-component-count-divergence",
+      "sourceCount": 1,
+      "autoProposedLabel": "true-bug",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "legacy importer, integrated report, lightweight parser 중 어느 쪽 component counting 기준이 틀렸는가?",
+      "actionIfConfirmed": "같은 KiCad source에서 세 파이프라인의 reportable component 정의를 맞춘다.",
+      "stats": {
+        "components": 129,
+        "reportableComponents": 129,
+        "sceneSymbols": 129,
+        "sceneLabels": 325,
+        "sceneWires": 588,
+        "manualConnections": 0,
+        "integratedComponents": 129,
+        "lightweightComponents": 0,
+        "lightweightUnresolved": 129,
+        "netlistNets": 79,
+        "netlistIssues": 6
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "report.lightweight-component-count-divergence",
+          "category": "report",
+          "severity": "info",
+          "message": "Lightweight report component count diverges from every comparable imported component count.",
+          "detail": {
+            "lightweightComponents": 0,
+            "closestImportedCountKind": "all-imported-components",
+            "closestImportedCount": 129,
+            "allImportedComponents": 129,
+            "reportableComponents": 129,
+            "nonPowerComponents": 129,
+            "delta": 129
+          }
+        }
+      ]
+    },
+    {
+      "id": "report-count-divergence-03-7f0e21d9f2051c88-jotego-jtcores-counters",
+      "bucket": "report-count-divergence",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/7f0e21d9f2051c88_jotego_jtcores_counters.kicad_sch",
+      "sourceReason": "report.lightweight-component-count-divergence",
+      "sourceCount": 1,
+      "autoProposedLabel": "true-bug",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "legacy importer, integrated report, lightweight parser 중 어느 쪽 component counting 기준이 틀렸는가?",
+      "actionIfConfirmed": "같은 KiCad source에서 세 파이프라인의 reportable component 정의를 맞춘다.",
+      "stats": {
+        "components": 105,
+        "reportableComponents": 105,
+        "sceneSymbols": 105,
+        "sceneLabels": 203,
+        "sceneWires": 376,
+        "manualConnections": 16,
+        "integratedComponents": 105,
+        "lightweightComponents": 22,
+        "lightweightUnresolved": 83,
+        "netlistNets": 121,
+        "netlistIssues": 4
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "report.lightweight-component-count-divergence",
+          "category": "report",
+          "severity": "info",
+          "message": "Lightweight report component count diverges from every comparable imported component count.",
+          "detail": {
+            "lightweightComponents": 22,
+            "closestImportedCountKind": "all-imported-components",
+            "closestImportedCount": 105,
+            "allImportedComponents": 105,
+            "reportableComponents": 105,
+            "nonPowerComponents": 105,
+            "delta": 83
+          }
+        }
+      ]
+    },
+    {
+      "id": "report-count-divergence-04-0404877533f82723-f1ac0-breakout-and-simple-connector-boards-minipill-215",
+      "bucket": "report-count-divergence",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/0404877533f82723_f1ac0_Breakout-and-simple-connector-boards_Minipill 215.kicad_sch",
+      "sourceReason": "report.integrated-component-count-divergence",
+      "sourceCount": 1,
+      "autoProposedLabel": "true-bug",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "legacy importer, integrated report, lightweight parser 중 어느 쪽 component counting 기준이 틀렸는가?",
+      "actionIfConfirmed": "같은 KiCad source에서 세 파이프라인의 reportable component 정의를 맞춘다.",
+      "stats": {
+        "components": 100,
+        "reportableComponents": 38,
+        "sceneSymbols": 100,
+        "sceneLabels": 21,
+        "sceneWires": 85,
+        "manualConnections": 131,
+        "integratedComponents": 85,
+        "lightweightComponents": 99,
+        "lightweightUnresolved": 1,
+        "netlistNets": 62,
+        "netlistIssues": 2
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "report.integrated-component-count-divergence",
+          "category": "report",
+          "severity": "warning",
+          "message": "Integrated report component count diverges from reportable imported components.",
+          "detail": {
+            "integratedComponents": 85,
+            "reportableComponents": 38,
+            "delta": 47
+          }
+        }
+      ]
+    },
+    {
+      "id": "report-count-divergence-05-8b51fa7f9386a321-jotego-jtcores-outputs",
+      "bucket": "report-count-divergence",
+      "file": "/Users/gimdong-il/Desktop/프로그램/clean_kicad_dataset/8b51fa7f9386a321_jotego_jtcores_outputs.kicad_sch",
+      "sourceReason": "report.lightweight-component-count-divergence",
+      "sourceCount": 1,
+      "autoProposedLabel": "true-bug",
+      "humanLabel": null,
+      "reviewStatus": "pending-human-review",
+      "reviewQuestion": "legacy importer, integrated report, lightweight parser 중 어느 쪽 component counting 기준이 틀렸는가?",
+      "actionIfConfirmed": "같은 KiCad source에서 세 파이프라인의 reportable component 정의를 맞춘다.",
+      "stats": {
+        "components": 100,
+        "reportableComponents": 100,
+        "sceneSymbols": 100,
+        "sceneLabels": 310,
+        "sceneWires": 356,
+        "manualConnections": 0,
+        "integratedComponents": 100,
+        "lightweightComponents": 0,
+        "lightweightUnresolved": 100,
+        "netlistNets": 44,
+        "netlistIssues": 1
+      },
+      "sampleAnomalies": [
+        {
+          "reason": "report.lightweight-component-count-divergence",
+          "category": "report",
+          "severity": "info",
+          "message": "Lightweight report component count diverges from every comparable imported component count.",
+          "detail": {
+            "lightweightComponents": 0,
+            "closestImportedCountKind": "all-imported-components",
+            "closestImportedCount": 100,
+            "allImportedComponents": 100,
+            "reportableComponents": 100,
+            "nonPowerComponents": 100,
+            "delta": 100
+          }
+        }
+      ]
+    }
+  ]
+}
