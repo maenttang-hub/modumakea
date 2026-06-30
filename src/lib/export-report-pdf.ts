@@ -1,42 +1,62 @@
 'use client';
 
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import type { ProjectVerificationReport } from '@/lib/project-verification-report';
+import type { AppLanguage } from '@/types';
 
-export async function exportReportElementAsPdf(element: HTMLElement, filenameBase: string) {
-  const canvas = await html2canvas(element, {
-    scale: Math.min(window.devicePixelRatio || 1, 2),
-    useCORS: true,
-    backgroundColor: '#f3ede3',
+type ExportReportDocumentPdfInput = {
+  report: ProjectVerificationReport;
+  language: AppLanguage;
+  title: string;
+};
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = window.URL.createObjectURL(blob);
+  const anchor = window.document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = 'noopener';
+  window.document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+}
+
+async function readPdfError(response: Response) {
+  try {
+    const body = await response.json() as { error?: unknown };
+    return typeof body.error === 'string' ? body.error : response.statusText;
+  } catch {
+    return response.statusText;
+  }
+}
+
+export async function exportReportDocumentAsPdf({
+  report,
+  language,
+  title,
+}: ExportReportDocumentPdfInput) {
+  const response = await window.fetch('/api/report/pdf', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      errorCount: report.errorCount,
+      filenameBase: report.filenameBase,
+      infoCount: report.infoCount,
+      language,
+      markdown: report.markdown,
+      reportId: report.reportId,
+      status: report.status,
+      title,
+      warningCount: report.warningCount,
+    }),
   });
 
-  const imageData = canvas.toDataURL('image/png');
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4',
-    compress: true,
-  });
-
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 8;
-  const usableWidth = pageWidth - margin * 2;
-  const usableHeight = pageHeight - margin * 2;
-  const imageHeight = (canvas.height * usableWidth) / canvas.width;
-
-  let remainingHeight = imageHeight;
-  let offsetY = margin;
-
-  pdf.addImage(imageData, 'PNG', margin, offsetY, usableWidth, imageHeight, undefined, 'FAST');
-  remainingHeight -= usableHeight;
-
-  while (remainingHeight > 0) {
-    offsetY = remainingHeight - imageHeight + margin;
-    pdf.addPage();
-    pdf.addImage(imageData, 'PNG', margin, offsetY, usableWidth, imageHeight, undefined, 'FAST');
-    remainingHeight -= usableHeight;
+  if (!response.ok) {
+    throw new Error(await readPdfError(response));
   }
 
-  pdf.save(`${filenameBase}.pdf`);
+  const blob = await response.blob();
+  downloadBlob(blob, `${report.filenameBase}.pdf`);
 }

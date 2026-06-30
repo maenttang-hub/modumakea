@@ -1,0 +1,168 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import test from 'node:test';
+import { validateImportedPcbDocument } from '@/lib/imported-pcb-validation';
+import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
+import { createProjectDocument, normalizeProjectDocument } from '@/store/project-document';
+import { buildDefaultProjectState } from '@/store/store-defaults';
+import { DEFAULT_BOARD_ID, DEFAULT_PROJECT_NAME, POWER_INPUT_MODES, PROJECT_FILE_VERSION } from '@/store/store-config';
+
+const FAIL_PROJECT = '/Users/gimdong-il/Desktop/프로그램/modumake/pydrc/test-projects/fail-project/fail-project.kicad_pcb';
+const GOOD_PROJECT = '/Users/gimdong-il/Desktop/프로그램/modumake/pydrc/test-projects/good-project/good-project.kicad_pcb';
+
+const ADVANCED_RULE_PROJECT = `
+(kicad_pcb
+  (version 20240101)
+  (generator modumake-test)
+  (layers
+    (0 "F.Cu" signal)
+    (31 "B.Cu" signal)
+    (36 "F.Mask" user)
+    (44 "Edge.Cuts" user)
+  )
+  (setup
+    (trace_clearance 0.2)
+    (trace_min 0.15)
+    (zone_clearance 0.2)
+    (pad_to_mask_clearance 0.1)
+    (solder_mask_min_width 0.25)
+    (via_min_size 0.4)
+    (via_min_drill 0.25)
+  )
+  (net 0 "")
+  (net 1 "USB_DP")
+  (net 2 "USB_DM")
+  (net 3 "AUX")
+  (net_class Default ""
+    (clearance 0.2)
+    (trace_width 0.2)
+    (via_dia 0.6)
+    (via_drill 0.3)
+    (diff_pair_width 0.2)
+    (diff_pair_gap 0.15)
+    (length_match_tolerance 0.2)
+    (add_net "USB_DP")
+    (add_net "USB_DM")
+  )
+  (gr_rect (start 0 0) (end 12 8) (layer "Edge.Cuts") (width 0.15))
+  (footprint "Test:R" (layer "F.Cu") (at 0.35 0.35)
+    (fp_text reference "R1" (at 0 0) (layer "F.SilkS") (effects (font (size 1 1))))
+    (fp_text value "R" (at 0 1) (layer "F.Fab") (effects (font (size 1 1))))
+    (pad "1" smd rect (at 0 0) (size 1 1) (layers "F.Cu" "F.Mask") (net 1 "USB_DP"))
+    (pad "2" smd rect (at 0.75 0) (size 1 1) (layers "F.Cu" "F.Mask") (net 3 "AUX"))
+  )
+  (footprint "Test:J" (layer "F.Cu") (at 7 3)
+    (fp_text reference "J1" (at 0 0) (layer "F.SilkS") (effects (font (size 1 1))))
+    (fp_text value "J" (at 0 1) (layer "F.Fab") (effects (font (size 1 1))))
+    (pad "1" thru_hole circle (at 0 0) (size 0.7 0.7) (drill 0.6) (layers "*.Cu" "*.Mask") (net 2 "USB_DM"))
+  )
+  (segment (start 1 2) (end 8 2) (width 0.1) (layer "F.Cu") (net 1))
+  (segment (start 1 2.6) (end 3 2.6) (width 0.2) (layer "F.Cu") (net 2))
+  (via (at 9 2) (size 0.32) (drill 0.24) (layers "F.Cu" "B.Cu") (net 2))
+  (zone (net 1) (net_name "USB_DP") (layer "F.Cu")
+    (connect_pads (clearance 0.2))
+    (min_thickness 0.15)
+    (polygon (pts (xy 1 1.8) (xy 4 1.8) (xy 4 2.5) (xy 1 2.5)))
+    (filled_polygon (pts (xy 1 1.8) (xy 4 1.8) (xy 4 2.5) (xy 1 2.5)))
+  )
+)
+`;
+
+test('parseKiCadPcb extracts core board geometry from KiCad 5 module files', async () => {
+  const source = await readFile(FAIL_PROJECT, 'utf8');
+  const document = parseKiCadPcb(source, { sourceFilename: 'fail-project.kicad_pcb' });
+
+  assert.equal(document.sourceFilename, 'fail-project.kicad_pcb');
+  assert.equal(document.stats.footprintCount, 3);
+  assert.equal(document.stats.segmentCount, 4);
+  assert.equal(document.stats.zoneCount, 1);
+  assert.ok(document.layers.some(layer => layer.name === 'F.Cu'));
+  assert.ok(document.layers.some(layer => layer.name === 'Edge.Cuts'));
+  assert.ok(document.nets.some(net => net.name === 'VCC'));
+  assert.ok(document.footprints.some(footprint => footprint.reference === 'D1'));
+  assert.ok(document.footprints.flatMap(footprint => footprint.pads).some(pad => pad.netName === 'VCC'));
+  assert.ok(document.bounds);
+});
+
+test('validateImportedPcbDocument reports obvious manufacturing and continuity issues', async () => {
+  const source = await readFile(FAIL_PROJECT, 'utf8');
+  const document = parseKiCadPcb(source);
+  const report = validateImportedPcbDocument(document);
+  const codes = new Set(report.issues.map(issue => issue.code));
+
+  assert.ok(report.errorCount > 0);
+  assert.ok(codes.has('PCB_STRAY_COPPER'));
+  assert.ok(codes.has('PCB_TRACK_TOO_NARROW'));
+  assert.ok(codes.has('PCB_NET_DISCONNECTED') || codes.has('PCB_NET_HAS_NO_COPPER_PATH'));
+});
+
+test('parseKiCadPcb keeps enough data to render legacy good-project fixtures', async () => {
+  const source = await readFile(GOOD_PROJECT, 'utf8');
+  const document = parseKiCadPcb(source);
+
+  assert.ok(document.stats.footprintCount > 0);
+  assert.ok(document.drawings.some(drawing => drawing.layer === 'Edge.Cuts'));
+  assert.ok(document.footprints.flatMap(footprint => footprint.graphics).length > 0);
+});
+
+test('project documents round-trip imported PCB source through canonical parser state', async () => {
+  const source = await readFile(FAIL_PROJECT, 'utf8');
+  const importedPcbDocument = parseKiCadPcb(source, { sourceFilename: 'fail-project.kicad_pcb' });
+  const importedPcbValidation = validateImportedPcbDocument(importedPcbDocument);
+  const state = {
+    ...buildDefaultProjectState(),
+    importedPcbDocument,
+    importedPcbSource: source,
+    importedPcbValidation,
+    workspaceMode: 'pcb' as const,
+  };
+  const saved = createProjectDocument(state, { projectFileVersion: PROJECT_FILE_VERSION });
+  const normalized = normalizeProjectDocument(saved, {
+    defaultBoardId: DEFAULT_BOARD_ID,
+    defaultProjectName: DEFAULT_PROJECT_NAME,
+    projectFileVersion: PROJECT_FILE_VERSION,
+    workspaceModes: ['simulation', 'schematic', 'pcb', 'manufacturing'],
+    powerInputModes: POWER_INPUT_MODES,
+  });
+
+  assert.ok(normalized?.importedPcbDocument);
+  assert.equal(normalized.importedPcbDocument.stats.footprintCount, importedPcbDocument.stats.footprintCount);
+  assert.ok(normalized.importedPcbValidation);
+  assert.equal(normalized.workspaceMode, 'pcb');
+});
+
+test('advanced PCB validation covers polygon clearance, manufacturing, diff-pair, and schematic parity', () => {
+  const document = parseKiCadPcb(ADVANCED_RULE_PROJECT, { sourceFilename: 'advanced.kicad_pcb' });
+  const report = validateImportedPcbDocument(document, {
+    schematicParity: {
+      components: [{
+        instanceId: 'missing-r99',
+        templateId: 'test',
+        name: 'Missing R99',
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        assignedPins: {},
+        isFullyRouted: false,
+        importedReference: 'R99',
+      }],
+      manualConnections: [{ id: 'net-missing', source: { ownerType: 'component', ownerId: 'a', pinId: '1' }, target: { ownerType: 'component', ownerId: 'b', pinId: '1' }, suggestedNetName: 'MISSING_NET' }],
+      importedSchematicScene: null,
+    },
+  });
+  const codes = new Set(report.issues.map(issue => issue.code));
+
+  assert.equal(document.setup.padToMaskClearance, 0.1);
+  assert.equal(document.setup.solderMaskMinWidth, 0.25);
+  assert.equal(document.netClasses[0]?.diffPairGap, 0.15);
+  assert.ok(codes.has('PCB_ANNULAR_RING_TOO_SMALL'));
+  assert.ok(codes.has('PCB_VIA_TOO_SMALL'));
+  assert.ok(codes.has('PCB_SOLDER_MASK_SLIVER_TOO_SMALL'));
+  assert.ok(codes.has('PCB_COPPER_TO_EDGE_CLEARANCE'));
+  assert.ok(codes.has('PCB_ZONE_CLEARANCE_TRACK'));
+  assert.ok(codes.has('PCB_DIFF_PAIR_LENGTH_MISMATCH'));
+  assert.ok(codes.has('PCB_DIFF_PAIR_WIDTH_MISMATCH'));
+  assert.ok(codes.has('PCB_DIFF_PAIR_GAP_MISMATCH'));
+  assert.ok(codes.has('PCB_DIFF_PAIR_IMPEDANCE_UNVERIFIED'));
+  assert.ok(codes.has('PCB_SCHEMATIC_MISSING_FOOTPRINT'));
+  assert.ok(codes.has('PCB_SCHEMATIC_NET_MISSING'));
+});

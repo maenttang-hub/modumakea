@@ -102,3 +102,62 @@ test('project verification report groups formal, DRC, and power findings', () =>
   assert.match(report.markdown, /Limits \/ Assumptions \/ Engine Notes/);
   assert.match(report.filenameBase, /smart_iot_sensor_hub/i);
 });
+
+test('project verification report does not label generic solver review as power/GND risk', () => {
+  const audit = buildReportFixture();
+  audit.issues = [
+    {
+      severity: 'warning',
+      code: 'netlist.solver-convergence',
+      ruleId: 'netlist.solver-convergence',
+      title: 'Circuit solver convergence needs review',
+      message: 'Nonlinear DC analysis did not converge cleanly.',
+      recommendation: '다이오드/전원 방향, 떠 있는 노드, 비현실적인 부품값을 다시 확인하세요.',
+    },
+  ];
+  audit.issueCount = 1;
+  audit.circuitAnalysis.issues = audit.issues;
+
+  const report = buildProjectVerificationReport({
+    projectName: 'rasphat_proj2',
+    boardId: 'kicad_generic',
+    audit,
+    components: [],
+    language: 'ko',
+    generatedAt: new Date('2026-06-29T10:28:00.000Z'),
+  });
+
+  assert.match(report.markdown, /회로 해석: 추가 확인 필요/);
+  assert.doesNotMatch(report.markdown, /전원\/GND: 추가 확인 필요/);
+});
+
+test('project verification report includes schematic PCB augmentation candidates', () => {
+  const audit = buildReportFixture();
+  audit.issues = [
+    {
+      severity: 'warning',
+      code: 'pcb.PCB_SCHEMATIC_EXTRA_FOOTPRINT',
+      ruleId: 'pcb.PCB_SCHEMATIC_EXTRA_FOOTPRINT',
+      title: 'PCB-only footprint',
+      message: 'TP1 exists on PCB but not in schematic.',
+      recommendation: 'Review whether TP1 is a test point or a missing schematic part.',
+      componentName: 'TP1',
+      confidence: 'needs-review',
+    },
+  ];
+  audit.issueCount = 1;
+
+  const report = buildProjectVerificationReport({
+    projectName: 'pcb_sync_review',
+    boardId: 'kicad_generic',
+    audit,
+    components: [],
+    language: 'ko',
+    generatedAt: new Date('2026-06-29T10:28:00.000Z'),
+  });
+
+  assert.match(report.markdown, /회로도 ↔ PCB 보강 후보/);
+  assert.match(report.markdown, /PCB → 회로도/);
+  assert.match(report.markdown, /자동 반영 안 함/);
+  assert.match(report.markdown, /TP1/);
+});

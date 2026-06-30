@@ -5,7 +5,9 @@ import { buildPcbDocument } from '@/lib/pcb-document';
 import { validateCustomComponentPackage } from '@/lib/custom-component-packages';
 import { hasImportedSchematicSceneContent } from '@/lib/component-template-utils';
 import { layoutImportedGeometry } from '@/lib/imported-schematic-geometry';
+import { validateImportedPcbDocument } from '@/lib/imported-pcb-validation';
 import { importKiCadSchematic } from '@/lib/kicad-sch-parser';
+import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
 import { normalizeValidationReviewDecision } from '@/lib/issue-feedback';
 import { sanitizeMultilineText, sanitizePlainText } from '@/lib/security-input';
 import { resolveAppLanguage } from '@/lib/ui-language';
@@ -16,6 +18,8 @@ import type {
   BoardPin,
   ComponentTemplate,
   CustomComponentPackage,
+  ImportedPcbDocument,
+  ImportedPcbValidationReport,
   ImportedSchematicLabel,
   ImportedKiCadMapping,
   ImportedSchematicGeometry,
@@ -54,6 +58,9 @@ export interface SerializableProjectState {
   manualConnections: ManualNetConnection[];
   importedSchematicScene: ImportedSchematicScene | null;
   importedSchematicSource: string | null;
+  importedPcbDocument: ImportedPcbDocument | null;
+  importedPcbSource: string | null;
+  importedPcbValidation: ImportedPcbValidationReport | null;
   integratedValidationJson: DatasheetReviewInputPayload | null;
   validationReviewDecisions: Record<string, ValidationReviewDecision>;
   templateCache: Record<string, ComponentTemplate>;
@@ -83,6 +90,9 @@ export interface AppliedProjectDocumentState {
   manualConnections: ManualNetConnection[];
   importedSchematicScene: ImportedSchematicScene | null;
   importedSchematicSource: string | null;
+  importedPcbDocument: ImportedPcbDocument | null;
+  importedPcbSource: string | null;
+  importedPcbValidation: ImportedPcbValidationReport | null;
   integratedValidationJson: DatasheetReviewInputPayload | null;
   validationReviewDecisions: Record<string, ValidationReviewDecision>;
   templateCache: Record<string, ComponentTemplate>;
@@ -204,6 +214,10 @@ function getImportedSceneGeometryBounds(scene: ImportedSchematicScene | null): I
 
   for (const junction of scene.junctions) {
     bounds = includeImportedPoint(bounds, junction);
+  }
+
+  for (const noConnect of scene.noConnects ?? []) {
+    bounds = includeImportedPoint(bounds, noConnect);
   }
 
   for (const label of scene.labels) {
@@ -440,7 +454,7 @@ export function sanitizeCodeGenerationMeta(meta: unknown): AICodeGenerationMeta 
 
 export function createProjectDocument(
   state: SerializableProjectState,
-  options: Pick<ProjectDocumentOptions, 'projectFileVersion'>,
+  options: Pick<ProjectDocumentOptions, 'projectFileVersion'> & { includePcbDocument?: boolean },
   savedAt = new Date().toISOString()
 ): ModuMakeProjectData {
   const referencedTemplateCache = state.components.reduce<Record<string, ComponentTemplate>>((acc, component) => {
@@ -485,6 +499,9 @@ export function createProjectDocument(
     manualConnections: state.manualConnections,
     importedSchematicScene: state.importedSchematicScene,
     importedSchematicSource: state.importedSchematicSource,
+    importedPcbDocument: state.importedPcbDocument,
+    importedPcbSource: state.importedPcbSource,
+    importedPcbValidation: state.importedPcbValidation,
     integratedValidationJson: state.integratedValidationJson,
     validationReviewDecisions: state.validationReviewDecisions,
     templateCache: referencedTemplateCache,
@@ -503,7 +520,9 @@ export function createProjectDocument(
     schematicTheme: state.schematicTheme,
     importedSchematicViewMode: state.importedSchematicViewMode,
     isGuestStudentMode: state.isGuestStudentMode,
-    pcbDocument: buildPcbDocument(state.components, state.activeBoardId, state.manualConnections, savedAt),
+    pcbDocument: options.includePcbDocument === false
+      ? undefined
+      : buildPcbDocument(state.components, state.activeBoardId, state.manualConnections, savedAt),
   };
 }
 
@@ -690,6 +709,69 @@ function sanitizeIntegratedValidationJson(value: unknown): DatasheetReviewInputP
   }
 
   return candidate as DatasheetReviewInputPayload;
+}
+
+function normalizeImportedPcbState(
+  sourceValue: unknown,
+  documentValue: unknown
+): {
+  importedPcbDocument: ImportedPcbDocument | null;
+  importedPcbSource: string | null;
+  importedPcbValidation: ImportedPcbValidationReport | null;
+} {
+  const source = typeof sourceValue === 'string' && sourceValue.trim().startsWith('(kicad_pcb')
+    ? sourceValue
+    : null;
+
+  if (source) {
+    try {
+      const document = parseKiCadPcb(source);
+      return {
+        importedPcbDocument: document,
+        importedPcbSource: source,
+        importedPcbValidation: validateImportedPcbDocument(document),
+      };
+    } catch {
+      return {
+        importedPcbDocument: null,
+        importedPcbSource: null,
+        importedPcbValidation: null,
+      };
+    }
+  }
+
+  if (!documentValue || typeof documentValue !== 'object') {
+    return {
+      importedPcbDocument: null,
+      importedPcbSource: null,
+      importedPcbValidation: null,
+    };
+  }
+
+  const candidate = documentValue as Partial<ImportedPcbDocument>;
+  if (
+    candidate.schemaVersion !== 1 ||
+    !Array.isArray(candidate.layers) ||
+    !Array.isArray(candidate.nets) ||
+    !Array.isArray(candidate.footprints) ||
+    !Array.isArray(candidate.segments) ||
+    !Array.isArray(candidate.vias) ||
+    !Array.isArray(candidate.zones) ||
+    !Array.isArray(candidate.drawings)
+  ) {
+    return {
+      importedPcbDocument: null,
+      importedPcbSource: null,
+      importedPcbValidation: null,
+    };
+  }
+
+  const importedPcbDocument = candidate as ImportedPcbDocument;
+  return {
+    importedPcbDocument,
+    importedPcbSource: null,
+    importedPcbValidation: validateImportedPcbDocument(importedPcbDocument),
+  };
 }
 
 function sanitizeTemplateCache(value: unknown): Record<string, ComponentTemplate> {
@@ -981,6 +1063,10 @@ function sanitizeImportedSchematicScene(value: unknown): ImportedSchematicScene 
     ? raw.junctions.map(sanitizePoint).filter(Boolean) as ImportedSchematicPoint[]
     : [];
 
+  const noConnects = Array.isArray(raw.noConnects)
+    ? raw.noConnects.map(sanitizePoint).filter(Boolean) as ImportedSchematicPoint[]
+    : [];
+
   const labels = Array.isArray(raw.labels)
     ? raw.labels.flatMap(label => {
         if (!label || typeof label !== 'object') {
@@ -1264,6 +1350,7 @@ function sanitizeImportedSchematicScene(value: unknown): ImportedSchematicScene 
   if (
     wireSegments.length === 0 &&
     junctions.length === 0 &&
+    noConnects.length === 0 &&
     labels.length === 0 &&
     drawings.length === 0 &&
     !pageFrame &&
@@ -1276,6 +1363,7 @@ function sanitizeImportedSchematicScene(value: unknown): ImportedSchematicScene 
   return {
     wireSegments,
     junctions,
+    noConnects,
     labels,
     drawings,
     pageFrame,
@@ -1505,6 +1593,7 @@ export function normalizeProjectDocument(
       })
     : [];
   const appLanguage = resolveAppLanguage(raw.appLanguage);
+  const importedPcbState = normalizeImportedPcbState(raw.importedPcbSource, raw.importedPcbDocument);
 
   const normalizedDocument: ModuMakeProjectData = {
     version: typeof raw.version === 'number' ? raw.version : options.projectFileVersion,
@@ -1529,6 +1618,9 @@ export function normalizeProjectDocument(
     importedSchematicSource: typeof raw.importedSchematicSource === 'string' && raw.importedSchematicSource.trim().length > 0
       ? raw.importedSchematicSource
       : null,
+    importedPcbDocument: importedPcbState.importedPcbDocument,
+    importedPcbSource: importedPcbState.importedPcbSource,
+    importedPcbValidation: importedPcbState.importedPcbValidation,
     integratedValidationJson: sanitizeIntegratedValidationJson(raw.integratedValidationJson),
     validationReviewDecisions: sanitizeValidationReviewDecisions(raw.validationReviewDecisions),
     templateCache,
@@ -1548,7 +1640,7 @@ export function normalizeProjectDocument(
     showGrid: typeof raw.showGrid === 'boolean' ? raw.showGrid : true,
     showMinimap: typeof raw.showMinimap === 'boolean' ? raw.showMinimap : true,
     schematicTheme: raw.schematicTheme === 'dark' ? 'dark' : 'light',
-    importedSchematicViewMode: raw.importedSchematicViewMode === 'structured' ? 'structured' : 'original',
+    importedSchematicViewMode: 'original',
   };
 
   normalizedDocument.componentPowerModes = sanitizeComponentPowerModes(
@@ -1573,6 +1665,9 @@ export function applyProjectDocument(document: ModuMakeProjectData): AppliedProj
     manualConnections: document.manualConnections ?? [],
     importedSchematicScene: document.importedSchematicScene ?? null,
     importedSchematicSource: document.importedSchematicSource ?? null,
+    importedPcbDocument: document.importedPcbDocument ?? null,
+    importedPcbSource: document.importedPcbSource ?? null,
+    importedPcbValidation: document.importedPcbValidation ?? null,
     integratedValidationJson: document.integratedValidationJson ?? null,
     validationReviewDecisions: document.validationReviewDecisions ?? {},
     templateCache: document.templateCache ?? {},
@@ -1592,7 +1687,7 @@ export function applyProjectDocument(document: ModuMakeProjectData): AppliedProj
     showGrid: document.showGrid,
     showMinimap: document.showMinimap,
     schematicTheme: document.schematicTheme === 'dark' ? 'dark' : 'light',
-    importedSchematicViewMode: document.importedSchematicViewMode === 'structured' ? 'structured' : 'original',
+    importedSchematicViewMode: 'original',
     selectedComponentId: null,
     isGenerating: false,
   };

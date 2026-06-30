@@ -4,7 +4,9 @@ import { useMemo } from 'react';
 import { getBoardById } from '@/constants/boards';
 import { getTemplateById } from '@/constants/component-templates';
 import { runProjectDrc } from '@/lib/drc-engine';
+import { buildEffectiveImportedPcbValidation } from '@/lib/effective-imported-pcb-validation';
 import { translateEngineIssue } from '@/lib/engine-i18n';
+import { mapImportedPcbValidationIssuesToProjectAuditIssues } from '@/lib/imported-pcb-audit-issues';
 import { resolveIssueSourceBucketInfo, type IssueSourceBucket } from '@/lib/issue-source-bucket';
 import { getImportedSchematicPalette } from '@/lib/imported-schematic-theme';
 import { isImportedSchematicProject } from '@/lib/component-template-utils';
@@ -56,6 +58,8 @@ export function useValidationReport() {
   const componentUnusedPinModes = useBoardStore(state => state.componentUnusedPinModes);
   const generatedCode = useBoardStore(state => state.generatedCode);
   const footprintPinPadOverrideCache = useBoardStore(state => state.footprintPinPadOverrideCache);
+  const importedPcbDocument = useBoardStore(state => state.importedPcbDocument);
+  const importedPcbValidation = useBoardStore(state => state.importedPcbValidation);
 
   const audit = useMemo<ReturnType<typeof runProjectDrc>>(
     () =>
@@ -91,9 +95,31 @@ export function useValidationReport() {
 
   const activeBoard = useMemo(() => getBoardById(activeBoardId), [activeBoardId]);
   const importedPalette = useMemo(() => getImportedSchematicPalette(schematicTheme), [schematicTheme]);
+  const effectiveImportedPcbValidation = useMemo(
+    () => buildEffectiveImportedPcbValidation({
+      document: importedPcbDocument,
+      validation: importedPcbValidation,
+      options: {
+        schematicParity: {
+          components,
+          manualConnections,
+          importedSchematicScene,
+          resolveTemplate: getTemplateById,
+        },
+      },
+    }),
+    [components, importedPcbDocument, importedPcbValidation, importedSchematicScene, manualConnections]
+  );
+  const combinedIssues = useMemo(
+    () => [
+      ...audit.issues,
+      ...mapImportedPcbValidationIssuesToProjectAuditIssues(effectiveImportedPcbValidation),
+    ],
+    [audit.issues, effectiveImportedPcbValidation]
+  );
 
   const issues = useMemo<ValidationDisplayIssue[]>(() => {
-    return audit.issues.map(issue => {
+    return combinedIssues.map(issue => {
       const localized = translateEngineIssue(issue, appLanguage);
       const confidence = issue.confidence ?? issue.evidence?.confidence ?? inferFallbackConfidence(issue);
       const evidence: ProjectAuditIssueEvidence = issue.evidence ?? {
@@ -137,7 +163,7 @@ export function useValidationReport() {
         ...sourceBucketInfo,
       };
     });
-  }, [appLanguage, audit.circuitAnalysis.nets, audit.issues, components]);
+  }, [appLanguage, audit.circuitAnalysis.nets, combinedIssues, components]);
 
   const confidenceCounts = useMemo(() => {
     return issues.reduce(

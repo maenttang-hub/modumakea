@@ -1,6 +1,11 @@
 import type { AppLanguage, PlacedComponent, ProjectAuditIssue } from '@/types';
 import type { DrcEngineReport } from '@/lib/drc-engine';
 import { translateEngineIssue } from '@/lib/engine-i18n';
+import {
+  buildSchematicPcbAugmentationCandidates,
+  schematicPcbAugmentationDirectionLabel,
+  type SchematicPcbAugmentationCandidate,
+} from '@/lib/schematic-pcb-augmentation-candidates';
 import { pickLanguage } from '@/lib/ui-language';
 import {
   classifyIssueActionBucket,
@@ -17,6 +22,7 @@ export interface ProjectVerificationReportInput {
   components: PlacedComponent[];
   language: AppLanguage;
   generatedAt?: Date;
+  issues?: ProjectAuditIssue[];
 }
 
 export interface ProjectVerificationReport {
@@ -62,6 +68,32 @@ function buildReportId(projectName: string, generatedAt: Date) {
 
 function isFormalIssue(issue: ProjectAuditIssue) {
   return issue.ruleId?.startsWith('formal.') || issue.code?.startsWith('formal.');
+}
+
+function isPowerGroundCircuitIssue(issue: ProjectAuditIssue) {
+  const identity = [issue.ruleId, issue.code].filter(Boolean).join(' ').toLowerCase();
+  const fallbackText = [issue.title, issue.message].filter(Boolean).join(' ').toLowerCase();
+  const text = identity || fallbackText;
+
+  return /\b(power|ground|gnd|short|rail|regulator|vcc|vdd|vin|vbat|polarity)\b/.test(text) ||
+    /전원|접지|그라운드|쇼트|합선|레일|레귤레이터|극성/.test(text);
+}
+
+function buildCircuitReviewSummaryLine(
+  issues: ProjectAuditIssue[],
+  language: AppLanguage
+) {
+  const t = (ko: string, en: string) => pickLanguage(language, { ko, en });
+  if (issues.length === 0) {
+    return `- ${t('전원/GND', 'Power/GND')}: ${t('정상', 'Pass')}`;
+  }
+
+  if (issues.some(isPowerGroundCircuitIssue)) {
+    return `- ${t('전원/GND', 'Power/GND')}: ${t('추가 확인 필요', 'Needs review')}`;
+  }
+
+  const firstIssueTitle = translateEngineIssue(issues[0], language).title;
+  return `- ${t('회로 해석', 'Circuit analysis')}: ${t('추가 확인 필요', 'Needs review')} (${firstIssueTitle})`;
 }
 
 function summarizeStatus(status: VerificationReportStatus, language: AppLanguage) {
@@ -123,6 +155,20 @@ function buildIssueBlock(issue: ProjectAuditIssue, index: number, language: AppL
   ].filter(Boolean).join('\n');
 }
 
+function buildAugmentationCandidateBlock(
+  candidate: SchematicPcbAugmentationCandidate,
+  index: number,
+  language: AppLanguage
+) {
+  return [
+    `${index}. [${schematicPcbAugmentationDirectionLabel(candidate.direction)}] ${candidate.title}`,
+    `   - ${pickLanguage(language, { ko: '대상', en: 'Target' })}: ${candidate.targetLabel}`,
+    `   - ${pickLanguage(language, { ko: '근거', en: 'Evidence' })}: ${candidate.description}`,
+    `   - ${pickLanguage(language, { ko: '보강 후보', en: 'Candidate action' })}: ${candidate.suggestedAction}`,
+    `   - ${pickLanguage(language, { ko: '상태', en: 'Status' })}: ${pickLanguage(language, { ko: '자동 반영 안 함', en: 'Not auto-applied' })}`,
+  ].join('\n');
+}
+
 function buildPowerSummary(audit: DrcEngineReport, language: AppLanguage) {
   const rails = audit.powerReport.rails;
   const regulators = audit.powerReport.regulators;
@@ -154,7 +200,8 @@ function buildPowerSummary(audit: DrcEngineReport, language: AppLanguage) {
 
 export function buildProjectVerificationReport(input: ProjectVerificationReportInput): ProjectVerificationReport {
   const generatedAt = input.generatedAt ?? new Date();
-  const severityCounts = countIssueSeverities(input.audit.issues);
+  const reportIssues = input.issues ?? input.audit.issues;
+  const severityCounts = countIssueSeverities(reportIssues);
   const errorCount = severityCounts.error;
   const warningCount = severityCounts.warning;
   const infoCount = severityCounts.info;
@@ -162,24 +209,32 @@ export function buildProjectVerificationReport(input: ProjectVerificationReportI
   const reportId = buildReportId(input.projectName, generatedAt);
   const t = (ko: string, en: string) => pickLanguage(input.language, { ko, en });
 
-  const formalIssues = input.audit.issues.filter(isFormalIssue);
-  const drcIssues = input.audit.issues.filter(issue => !isFormalIssue(issue));
-  const mustFixIssues = input.audit.issues.filter(issue => classifyIssueActionBucket(issue) === 'must-fix');
-  const reviewIssues = input.audit.issues.filter(issue => classifyIssueActionBucket(issue) === 'review');
+  const formalIssues = reportIssues.filter(isFormalIssue);
+  const drcIssues = reportIssues.filter(issue => !isFormalIssue(issue));
+  const mustFixIssues = reportIssues.filter(issue => classifyIssueActionBucket(issue) === 'must-fix');
+  const reviewIssues = reportIssues.filter(issue => classifyIssueActionBucket(issue) === 'review');
   const highPriorityIssues = [...mustFixIssues, ...reviewIssues].slice(0, 8);
+  const augmentationCandidates = buildSchematicPcbAugmentationCandidates(reportIssues);
   const totalComponents = input.components.length;
   const recognizedComponents = Math.max(totalComponents - input.audit.partialCount - input.audit.genericCount, 0);
   const verificationLimitedCount = input.audit.partialCount + input.audit.genericCount;
   const formalCriticalCount = formalIssues.filter(issue => classifyIssueActionBucket(issue) === 'must-fix').length;
+  const pcbIssueCount = reportIssues.filter(issue => issue.ruleId?.startsWith('pcb.') || issue.code?.startsWith('pcb.')).length;
   const reviewSummaryLines = [
     mustFixIssues[0] ? `- ${t('즉시 수정 필요', 'Immediate fix')}: ${translateEngineIssue(mustFixIssues[0], input.language).title}` : null,
     reviewIssues[0] ? `- ${t('확인 권장', 'Review next')}: ${translateEngineIssue(reviewIssues[0], input.language).title}` : null,
-    input.audit.circuitAnalysis.issues.length === 0
-      ? `- ${t('전원/GND', 'Power/GND')}: ${t('정상', 'Pass')}`
-      : `- ${t('전원/GND', 'Power/GND')}: ${t('추가 확인 필요', 'Needs review')}`,
+    buildCircuitReviewSummaryLine(input.audit.circuitAnalysis.issues, input.language),
   ].filter(Boolean);
   const limitations = [
-    t('이 리포트는 schematic/netlist 기준 자동 검증 결과이며 실제 PCB trace 길이와 copper area는 반영하지 않습니다.', 'This report is generated from schematic and netlist analysis and does not yet include real PCB trace length or copper area.'),
+    pcbIssueCount > 0
+      ? t(
+          '가져온 PCB의 형상, 넷 연속성, 제조성 검증 결과를 함께 반영했습니다. 제조사별 공정값과 실제 생산 조건은 별도 확인이 필요합니다.',
+          'Imported PCB geometry, net-continuity, and manufacturability findings are included. Manufacturer-specific process limits and production conditions still need separate review.'
+        )
+      : t(
+          '이 리포트는 schematic/netlist 기준 자동 검증 결과이며 실제 PCB trace 길이와 copper area는 반영하지 않습니다.',
+          'This report is generated from schematic and netlist analysis and does not yet include real PCB trace length or copper area.'
+        ),
     verificationLimitedCount > 0
       ? t(
           `일부 부품 ${verificationLimitedCount}개는 partial/generic 인식 상태라 보수적으로 판정했습니다.`,
@@ -226,18 +281,24 @@ export function buildProjectVerificationReport(input: ProjectVerificationReportI
       ? reviewIssues.map((issue, index) => buildIssueBlock(issue, index + 1, input.language)).join('\n\n')
       : t('현재 검토 권장 항목은 없습니다.', 'There are no review-only items in the current report.'),
     '',
-    `## 4. ${t('전원 / GND 분석', 'Power / GND Analysis')}`,
+    `## 4. ${t('회로도 ↔ PCB 보강 후보', 'Schematic ↔ PCB Augmentation Candidates')}`,
+    '',
+    augmentationCandidates.length > 0
+      ? augmentationCandidates.map((candidate, index) => buildAugmentationCandidateBlock(candidate, index + 1, input.language)).join('\n\n')
+      : t('현재 회로도와 PCB 사이에서 자동 보강 후보로 분리할 항목은 없습니다. 자동 변경은 수행하지 않았습니다.', 'No schematic/PCB augmentation candidate is separated in this report. No automatic change was applied.'),
+    '',
+    `## 5. ${t('전원 / GND 분석', 'Power / GND Analysis')}`,
     '',
     buildPowerSummary(input.audit, input.language),
     '',
-    `## 5. ${t('컴포넌트 인식 결과', 'Component Recognition')}`,
+    `## 6. ${t('컴포넌트 인식 결과', 'Component Recognition')}`,
     '',
     `${t('전체 부품', 'Total components')}: ${totalComponents}`,
     `${t('정상 인식', 'Recognized')}: ${recognizedComponents}`,
     `${t('부분 인식', 'Partial')}: ${input.audit.partialCount}`,
     `${t('일반화 인식', 'Generic')}: ${input.audit.genericCount}`,
     '',
-    `## 6. ${t('코드-회로 크로스 검증', 'Code-to-Circuit Cross-Check')}`,
+    `## 7. ${t('코드-회로 크로스 검증', 'Code-to-Circuit Cross-Check')}`,
     '',
     formalIssues.length > 0
       ? formalIssues.map((issue, index) => buildIssueBlock(issue, index + 1, input.language)).join('\n\n')
@@ -246,13 +307,13 @@ export function buildProjectVerificationReport(input: ProjectVerificationReportI
     `${t('코드 차단 이슈', 'Blocking code findings')}: ${formalCriticalCount}`,
     `${t('코드 검토 항목', 'Code review findings')}: ${Math.max(formalIssues.length - formalCriticalCount, 0)}`,
     '',
-    `## 7. ${t('룰 엔진 / DRC 세부 이슈', 'Rule Engine / DRC Findings')}`,
+    `## 8. ${t('룰 엔진 / DRC 세부 이슈', 'Rule Engine / DRC Findings')}`,
     '',
     drcIssues.length > 0
       ? drcIssues.slice(0, 12).map((issue, index) => buildIssueBlock(issue, index + 1, input.language)).join('\n\n')
       : t('No datasheet or DRC findings are blocking the current design.', 'No datasheet or DRC findings are blocking the current design.'),
     '',
-    `## 8. ${t('수정 체크리스트', 'Action Checklist')}`,
+    `## 9. ${t('수정 체크리스트', 'Action Checklist')}`,
     '',
     highPriorityIssues.length > 0
       ? highPriorityIssues.map((issue, index) => {
@@ -264,7 +325,7 @@ export function buildProjectVerificationReport(input: ProjectVerificationReportI
         }).join('\n')
       : `1. [Low] ${t('Keep the design reviewed before moving to PCB or manufacturing.', 'Keep the design reviewed before moving to PCB or manufacturing.')}`,
     '',
-    `## 9. ${t('검증 한계 / 가정 / 엔진 정보', 'Limits / Assumptions / Engine Notes')}`,
+    `## 10. ${t('검증 한계 / 가정 / 엔진 정보', 'Limits / Assumptions / Engine Notes')}`,
     '',
     ...limitations.map((item, index) => `${index + 1}. ${item}`),
   ].join('\n');

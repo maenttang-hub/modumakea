@@ -27,6 +27,9 @@ export const createBoardSlice: StateCreator<BoardStoreState, [], [], Partial<Boa
         ghostFixPreview: null,
         importedSchematicScene: null,
         importedSchematicSource: null,
+        importedPcbDocument: null,
+        importedPcbSource: null,
+        importedPcbValidation: null,
         integratedValidationJson: null,
         validationReviewDecisions: {},
         installedLibraries: [],
@@ -151,6 +154,25 @@ export const createBoardSlice: StateCreator<BoardStoreState, [], [], Partial<Boa
 
   setImportedSchematicViewMode: importedSchematicViewMode => set({ importedSchematicViewMode }),
 
+  setImportedPcbDocument: (importedPcbDocument, importedPcbSource, importedPcbValidation = null) => {
+    set({
+      importedPcbDocument,
+      importedPcbSource,
+      importedPcbValidation,
+      workspaceMode: 'pcb',
+    });
+  },
+
+  setImportedPcbValidation: importedPcbValidation => set({ importedPcbValidation }),
+
+  clearImportedPcbDocument: () => {
+    set({
+      importedPcbDocument: null,
+      importedPcbSource: null,
+      importedPcbValidation: null,
+    });
+  },
+
   setValidationReviewDecision: (issueKey, decision) => set(state => {
     const normalizedKey = sanitizePlainText(issueKey, { maxLength: 240 });
     if (!normalizedKey) {
@@ -235,6 +257,9 @@ export const createBoardSlice: StateCreator<BoardStoreState, [], [], Partial<Boa
         ghostFixPreview: null,
         importedSchematicScene: null,
         importedSchematicSource: null,
+        importedPcbDocument: null,
+        importedPcbSource: null,
+        importedPcbValidation: null,
         integratedValidationJson: null,
         validationReviewDecisions: {},
         installedLibraries: [],
