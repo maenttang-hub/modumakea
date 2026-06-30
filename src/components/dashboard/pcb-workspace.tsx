@@ -372,7 +372,7 @@ export function PcbWorkspace() {
       <input
         ref={pcbFileInputRef}
         type="file"
-        accept=".kicad_pcb,text/plain"
+        accept=".kicad_pcb,.pcb,text/plain"
         className="hidden"
         onChange={async event => {
           const file = event.target.files?.[0];

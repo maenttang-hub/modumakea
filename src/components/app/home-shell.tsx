@@ -31,6 +31,7 @@ import { getSurfaceFlags } from '@/constants/product-surface';
 import { getLocalizedTemplateName } from '@/lib/catalog-i18n';
 import { buildCloudProjectPath } from '@/lib/cloud-projects';
 import { buildImportedSchematicIntegratedValidationJson } from '@/lib/build-imported-schematic-integrated-validation-json';
+import { detectKiCadFileKind } from '@/lib/kicad-file-kind';
 import { importKiCadSchematicAsync } from '@/lib/import-kicad-schematic-async';
 import { getImportedPcbIssueId, isImportedPcbAuditIssue } from '@/lib/imported-pcb-audit-issues';
 import { validateImportedPcbDocument } from '@/lib/imported-pcb-validation';
@@ -562,20 +563,18 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
   }, [generatedCode, generatedCodeFileLabel, hasSchematicContent, importedPcbDocument, importedPcbSource, pcbFileLabel, schematicFileLabel]);
 
   const importDroppedKiCadFile = useCallback(async (file: File) => {
-    const filename = file.name.toLowerCase();
-    const isKiCadSchematic = filename.endsWith('.kicad_sch');
-    const isKiCadPcb = filename.endsWith('.kicad_pcb');
-
-    if (!isKiCadSchematic && !isKiCadPcb) {
-      toast.info(t('KiCad 파일만 바로 올릴 수 있습니다.', 'This quick-review surface accepts KiCad files.'), {
-        description: t('`.kicad_sch` 또는 `.kicad_pcb` 파일을 올려 주세요.', 'Drop a `.kicad_sch` or `.kicad_pcb` file.'),
-      });
-      return;
-    }
-
     try {
       const text = await file.text();
-      if (isKiCadPcb) {
+      const kiCadFileKind = detectKiCadFileKind(file.name, text);
+
+      if (!kiCadFileKind) {
+        toast.info(t('KiCad 파일만 바로 올릴 수 있습니다.', 'This quick-review surface accepts KiCad files.'), {
+          description: t('`.kicad_sch`, `.kicad_pcb` 또는 KiCad PCB 텍스트 파일을 올려 주세요.', 'Drop a `.kicad_sch`, `.kicad_pcb`, or KiCad PCB text file.'),
+        });
+        return;
+      }
+
+      if (kiCadFileKind === 'pcb') {
         const document = parseKiCadPcb(text, { sourceFilename: file.name });
         const validation = validateImportedPcbDocument(document, {
           schematicParity: {
@@ -809,7 +808,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
       <input
         ref={schematicFileInputRef}
         type="file"
-        accept=".kicad_sch,.kicad_pcb,text/plain"
+        accept=".kicad_sch,.kicad_pcb,.pcb,text/plain"
         className="hidden"
         onChange={async event => {
           const file = event.target.files?.[0];

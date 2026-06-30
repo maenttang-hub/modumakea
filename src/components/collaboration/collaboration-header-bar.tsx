@@ -37,6 +37,7 @@ import { buildImportedSchematicIntegratedValidationJson } from '@/lib/build-impo
 import { isImportedSchematicProject } from '@/lib/component-template-utils';
 import { getImportedSchematicPalette } from '@/lib/imported-schematic-theme';
 import { importKiCadSchematicAsync } from '@/lib/import-kicad-schematic-async';
+import { detectKiCadFileKind } from '@/lib/kicad-file-kind';
 import { validateImportedPcbDocument } from '@/lib/imported-pcb-validation';
 import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
 import { getSupabaseStatus } from '@/lib/supabase';
@@ -143,6 +144,7 @@ export function CollaborationHeaderBar({
     redo,
     hydrateProject,
     setImportedPcbDocument,
+    setWorkspaceMode,
     saveProjectToBrowser,
     loadProjectFromBrowser,
     clearCloudProjectState,
@@ -445,9 +447,8 @@ export function CollaborationHeaderBar({
   const handleImportProjectFile = useCallback(async (file: File) => {
     try {
       const text = await file.text();
-      const isKiCadSchematic = file.name.toLowerCase().endsWith('.kicad_sch');
-      const isKiCadPcb = file.name.toLowerCase().endsWith('.kicad_pcb');
-      if (isKiCadPcb) {
+      const kiCadFileKind = detectKiCadFileKind(file.name, text);
+      if (kiCadFileKind === 'pcb') {
         const pcbDocument = parseKiCadPcb(text, { sourceFilename: file.name });
         const validation = validateImportedPcbDocument(pcbDocument, {
           schematicParity: {
@@ -457,6 +458,7 @@ export function CollaborationHeaderBar({
           },
         });
         setImportedPcbDocument(pcbDocument, text, validation);
+        setWorkspaceMode('pcb');
         clearCloudProjectState();
         if (cloudProjectId) {
           router.replace('/', { scroll: false });
@@ -467,11 +469,11 @@ export function CollaborationHeaderBar({
         return;
       }
 
-      if (!isKiCadSchematic) {
+      if (kiCadFileKind !== 'schematic') {
         toast.error(t('KiCad 파일만 불러올 수 있습니다.', 'Only KiCad files can be imported.'), {
           description: t(
-            '.kicad_sch 또는 .kicad_pcb 파일을 선택해 주세요.',
-            'Please choose a .kicad_sch or .kicad_pcb file.'
+            '.kicad_sch, .kicad_pcb 또는 KiCad PCB 텍스트 파일을 선택해 주세요.',
+            'Please choose a .kicad_sch, .kicad_pcb, or KiCad PCB text file.'
           ),
         });
         return;
@@ -515,7 +517,7 @@ export function CollaborationHeaderBar({
               ),
       });
     }
-  }, [appLanguage, clearCloudProjectState, cloudProjectId, components, hydrateProject, importedSchematicScene, manualConnections, router, setImportedPcbDocument, t]);
+  }, [appLanguage, clearCloudProjectState, cloudProjectId, components, hydrateProject, importedSchematicScene, manualConnections, router, setImportedPcbDocument, setWorkspaceMode, t]);
 
   const handleLoadBrowserSave = useCallback(async () => {
     const result = await loadProjectFromBrowser();
@@ -548,7 +550,7 @@ export function CollaborationHeaderBar({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".kicad_sch,.kicad_pcb,text/plain"
+        accept=".kicad_sch,.kicad_pcb,.pcb,text/plain"
         className="hidden"
         onChange={async event => {
           const file = event.target.files?.[0];

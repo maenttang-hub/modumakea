@@ -15,6 +15,7 @@ import { getBoardById } from '@/constants/boards';
 import { buildStarterCode } from '@/lib/code-starter';
 import { buildImportedSchematicIntegratedValidationJson } from '@/lib/build-imported-schematic-integrated-validation-json';
 import { buildKiCadSchematic, buildKiCadSchematicFilename } from '@/lib/export-kicad';
+import { detectKiCadFileKind } from '@/lib/kicad-file-kind';
 import { validateImportedPcbDocument } from '@/lib/imported-pcb-validation';
 import { importKiCadSchematicAsync } from '@/lib/import-kicad-schematic-async';
 import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
@@ -200,6 +201,7 @@ export function Header() {
     saveProjectToBrowser,
     loadProjectFromBrowser,
     clearCloudProjectState,
+    setWorkspaceMode,
     isGuestStudentMode,
     setGuestStudentMode,
     lastCodeGenerationMeta,
@@ -628,12 +630,12 @@ export function Header() {
   const handleImportProjectFile = async (file: File) => {
     try {
       const text = await file.text();
-      const isKiCadSchematic = file.name.toLowerCase().endsWith('.kicad_sch');
-      const isKiCadPcb = file.name.toLowerCase().endsWith('.kicad_pcb');
-      if (isKiCadPcb) {
+      const kiCadFileKind = detectKiCadFileKind(file.name, text);
+      if (kiCadFileKind === 'pcb') {
         const pcbDocument = parseKiCadPcb(text, { sourceFilename: file.name });
         const validation = validateImportedPcbDocument(pcbDocument);
         setImportedPcbDocument(pcbDocument, text, validation);
+        setWorkspaceMode('pcb');
         clearCloudProjectState();
         if (cloudProjectId) {
           router.replace('/', { scroll: false });
@@ -644,7 +646,7 @@ export function Header() {
         return;
       }
 
-      const payload = isKiCadSchematic
+      const payload = kiCadFileKind === 'schematic'
         ? await (async () => {
             const imported = await importKiCadSchematicAsync(text, {
               projectName: file.name.replace(/\.kicad_sch$/i, ''),
@@ -842,7 +844,7 @@ export function Header() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".json,.modumake.json,.kicad_sch,.kicad_pcb,application/json,text/plain"
+        accept=".json,.modumake.json,.kicad_sch,.kicad_pcb,.pcb,application/json,text/plain"
         className="hidden"
         onChange={async event => {
           const file = event.target.files?.[0];

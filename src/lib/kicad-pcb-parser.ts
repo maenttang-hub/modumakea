@@ -604,7 +604,7 @@ function getRoot(source: string) {
   const nodes = parseKiCadSExpression(source);
   const root = nodes.find(node => isList(node) && node[0] === 'kicad_pcb');
   if (!root || !isList(root)) {
-    throw new Error('KiCad PCB 파일 형식이 아닙니다. .kicad_pcb 파일을 선택해 주세요.');
+    throw new Error('KiCad PCB 형식이 아닙니다. KiCad v6 이상에서 저장한 .kicad_pcb 파일 또는 KiCad PCB 텍스트 파일을 선택해 주세요.');
   }
   return root;
 }
