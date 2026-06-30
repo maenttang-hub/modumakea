@@ -1543,6 +1543,13 @@ function expectedSchematicNetNames(context: ImportedPcbSchematicParityContext) {
   return new Set(names.map(name => name.trim()).filter(name => name.length > 0));
 }
 
+export function buildImportedPcbSchematicParityKey(context: ImportedPcbSchematicParityContext) {
+  return JSON.stringify({
+    nets: Array.from(expectedSchematicNetNames(context)).sort(),
+    references: Array.from(expectedSchematicReferences(context)).sort(),
+  });
+}
+
 function validateSchematicParity(
   document: ImportedPcbDocument,
   issues: ImportedPcbValidationIssue[],
@@ -1627,6 +1634,9 @@ export function validateImportedPcbDocument(
     polygonClearance: true,
     differentialPairs: true,
     schematicParity: Boolean(options.schematicParity),
+    schematicParityContextKey: options.schematicParity
+      ? buildImportedPcbSchematicParityKey(options.schematicParity)
+      : undefined,
     renderFidelity: false,
     kicadDrc: false,
   });
@@ -1749,6 +1759,7 @@ export function mergeImportedPcbValidationReports(
     polygonClearance: Boolean(base.checks.polygonClearance || extra.checks.polygonClearance),
     differentialPairs: Boolean(base.checks.differentialPairs || extra.checks.differentialPairs),
     schematicParity: Boolean(base.checks.schematicParity || extra.checks.schematicParity),
+    schematicParityContextKey: extra.checks.schematicParityContextKey ?? base.checks.schematicParityContextKey,
     renderFidelity: Boolean(base.checks.renderFidelity || extra.checks.renderFidelity),
     kicadDrc: base.checks.kicadDrc || extra.checks.kicadDrc,
   });

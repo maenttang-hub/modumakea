@@ -46,6 +46,8 @@ const LAYER_COLORS: Record<string, string> = {
 const MAX_VISIBLE_ISSUE_MARKERS = 240;
 const BOARD_OUTLINE_STROKE = '#1f2937';
 const BOARD_OUTLINE_HALO = '#fffdf9';
+const MIN_PCB_ZOOM = 0.5;
+const MAX_PCB_ZOOM = 8;
 
 function layerColor(layer: ImportedPcbLayerId) {
   return LAYER_COLORS[layer] ?? '#94a3b8';
@@ -175,14 +177,9 @@ function viewBoxToString(viewBox: PcbViewBox) {
 }
 
 function clampZoomViewBox(next: PcbViewBox, base: PcbViewBox) {
-  const minWidth = Math.max(base.width / 8, 1);
-  const maxWidth = base.width;
+  const minWidth = Math.max(base.width / MAX_PCB_ZOOM, 1);
+  const maxWidth = base.width / MIN_PCB_ZOOM;
   const width = Math.min(maxWidth, Math.max(minWidth, next.width));
-
-  if (width >= maxWidth * 0.999) {
-    return base;
-  }
-
   const height = width * (base.height / base.width);
   const centerX = next.x + next.width / 2;
   const centerY = next.y + next.height / 2;

@@ -123,6 +123,14 @@ test('editor shows imported PCB zoom controls and changes the board view', async
   await expect(zoomLabel).toHaveText('100%');
 
   const initialViewBox = await pcbSvg.getAttribute('viewBox');
+  await page.getByTitle('축소').click();
+  await expect(zoomLabel).toHaveText('80%');
+  expect(await pcbSvg.getAttribute('viewBox')).not.toBe(initialViewBox);
+
+  await page.getByTitle('화면 맞춤').click();
+  await expect(zoomLabel).toHaveText('100%');
+  await expect.poll(() => pcbSvg.getAttribute('viewBox')).toBe(initialViewBox);
+
   await page.getByTitle('확대').click();
   await expect(zoomLabel).toHaveText('125%');
   expect(await pcbSvg.getAttribute('viewBox')).not.toBe(initialViewBox);
@@ -130,6 +138,37 @@ test('editor shows imported PCB zoom controls and changes the board view', async
   await page.getByTitle('화면 맞춤').click();
   await expect(zoomLabel).toHaveText('100%');
   await expect.poll(() => pcbSvg.getAttribute('viewBox')).toBe(initialViewBox);
+  expect(errors).toEqual([]);
+});
+
+test('editor and report show matching imported PCB validation counts', async ({ page }) => {
+  const errors = collectPageErrors(page);
+
+  await page.goto('/editor');
+  await page
+    .locator('input[type="file"][accept=".kicad_sch,.kicad_pcb,.pcb,text/plain"]')
+    .setInputFiles(importedPcbFixturePath);
+  await expect(page.getByTestId('imported-pcb-svg')).toBeVisible({ timeout: 15000 });
+
+  const editorCounts = {
+    error: await readCount(page, 'editor-error-count'),
+    warning: await readCount(page, 'editor-warning-count'),
+  };
+  expect(editorCounts.error).toBeGreaterThan(0);
+  expect(editorCounts.warning).toBeGreaterThan(0);
+
+  await page.getByRole('button', { name: '분석 보고서 보기' }).click();
+  await page.waitForURL('**/report');
+  await expect(page.getByText('Motor_driver_A4988.kicad_pcb').first()).toBeVisible();
+  await expect(page.getByText('PCB 형상 / Net 연속성 / 제조성 DRC')).toBeVisible();
+  await expect(page.getByText('가져온 PCB의 형상', { exact: false })).toBeVisible();
+
+  const reportCounts = {
+    error: await readCount(page, 'report-error-count'),
+    warning: await readCount(page, 'report-warning-count'),
+  };
+  expect(reportCounts.error).toBe(editorCounts.error);
+  expect(reportCounts.warning).toBe(editorCounts.warning);
   expect(errors).toEqual([]);
 });
 

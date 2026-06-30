@@ -388,6 +388,17 @@ export function ProjectVerificationReportPage() {
       },
     });
   }, [workspace]);
+  const board = useMemo(() => getBoardById(workspace?.activeBoardId ?? 'uno'), [workspace?.activeBoardId]);
+  const hasImportedPcbReview = Boolean(effectiveImportedPcbValidation);
+  const hasSchematicReview = Boolean((workspace?.components.length ?? 0) > 0 || workspace?.importedSchematicScene);
+  const targetLabel = workspace?.importedPcbDocument && !hasSchematicReview
+    ? workspace.importedPcbDocument.sourceFilename ?? t('가져온 PCB', 'Imported PCB')
+    : displayBoardName(board.name, t);
+  const scopeLabel = hasImportedPcbReview
+    ? hasSchematicReview
+      ? t('Schematic / Netlist / Code / PCB DRC', 'Schematic / Netlist / Code / PCB DRC')
+      : t('PCB 형상 / Net 연속성 / 제조성 DRC', 'PCB Geometry / Net Continuity / Manufacturing DRC')
+    : t('Schematic / Netlist / Code', 'Schematic / Netlist / Code');
 
   const issues = useMemo<ProjectAuditIssue[]>(() => {
     if (!audit || !workspace) {
@@ -440,6 +451,7 @@ export function ProjectVerificationReportPage() {
         ? buildProjectVerificationReport({
             projectName: workspace.projectName,
             boardId: workspace.activeBoardId,
+            targetLabel,
             audit,
             components: workspace.components,
             language: workspace.appLanguage,
@@ -447,10 +459,9 @@ export function ProjectVerificationReportPage() {
             issues,
           })
         : null,
-    [audit, generatedAt, issues, workspace]
+    [audit, generatedAt, issues, targetLabel, workspace]
   );
 
-  const board = useMemo(() => getBoardById(workspace?.activeBoardId ?? 'uno'), [workspace?.activeBoardId]);
   const mustFixIssues = useMemo(() => issues.filter(issue => classifyIssue(issue) === 'must-fix'), [issues]);
   const reviewIssues = useMemo(() => issues.filter(issue => classifyIssue(issue) === 'review'), [issues]);
   const infoIssues = useMemo(() => issues.filter(issue => classifyIssue(issue) === 'info'), [issues]);
@@ -462,7 +473,6 @@ export function ProjectVerificationReportPage() {
     () => buildSchematicPcbAugmentationCandidates(issues),
     [issues]
   );
-  const hasImportedPcbReview = Boolean(effectiveImportedPcbValidation);
   const recognizedComponents = Math.max((workspace?.components.length ?? 0) - (audit?.partialCount ?? 0) - (audit?.genericCount ?? 0), 0);
   const verificationLimits = (audit?.partialCount ?? 0) + (audit?.genericCount ?? 0);
   const readinessLabel = !verificationReport
@@ -660,7 +670,7 @@ export function ProjectVerificationReportPage() {
                   </div>
                   <div className="border-b border-[#e7dccf] bg-[#fbf7f0] px-4 py-3">
                     <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('대상 보드 / MCU', 'Target Board / MCU')}</div>
-                    <div className="mt-1 font-semibold">{displayBoardName(board.name, t)}</div>
+                    <div className="mt-1 font-semibold">{targetLabel}</div>
                   </div>
                   <div className="bg-white px-4 py-3 md:border-r">
                     <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('분석 시각', 'Analysis Date')}</div>
@@ -668,11 +678,7 @@ export function ProjectVerificationReportPage() {
                   </div>
                   <div className="bg-white px-4 py-3">
                     <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('검증 범위', 'Scope')}</div>
-                    <div className="mt-1 font-semibold">
-                      {hasImportedPcbReview
-                        ? t('Schematic / Netlist / Code / PCB DRC', 'Schematic / Netlist / Code / PCB DRC')
-                        : t('Schematic / Netlist / Code', 'Schematic / Netlist / Code')}
-                    </div>
+                    <div className="mt-1 font-semibold">{scopeLabel}</div>
                   </div>
                 </div>
               </div>
@@ -1031,13 +1037,21 @@ export function ProjectVerificationReportPage() {
               <div className="border border-[#e7dccf] bg-[#fcfaf6] px-4 py-4 text-[12px] leading-6 text-[#52463b]">
                 <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('PCB 반영 범위', 'PCB coverage')}</div>
                 <div className="mt-2">
-                  {t('현재 리포트는 schematic/netlist 기준이며 실제 trace 길이, copper area, 배치 열 분산은 직접 반영하지 않습니다.', 'This report is schematic/netlist-driven and does not directly model final trace length, copper area, or placement thermal spread.')}
+                  {hasImportedPcbReview
+                    ? t(
+                        '가져온 PCB의 형상, net 연속성, clearance/제조성 점검을 함께 반영했습니다. 다만 제조사별 공정 한계와 실제 양산 조건은 별도 확인이 필요합니다.',
+                        'Imported PCB geometry, net continuity, clearance, and manufacturability checks are included. Manufacturer-specific limits and production conditions still need separate confirmation.'
+                      )
+                    : t(
+                        '현재 리포트는 schematic/netlist 기준이며 실제 trace 길이, copper area, 배치 열 분산은 직접 반영하지 않습니다.',
+                        'This report is schematic/netlist-driven and does not directly model final trace length, copper area, or placement thermal spread.'
+                      )}
                 </div>
               </div>
               <div className="border border-[#e7dccf] bg-[#fcfaf6] px-4 py-4 text-[12px] leading-6 text-[#52463b]">
                 <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('입력 품질', 'Input quality')}</div>
                 <div className="mt-2">
-                  {workspace.importedSchematicSource?.trim()
+                  {workspace.importedSchematicSource?.trim() || workspace.importedPcbSource?.trim()
                     ? t('원본 KiCad 소스를 기준으로 검증했습니다.', 'The report was generated with original KiCad source available.')
                     : t('원본 KiCad 소스 없이 저장된 워크스페이스 상태를 기준으로 검증했습니다.', 'The report was generated from the saved workspace state without original KiCad source text.')}
                 </div>

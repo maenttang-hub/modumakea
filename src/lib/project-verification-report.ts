@@ -22,6 +22,7 @@ export type VerificationReportStatus = 'passed' | 'warning' | 'critical';
 export interface ProjectVerificationReportInput {
   projectName: string;
   boardId: string;
+  targetLabel?: string;
   audit: DrcEngineReport;
   components: PlacedComponent[];
   language: AppLanguage;
@@ -341,7 +342,7 @@ export function buildProjectVerificationReport(input: ProjectVerificationReportI
     `${t('회로 검토 및 실물 제작 전 확인 리포트', 'Circuit Review and Build-Readiness Report')}`,
     '',
     `Project Name: ${input.projectName || 'Untitled Project'}`,
-    `Target Board / MCU: ${input.boardId}`,
+    `Target Board / MCU: ${input.targetLabel ?? input.boardId}`,
     `Analysis Date: ${formatDate(generatedAt, input.language)}`,
     `Engine Version: ${input.audit.engineId}`,
     `Report ID: ${reportId}`,

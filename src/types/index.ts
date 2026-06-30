@@ -727,6 +727,7 @@ export interface ImportedPcbValidationReport {
     polygonClearance?: boolean;
     differentialPairs?: boolean;
     schematicParity?: boolean;
+    schematicParityContextKey?: string;
     renderFidelity?: boolean;
     kicadDrc: boolean;
   };

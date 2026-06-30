@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { buildEffectiveImportedPcbValidation } from '@/lib/effective-imported-pcb-validation';
 import { validateImportedPcbDocument } from '@/lib/imported-pcb-validation';
 import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
 import { createProjectDocument, normalizeProjectDocument } from '@/store/project-document';
@@ -210,6 +211,54 @@ test('advanced PCB validation covers polygon clearance, manufacturing, diff-pair
   assert.ok(codes.has('PCB_DIFF_PAIR_IMPEDANCE_UNVERIFIED'));
   assert.ok(codes.has('PCB_SCHEMATIC_MISSING_FOOTPRINT'));
   assert.ok(codes.has('PCB_SCHEMATIC_NET_MISSING'));
+});
+
+test('effective PCB validation refreshes stale schematic parity context', () => {
+  const document = parseKiCadPcb(ADVANCED_RULE_PROJECT, { sourceFilename: 'advanced.kicad_pcb' });
+  const staleValidation = validateImportedPcbDocument(document, {
+    schematicParity: {
+      components: [{
+        instanceId: 'missing-r99',
+        templateId: 'test',
+        name: 'Missing R99',
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        assignedPins: {},
+        isFullyRouted: false,
+        importedReference: 'R99',
+      }],
+      manualConnections: [{ id: 'net-missing', source: { ownerType: 'component', ownerId: 'a', pinId: '1' }, target: { ownerType: 'component', ownerId: 'b', pinId: '1' }, suggestedNetName: 'MISSING_NET' }],
+      importedSchematicScene: null,
+    },
+  });
+
+  const effectiveValidation = buildEffectiveImportedPcbValidation({
+    document,
+    validation: staleValidation,
+    options: {
+      schematicParity: {
+        components: [{
+          instanceId: 'r1',
+          templateId: 'test',
+          name: 'R1',
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          assignedPins: { '1': 'USB_DP' },
+          isFullyRouted: true,
+          importedReference: 'R1',
+        }],
+        manualConnections: [],
+        importedSchematicScene: null,
+      },
+    },
+  });
+
+  assert.ok(staleValidation.issues.some(issue => issue.code === 'PCB_SCHEMATIC_MISSING_FOOTPRINT' && issue.footprintRef === 'R99'));
+  assert.ok(staleValidation.issues.some(issue => issue.code === 'PCB_SCHEMATIC_NET_MISSING' && issue.netName === 'MISSING_NET'));
+  assert.equal(effectiveValidation?.issues.some(issue => issue.code === 'PCB_SCHEMATIC_MISSING_FOOTPRINT' && issue.footprintRef === 'R99'), false);
+  assert.equal(effectiveValidation?.issues.some(issue => issue.code === 'PCB_SCHEMATIC_NET_MISSING' && issue.netName === 'MISSING_NET'), false);
+  assert.equal(effectiveValidation?.checks.schematicParity, true);
+  assert.ok(effectiveValidation?.checks.schematicParityContextKey);
 });
 
 test('PCB clearance ignores tracks on copper layers that do not touch the pad', () => {
