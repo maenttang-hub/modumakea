@@ -305,7 +305,7 @@ function LayerToggle({
     <button
       type="button"
       onClick={onToggle}
-      className="flex h-7 items-center gap-1.5 rounded-full border px-2 text-[10px] font-semibold transition hover:bg-white"
+      className="pointer-events-auto flex h-7 items-center gap-1.5 rounded-full border px-2 text-[10px] font-semibold transition hover:bg-white"
       style={{
         borderColor: active ? `${layerColor(layer)}99` : '#e6dfd4',
         background: active ? `${layerColor(layer)}14` : '#fffdfa',
@@ -483,7 +483,7 @@ export function ImportedPcbViewer({
         ))}
       </svg>
 
-      <div className="pointer-events-none absolute right-3 top-3 z-10 flex max-h-28 max-w-[min(720px,calc(100%-24px))] flex-wrap justify-end gap-1.5 overflow-y-auto">
+      <div className="pointer-events-none absolute right-3 top-16 z-10 flex max-h-28 max-w-[min(720px,calc(100%-24px))] flex-wrap justify-end gap-1.5 overflow-y-auto">
         <div className="pointer-events-auto flex h-7 items-center gap-1.5 rounded-full border border-[#e6dfd4] bg-[#fffdfa]/92 px-2 text-[10px] font-semibold text-[#6b5d51] shadow-sm backdrop-blur">
           <Layers3 size={11} />
           {availableLayers.length}
