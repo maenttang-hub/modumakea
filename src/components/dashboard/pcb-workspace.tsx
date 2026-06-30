@@ -1,406 +1,481 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ImportedPcbViewer } from '@/components/dashboard/imported-pcb-viewer';
 import { getBoardById } from '@/constants/boards';
 import { getTemplateById } from '@/constants/component-templates';
-import { runProjectDrc, runProjectStageDrc } from '@/lib/drc-engine';
-import { buildPcbDocument } from '@/lib/pcb-document';
-import { useBoardStore } from '@/store/use-board-store';
+import { runProjectStageDrc } from '@/lib/drc-engine';
+import { buildEffectiveImportedPcbValidation } from '@/lib/effective-imported-pcb-validation';
 import {
-  Box,
-  CheckCircle2,
-  Factory,
-  GitBranch,
-  Layers3,
-  Lock,
-  Map,
-  PackageCheck,
-  ShieldAlert,
-  ShieldCheck,
-  SquareStack,
-} from 'lucide-react';
+  mapKiCadPcbDrcReport,
+  mergeImportedPcbValidationReports,
+  validateImportedPcbDocument,
+} from '@/lib/imported-pcb-validation';
+import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
+import { buildPcbDocument } from '@/lib/pcb-document';
+import { pickLanguage } from '@/lib/ui-language';
+import { useBoardStore } from '@/store/use-board-store';
+import type { AppLanguage, PcbDocument, PcbPoint } from '@/types';
+import { Box, CircuitBoard, Factory, Layers3, RefreshCw, ShieldAlert, Upload, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-function formatPointLabel(points: Array<{ x: number; y: number }>) {
-  if (points.length < 2) {
-    return 'route unavailable';
+function formatCount(value: number, koUnit: string, enUnit: string, language: AppLanguage) {
+  return pickLanguage(language, { ko: `${value}${koUnit}`, en: `${value} ${enUnit}` });
+}
+
+function collectPcbPoints(document: PcbDocument): PcbPoint[] {
+  return [
+    ...document.outline.flatMap(segment => [segment.start, segment.end]),
+    ...document.placements.flatMap(placement => [
+      { x: placement.body.x, y: placement.body.y },
+      { x: placement.body.x + placement.body.width, y: placement.body.y + placement.body.height },
+      ...placement.pads.map(pad => pad.center),
+    ]),
+    ...document.traces.flatMap(trace => trace.points),
+    ...document.vias.map(via => via.at),
+    ...document.zones.flatMap(zone => zone.polygon),
+    ...document.keepouts.flatMap(keepout => keepout.polygon),
+  ].filter(point => Number.isFinite(point.x) && Number.isFinite(point.y));
+}
+
+function getPcbViewBox(document: PcbDocument) {
+  const points = collectPcbPoints(document);
+  if (points.length === 0) {
+    return '-20 -20 520 340';
   }
 
-  const first = points[0];
-  const last = points[points.length - 1];
-  return `${Math.round(first.x)},${Math.round(first.y)} → ${Math.round(last.x)},${Math.round(last.y)}`;
+  const minX = Math.min(...points.map(point => point.x));
+  const minY = Math.min(...points.map(point => point.y));
+  const maxX = Math.max(...points.map(point => point.x));
+  const maxY = Math.max(...points.map(point => point.y));
+  const width = Math.max(120, maxX - minX);
+  const height = Math.max(90, maxY - minY);
+  const padding = Math.max(28, Math.max(width, height) * 0.08);
+
+  return [
+    minX - padding,
+    minY - padding,
+    width + padding * 2,
+    height + padding * 2,
+  ].join(' ');
+}
+
+function layerStroke(layer: string) {
+  if (layer === 'B.Cu') {
+    return '#2f7fa7';
+  }
+  if (layer === 'Edge.Cuts') {
+    return '#3f342c';
+  }
+  if (layer.includes('Silk')) {
+    return '#4b4036';
+  }
+  return '#c76428';
+}
+
+function GeneratedPcbCanvas({
+  document,
+  emptyLabel,
+}: {
+  document: PcbDocument;
+  emptyLabel: string;
+}) {
+  const viewBox = useMemo(() => getPcbViewBox(document), [document]);
+  const hasGeometry = document.placements.length > 0 || document.traces.length > 0 || document.outline.length > 0;
+
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-[#f7f1e8]">
+      <div
+        className="absolute inset-0 opacity-70"
+        style={{
+          backgroundImage:
+            'linear-gradient(#e6d9c5 1px, transparent 1px), linear-gradient(90deg, #e6d9c5 1px, transparent 1px)',
+          backgroundSize: '28px 28px',
+        }}
+      />
+      <svg
+        data-testid="generated-pcb-svg"
+        className="relative h-full w-full"
+        viewBox={viewBox}
+        role="img"
+        aria-label="PCB workspace"
+      >
+        {document.zones.map(zone => (
+          <polygon
+            key={zone.id}
+            points={zone.polygon.map(point => `${point.x},${point.y}`).join(' ')}
+            fill={zone.purpose === 'ground-pour' ? '#4f8f651f' : '#c7642818'}
+            stroke={layerStroke(zone.layer)}
+            strokeWidth={0.5}
+            opacity={0.75}
+          />
+        ))}
+        {document.outline.map(segment => (
+          <line
+            key={segment.id}
+            x1={segment.start.x}
+            y1={segment.start.y}
+            x2={segment.end.x}
+            y2={segment.end.y}
+            stroke="#3f342c"
+            strokeWidth={1.8}
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+        {document.keepouts.map(keepout => (
+          <polygon
+            key={keepout.id}
+            points={keepout.polygon.map(point => `${point.x},${point.y}`).join(' ')}
+            fill="#b24f4f18"
+            stroke="#b24f4f"
+            strokeDasharray="4 4"
+            strokeWidth={0.7}
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+        {document.traces.map(trace => (
+          <polyline
+            key={trace.id}
+            points={trace.points.map(point => `${point.x},${point.y}`).join(' ')}
+            fill="none"
+            stroke={layerStroke(trace.layer)}
+            strokeWidth={Math.max(trace.width, 1.2)}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity={trace.layer === 'B.Cu' ? 0.78 : 0.86}
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+        {document.vias.map(via => (
+          <g key={via.id}>
+            <circle cx={via.at.x} cy={via.at.y} r={via.diameter / 2} fill="#a57019cc" stroke="#fffdfa" strokeWidth={0.7} />
+            <circle cx={via.at.x} cy={via.at.y} r={via.drill / 2} fill="#fffdfa" />
+          </g>
+        ))}
+        {document.placements.map(placement => (
+          <g key={placement.id} opacity={placement.ownerType === 'board' ? 0.88 : 0.96}>
+            <rect
+              x={placement.body.x}
+              y={placement.body.y}
+              width={placement.body.width}
+              height={placement.body.height}
+              rx={4}
+              fill={placement.ownerType === 'board' ? '#f3e6d7' : '#fffdf9'}
+              stroke={placement.ownerType === 'board' ? '#b69d80' : '#7b6b5d'}
+              strokeWidth={0.9}
+              vectorEffect="non-scaling-stroke"
+            />
+            <text
+              x={placement.body.x + placement.body.width / 2}
+              y={placement.body.y + Math.min(18, placement.body.height / 2)}
+              textAnchor="middle"
+              fontSize={Math.max(8, Math.min(14, placement.body.height * 0.22))}
+              fill="#4d4036"
+            >
+              {placement.ref}
+            </text>
+            {placement.pads.map(pad => (
+              <rect
+                key={pad.id}
+                x={pad.center.x - pad.size.width / 2}
+                y={pad.center.y - pad.size.height / 2}
+                width={pad.size.width}
+                height={pad.size.height}
+                rx={pad.shape === 'circle' || pad.shape === 'oval' ? Math.min(pad.size.width, pad.size.height) / 2 : 0.5}
+                fill={pad.netId ? '#c76428d9' : '#9ca3afcc'}
+                stroke="#fffdfa"
+                strokeWidth={0.4}
+              />
+            ))}
+          </g>
+        ))}
+      </svg>
+      {!hasGeometry ? (
+        <div className="absolute inset-0 flex items-center justify-center px-8 text-center text-sm font-semibold text-[#7f7265]">
+          {emptyLabel}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function PcbWorkspace() {
+  const pcbFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [selectedPcbIssueId, setSelectedPcbIssueId] = useState<string | null>(null);
+  const [isRunningKiCadDrc, setIsRunningKiCadDrc] = useState(false);
+  const [lastKiCadDrcError, setLastKiCadDrcError] = useState<string | null>(null);
   const {
     workspaceMode,
     components,
     manualConnections,
     activeBoardId,
     importedSchematicScene,
-    componentPowerModes,
-    componentUnusedPinModes,
-    generatedCode,
-    footprintPinPadOverrideCache,
+    importedPcbDocument,
+    importedPcbSource,
+    importedPcbValidation,
+    setImportedPcbDocument,
+    setImportedPcbValidation,
+    clearImportedPcbDocument,
     setWorkspaceMode,
+    appLanguage,
   } = useBoardStore();
+  const t = (ko: string, en: string) => pickLanguage(appLanguage, { ko, en });
   const board = getBoardById(activeBoardId);
   const pcbDocument = useMemo(
     () => buildPcbDocument(components, activeBoardId, manualConnections),
     [components, activeBoardId, manualConnections]
   );
-  const componentPlacements = pcbDocument.placements.filter(placement => placement.ownerType === 'component');
-  const routedComponents = components.filter(component => component.isFullyRouted);
-
-  const isManufacturing = workspaceMode === 'manufacturing';
   const readiness = runProjectStageDrc({
     components,
     manualConnections,
     boardId: activeBoardId,
     resolveTemplate: getTemplateById,
   });
-  const audit = runProjectDrc({
-    components,
-    manualConnections,
-    boardId: activeBoardId,
-    resolveTemplate: getTemplateById,
-    importedSchematicScene,
-    componentPowerModes,
-    componentUnusedPinModes,
-    generatedCode,
-    footprintPinPadOverrideCache,
-  });
+  const effectiveImportedPcbValidation = useMemo(
+    () => buildEffectiveImportedPcbValidation({
+      document: importedPcbDocument,
+      validation: importedPcbValidation,
+      options: {
+        schematicParity: {
+          components,
+          manualConnections,
+          importedSchematicScene,
+          resolveTemplate: getTemplateById,
+        },
+      },
+    }),
+    [components, importedPcbDocument, importedPcbValidation, importedSchematicScene, manualConnections]
+  );
+  const isManufacturing = workspaceMode === 'manufacturing';
   const activeStageReady = isManufacturing ? readiness.canEnterManufacturing : readiness.canEnterPcb;
   const activeStageReasons = isManufacturing ? readiness.manufacturingReasons : readiness.pcbReasons;
-  const manufacturingLocked = !readiness.canEnterManufacturing;
+  const routedComponents = components.filter(component => component.isFullyRouted).length;
+  const importedFindingLabel = effectiveImportedPcbValidation
+    ? appLanguage === 'ko'
+      ? `오류 ${effectiveImportedPcbValidation.errorCount} · 경고 ${effectiveImportedPcbValidation.warningCount}`
+      : `${effectiveImportedPcbValidation.errorCount} errors · ${effectiveImportedPcbValidation.warningCount} warnings`
+    : t('검증 대기', 'Awaiting checks');
+
+  useEffect(() => {
+    const handleIssueFocus = (event: Event) => {
+      const detail = (event as CustomEvent<{ issueId?: string | null }>).detail;
+      setSelectedPcbIssueId(detail?.issueId ?? null);
+    };
+
+    window.addEventListener('modumake:pcb-issue-focus', handleIssueFocus as EventListener);
+    return () => window.removeEventListener('modumake:pcb-issue-focus', handleIssueFocus as EventListener);
+  }, []);
+
+  const handleImportPcbFile = async (file: File) => {
+    try {
+      const source = await file.text();
+      const document = parseKiCadPcb(source, { sourceFilename: file.name });
+      const validation = validateImportedPcbDocument(document, {
+        schematicParity: {
+          components,
+          manualConnections,
+          importedSchematicScene,
+          resolveTemplate: getTemplateById,
+        },
+      });
+      setImportedPcbDocument(document, source, validation);
+      setWorkspaceMode('pcb');
+      setSelectedPcbIssueId(validation.issues[0]?.id ?? null);
+      setLastKiCadDrcError(null);
+      toast.success(t('KiCad PCB 파일을 불러왔습니다.', 'KiCad PCB loaded.'), {
+        description: appLanguage === 'ko'
+          ? `${document.stats.footprintCount}개 풋프린트 · ${document.stats.segmentCount}개 트랙 · 이슈 ${validation.issueCount}개`
+          : `${document.stats.footprintCount} footprints · ${document.stats.segmentCount} tracks · ${validation.issueCount} findings`,
+      });
+    } catch (error) {
+      toast.error(t('PCB 파일을 읽지 못했습니다.', 'Could not read the PCB file.'), {
+        description: error instanceof Error ? error.message : t('.kicad_pcb 파일인지 확인해 주세요.', 'Check that this is a .kicad_pcb file.'),
+      });
+    }
+  };
+
+  const handleRunKiCadDrc = async () => {
+    if (!importedPcbDocument || !importedPcbSource) {
+      toast.error(t('KiCad DRC를 실행할 PCB 원본이 없습니다.', 'No source PCB is available for KiCad DRC.'));
+      return;
+    }
+
+    setIsRunningKiCadDrc(true);
+    setLastKiCadDrcError(null);
+    try {
+      const response = await fetch('/api/kicad/pcb-drc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: importedPcbSource,
+          filename: importedPcbDocument.sourceFilename ?? 'imported.kicad_pcb',
+        }),
+      });
+      const payload = await response.json() as { report?: unknown; error?: string };
+      if (!response.ok || !payload.report) {
+        throw new Error(payload.error || t('KiCad DRC 실행에 실패했습니다.', 'KiCad DRC failed.'));
+      }
+
+      const localReport = validateImportedPcbDocument(importedPcbDocument, {
+        schematicParity: {
+          components,
+          manualConnections,
+          importedSchematicScene,
+          resolveTemplate: getTemplateById,
+        },
+      });
+      const kicadReport = mapKiCadPcbDrcReport(payload.report);
+      const merged = mergeImportedPcbValidationReports(localReport, kicadReport);
+      setImportedPcbValidation(merged);
+      setSelectedPcbIssueId(merged.issues[0]?.id ?? null);
+      toast.success(t('KiCad DRC 리포트를 반영했습니다.', 'KiCad DRC report applied.'), {
+        description: appLanguage === 'ko'
+          ? `오류 ${kicadReport.errorCount}개 · 경고 ${kicadReport.warningCount}개`
+          : `${kicadReport.errorCount} errors · ${kicadReport.warningCount} warnings`,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('KiCad DRC 실행 중 오류가 발생했습니다.', 'An error occurred while running KiCad DRC.');
+      setLastKiCadDrcError(message);
+      toast.error(t('KiCad DRC 실패', 'KiCad DRC failed'), { description: message });
+    } finally {
+      setIsRunningKiCadDrc(false);
+    }
+  };
 
   return (
-    <div className="h-full w-full bg-[#0b1020] text-slate-300 overflow-hidden flex flex-col">
-      <div
-        className="h-10 px-4 flex items-center justify-between border-b"
-        style={{ background: '#0d1117', borderColor: '#21262d' }}
-      >
-        <div className="flex items-center gap-2">
-          {isManufacturing ? (
-            <Factory size={15} className="text-[#38bdf8]" />
-          ) : (
-            <Box size={15} className="text-[#22c55e]" />
-          )}
-          <span className="text-xs font-bold">
-            {isManufacturing ? 'Manufacturing Output' : 'PCB Layout Preparation'}
+    <div data-testid="pcb-workspace" className="relative h-full w-full overflow-hidden bg-[#f7f1e8] text-[#564a40]">
+      <input
+        ref={pcbFileInputRef}
+        type="file"
+        accept=".kicad_pcb,text/plain"
+        className="hidden"
+        onChange={async event => {
+          const file = event.target.files?.[0];
+          const currentTarget = event.currentTarget;
+          if (file) {
+            await handleImportPcbFile(file);
+          }
+          currentTarget.value = '';
+        }}
+      />
+
+      {importedPcbDocument ? (
+        <ImportedPcbViewer
+          key={`${importedPcbDocument.sourceFilename ?? 'pcb'}:${importedPcbDocument.importedAt}`}
+          document={importedPcbDocument}
+          validation={effectiveImportedPcbValidation}
+          selectedIssueId={selectedPcbIssueId}
+          onSelectIssue={setSelectedPcbIssueId}
+          language={appLanguage}
+        />
+      ) : (
+        <GeneratedPcbCanvas
+          document={pcbDocument}
+          emptyLabel={t('회로 파일을 선택하거나 KiCad PCB를 열어 PCB 검토를 시작하세요.', 'Select a schematic or open a KiCad PCB to start PCB review.')}
+        />
+      )}
+
+      <div className="pointer-events-none absolute left-3 top-3 z-10 flex max-w-[calc(100%-24px)] flex-wrap items-center gap-2">
+        <div className="pointer-events-auto flex h-9 items-center gap-2 rounded-[10px] border border-[#d8cbbb] bg-[#fffdf9]/92 px-3 text-[11px] font-semibold text-[#43372f] shadow-sm backdrop-blur">
+          {importedPcbDocument ? <Box size={14} className="text-[#6f5235]" /> : isManufacturing ? <Factory size={14} className="text-[#a57019]" /> : <CircuitBoard size={14} className="text-[#34764a]" />}
+          <span className="max-w-[260px] truncate">
+            {importedPcbDocument
+              ? importedPcbDocument.sourceFilename ?? 'imported.kicad_pcb'
+              : isManufacturing
+                ? t('제조 산출물 준비', 'Manufacturing output')
+                : t('PCB 레이아웃', 'PCB layout')}
           </span>
         </div>
-        <button
-          onClick={() => {
-            if (isManufacturing) {
-              setWorkspaceMode('pcb');
-              return;
-            }
 
-            if (manufacturingLocked) {
-              toast.warning('제조 단계는 아직 잠겨 있습니다.', {
-                description: readiness.manufacturingReasons.slice(0, 3).join(' / '),
-              });
-              return;
-            }
-
-            setWorkspaceMode('manufacturing');
-          }}
-          className="h-7 px-3 text-[11px] font-bold border transition-colors"
-          style={{
-            background: isManufacturing ? '#0d1117' : manufacturingLocked ? '#111827' : '#12301f',
-            borderColor: isManufacturing ? '#334155' : manufacturingLocked ? '#7f1d1d' : '#22c55e80',
-            color: isManufacturing ? '#94a3b8' : manufacturingLocked ? '#fca5a5' : '#bbf7d0',
-            cursor: isManufacturing || !manufacturingLocked ? 'pointer' : 'not-allowed',
-          }}
-          title={manufacturingLocked ? readiness.manufacturingReasons[0] : undefined}
+        <div
+          className={`pointer-events-auto flex h-9 items-center gap-1.5 rounded-[10px] border px-3 text-[11px] font-semibold shadow-sm backdrop-blur ${
+            importedPcbDocument
+              ? effectiveImportedPcbValidation && effectiveImportedPcbValidation.errorCount > 0
+                ? 'border-[#efd3d3] bg-[#fff8f8]/92 text-[#b24f4f]'
+                : 'border-[#d7e6d9] bg-[#f8fff9]/92 text-[#34764a]'
+              : activeStageReady
+                ? 'border-[#d7e6d9] bg-[#f8fff9]/92 text-[#34764a]'
+                : 'border-[#efd3d3] bg-[#fff8f8]/92 text-[#b24f4f]'
+          }`}
         >
-          {isManufacturing ? 'PCB로 돌아가기' : manufacturingLocked ? '제조 잠금' : '제조 파일 준비'}
+          {importedPcbDocument ? importedFindingLabel : activeStageReady ? t('단계 진입 가능', 'Stage ready') : t('점검 필요', 'Needs review')}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => pcbFileInputRef.current?.click()}
+          className="pointer-events-auto flex h-9 items-center gap-1.5 rounded-[10px] border border-[#d8cbbb] bg-[#fffdf9]/92 px-3 text-[11px] font-semibold text-[#5b4e42] shadow-sm transition hover:bg-white"
+        >
+          <Upload size={13} />
+          {importedPcbDocument ? t('다른 PCB', 'Open another PCB') : t('KiCad PCB 열기', 'Open KiCad PCB')}
         </button>
+
+        {importedPcbDocument ? (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                void handleRunKiCadDrc();
+              }}
+              disabled={isRunningKiCadDrc || !importedPcbSource}
+              className="pointer-events-auto flex h-9 items-center gap-1.5 rounded-[10px] border border-[#c9b494] bg-[#6f5235] px-3 text-[11px] font-semibold text-[#fff6eb] shadow-sm transition hover:bg-[#5f452c] disabled:cursor-not-allowed disabled:opacity-60"
+              title={importedPcbSource ? t('KiCad CLI DRC를 실행합니다.', 'Run KiCad CLI DRC.') : t('원본 PCB 파일이 없어 실행할 수 없습니다.', 'Cannot run without the original PCB source.')}
+            >
+              <RefreshCw size={13} className={isRunningKiCadDrc ? 'animate-spin' : ''} />
+              {isRunningKiCadDrc ? t('DRC 실행 중', 'Running DRC') : 'KiCad DRC'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                clearImportedPcbDocument();
+                setSelectedPcbIssueId(null);
+                setWorkspaceMode('schematic');
+              }}
+              className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#efd3d3] bg-[#fff8f8]/92 text-[#b24f4f] shadow-sm transition hover:bg-white"
+              title={t('가져온 PCB 닫기', 'Close imported PCB')}
+            >
+              <XCircle size={14} />
+            </button>
+          </>
+        ) : null}
       </div>
 
-      <div className="flex-1 min-h-0 grid grid-cols-[minmax(280px,360px)_1fr]">
-        <div className="border-r border-[#21262d] bg-[#080e1d] p-4 overflow-y-auto">
-          <div className="space-y-3">
-            <div className="border border-[#21262d] bg-[#0d1117] p-3">
-              <div className="text-[10px] text-slate-500 font-bold uppercase mb-2">PCB Document</div>
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Target board</span>
-                  <span className="font-bold text-slate-200">{board.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Placed objects</span>
-                  <span className="font-bold text-[#22c55e]">{pcbDocument.placements.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Routed nets</span>
-                  <span className="font-bold text-[#38bdf8]">{pcbDocument.nets.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Copper traces</span>
-                  <span className="font-bold text-[#fbbf24]">{pcbDocument.traces.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Zones / keepouts</span>
-                  <span className="font-bold text-slate-200">
-                    {pcbDocument.zones.length} / {pcbDocument.keepouts.length}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="border border-[#21262d] bg-[#0d1117] p-3">
-              <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase mb-3">
-                {activeStageReady ? (
-                  <ShieldCheck size={12} className="text-[#22c55e]" />
-                ) : (
-                  <ShieldAlert size={12} className="text-[#f87171]" />
-                )}
-                Stage Readiness
-              </div>
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">PCB entry</span>
-                  <span className={readiness.canEnterPcb ? 'font-bold text-[#22c55e]' : 'font-bold text-[#f87171]'}>
-                    {readiness.canEnterPcb ? 'Ready' : 'Blocked'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Fabrication</span>
-                  <span className={readiness.canEnterManufacturing ? 'font-bold text-[#22c55e]' : 'font-bold text-[#f59e0b]'}>
-                    {readiness.canEnterManufacturing ? 'Ready' : 'Hold'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Open issues</span>
-                  <span className="font-bold text-slate-200">{audit.issueCount}</span>
-                </div>
-              </div>
-              {activeStageReasons.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {activeStageReasons.slice(0, 3).map(reason => (
-                    <div key={reason} className="border border-[#3b1620] bg-[#1f1015] px-2 py-2 text-[11px] text-[#fda4af]">
-                      {reason}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="border border-[#21262d] bg-[#0d1117] p-3">
-              <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase mb-3">
-                <PackageCheck size={12} />
-                PCB Objects
-              </div>
-              <div className="space-y-2">
-                {componentPlacements.length === 0 ? (
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    부품을 배치하면 센서, 저항, 다이오드, 외부 전원 같은 보조 부품도 실제 패드 객체로 승격됩니다.
-                  </p>
-                ) : (
-                  componentPlacements.map(placement => {
-                    const template = getTemplateById(placement.templateId);
-                    const connectedPads = placement.pads.filter(pad => pad.netId).length;
-                    return (
-                      <div key={placement.id} className="border border-[#21262d] bg-[#080e1d] p-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-slate-200 truncate">{placement.name}</span>
-                          <CheckCircle2 size={12} className="text-[#22c55e] flex-shrink-0" />
-                        </div>
-                        <div className="mt-1 text-[10px] text-slate-500 truncate">
-                          {placement.footprint}
-                        </div>
-                        <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
-                          <span>{template?.category ?? 'PART'} · {placement.packageType}</span>
-                          <span>{connectedPads}/{placement.pads.length} pads net-bound</span>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
+      {!importedPcbDocument ? (
+        <div className="pointer-events-none absolute bottom-3 right-3 z-10 flex flex-wrap justify-end gap-2 text-[10px] font-semibold text-[#67594d]">
+          <span className="rounded-[10px] border border-[#d8cbbb] bg-[#fffdf9]/90 px-2.5 py-1.5 shadow-sm backdrop-blur">
+            {board.name}
+          </span>
+          <span className="rounded-[10px] border border-[#d8cbbb] bg-[#fffdf9]/90 px-2.5 py-1.5 shadow-sm backdrop-blur">
+            <Layers3 size={11} className="mr-1 inline" />
+            {formatCount(pcbDocument.layers.length, '개 레이어', 'layers', appLanguage)}
+          </span>
+          <span className="rounded-[10px] border border-[#d8cbbb] bg-[#fffdf9]/90 px-2.5 py-1.5 shadow-sm backdrop-blur">
+            {formatCount(pcbDocument.nets.length, '개 넷', 'nets', appLanguage)}
+          </span>
+          <span className="rounded-[10px] border border-[#d8cbbb] bg-[#fffdf9]/90 px-2.5 py-1.5 shadow-sm backdrop-blur">
+            {t('배선 완료', 'Routed')} {routedComponents}/{components.length}
+          </span>
         </div>
+      ) : null}
 
-        <div className="relative overflow-hidden">
-          <div
-            className="absolute inset-0 opacity-40"
-            style={{
-              backgroundImage:
-                'linear-gradient(#1f2937 1px, transparent 1px), linear-gradient(90deg, #1f2937 1px, transparent 1px)',
-              backgroundSize: '24px 24px',
-            }}
-          />
-          <div className="relative h-full p-6 overflow-y-auto">
-            <div className="max-w-6xl mx-auto">
-              <div className="grid grid-cols-4 gap-3 mb-4">
-                <div className="border border-[#334155] bg-[#0d1117]/95 p-3">
-                  <Layers3 size={14} className="text-[#22c55e] mb-2" />
-                  <div className="text-[10px] text-slate-500 uppercase font-bold">Layer Set</div>
-                  <div className="text-sm font-bold text-slate-200 mt-1">{pcbDocument.layers.length} Views</div>
-                </div>
-                <div className="border border-[#334155] bg-[#0d1117]/95 p-3">
-                  <GitBranch size={14} className="text-[#38bdf8] mb-2" />
-                  <div className="text-[10px] text-slate-500 uppercase font-bold">Netlist</div>
-                  <div className="text-sm font-bold text-slate-200 mt-1">{pcbDocument.nets.length} Nets</div>
-                </div>
-                <div className="border border-[#334155] bg-[#0d1117]/95 p-3">
-                  <SquareStack size={14} className="text-[#fbbf24] mb-2" />
-                  <div className="text-[10px] text-slate-500 uppercase font-bold">Copper</div>
-                  <div className="text-sm font-bold text-slate-200 mt-1">{pcbDocument.traces.length} Traces</div>
-                </div>
-                <div className="border border-[#334155] bg-[#0d1117]/95 p-3">
-                  {manufacturingLocked ? (
-                    <Lock size={14} className="text-[#f87171] mb-2" />
-                  ) : (
-                    <Factory size={14} className="text-[#f59e0b] mb-2" />
-                  )}
-                  <div className="text-[10px] text-slate-500 uppercase font-bold">Output</div>
-                  <div className="text-sm font-bold text-slate-200 mt-1">
-                    {isManufacturing ? 'Gerber Ready Draft' : manufacturingLocked ? 'Verification Hold' : 'Layout Draft'}
-                  </div>
-                </div>
-              </div>
-
-              {!activeStageReady && (
-                <div className="border border-[#7f1d1d] bg-[#1f1015] px-4 py-3 mb-4">
-                  <div className="flex items-center gap-2 text-xs font-bold text-[#fecaca]">
-                    <ShieldAlert size={14} />
-                    {isManufacturing ? '제조 단계 잠금' : 'PCB 단계 점검 필요'}
-                  </div>
-                  <div className="mt-2 space-y-2">
-                    {activeStageReasons.map(reason => (
-                      <div key={reason} className="text-[11px] text-[#fda4af]">
-                        {reason}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-[1.35fr_1fr] gap-4">
-                <div className="border border-[#334155] bg-[#0d1117]/95 min-h-[360px] p-4">
-                  <div className="flex items-center justify-between border-b border-[#21262d] pb-3 mb-4">
-                    <div>
-                      <div className="text-xs font-bold text-slate-200">
-                        {isManufacturing ? 'Manufacturing Data Preview' : 'Actual Net / Trace Preview'}
-                      </div>
-                      <div className="text-[10px] text-slate-500 mt-1">
-                        이제 가짜 넷 이름이 아니라 실제 패드, 레이어, 트레이스, 영역 데이터로 구성됩니다.
-                      </div>
-                    </div>
-                  </div>
-
-                  {pcbDocument.nets.length === 0 ? (
-                    <div className="h-56 flex items-center justify-center text-center text-slate-500 text-xs">
-                      먼저 Simulation 단계에서 부품을 놓고 배선을 완료하세요.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {pcbDocument.nets.map(net => {
-                        const traces = pcbDocument.traces.filter(trace => trace.netId === net.id);
-                        return (
-                          <div key={net.id} className="border border-[#21262d] bg-[#080e1d]">
-                            <div className="grid grid-cols-[140px_110px_1fr] gap-3 px-3 py-2 border-b border-[#21262d] text-[10px] uppercase font-bold text-slate-500">
-                              <span>{net.name}</span>
-                              <span>{net.className}</span>
-                              <span>{net.nodes.length} nodes / {traces.length} traces</span>
-                            </div>
-                            <div className="divide-y divide-[#172033]">
-                              {traces.length > 0 ? traces.map(trace => (
-                                <div key={trace.id} className="grid grid-cols-[110px_80px_1fr] gap-3 px-3 py-2 text-xs">
-                                  <span className="text-[#22c55e]">{trace.layer}</span>
-                                  <span className="text-slate-400">{trace.width.toFixed(2)}mm</span>
-                                  <span className="text-slate-500 truncate">{formatPointLabel(trace.points)}</span>
-                                </div>
-                              )) : (
-                                <div className="px-3 py-2 text-xs text-slate-500">
-                                  연결된 노드는 있지만 아직 물리 경로가 생성되지 않았습니다.
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  <div className="border border-[#334155] bg-[#0d1117]/95 p-4">
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-200 mb-3">
-                      <Map size={14} className="text-[#38bdf8]" />
-                      Placement / Pads
-                    </div>
-                    <div className="space-y-2 max-h-[280px] overflow-y-auto">
-                      {pcbDocument.placements.map(placement => (
-                        <div key={placement.id} className="border border-[#21262d] bg-[#080e1d] p-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-slate-200 truncate">{placement.name}</span>
-                            <span className="text-[10px] text-slate-500">{placement.layer}</span>
-                          </div>
-                          <div className="mt-1 text-[10px] text-slate-500 truncate">{placement.footprint}</div>
-                          <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-slate-400">
-                            <span>{placement.pads.length} pads</span>
-                            <span>{Math.round(placement.body.width)} x {Math.round(placement.body.height)}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="border border-[#334155] bg-[#0d1117]/95 p-4">
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-200 mb-3">
-                      <Layers3 size={14} className="text-[#fbbf24]" />
-                      Zones / Keepouts
-                    </div>
-                    <div className="space-y-2">
-                      {pcbDocument.zones.map(zone => (
-                        <div key={zone.id} className="border border-[#21262d] bg-[#080e1d] p-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-slate-200">{zone.purpose}</span>
-                            <span className="text-[10px] text-[#22c55e]">{zone.layer}</span>
-                          </div>
-                          <div className="mt-1 text-[10px] text-slate-500">
-                            {zone.netId} · clearance {zone.clearance.toFixed(2)}mm
-                          </div>
-                        </div>
-                      ))}
-                      {pcbDocument.keepouts.map(keepout => (
-                        <div key={keepout.id} className="border border-[#3b1620] bg-[#1f1015] p-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-[#fda4af]">{keepout.reason}</span>
-                            <span className="text-[10px] text-slate-400">{keepout.layers.join(', ')}</span>
-                          </div>
-                        </div>
-                      ))}
-                      {pcbDocument.zones.length === 0 && pcbDocument.keepouts.length === 0 && (
-                        <div className="text-xs text-slate-500">
-                          아직 생성된 PCB 영역 데이터가 없습니다.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="border border-[#334155] bg-[#0d1117]/95 p-4">
-                    <div className="text-xs font-bold text-slate-200 mb-2">Conversion Notes</div>
-                    <div className="space-y-2 text-[11px] text-slate-500 leading-relaxed">
-                      <div>현재 단계에서는 원본 회로도 연결을 실제 넷 문서로 올리고, 보조 부품도 패드 객체로 취급합니다.</div>
-                      <div>직렬 저항이나 레벨 시프터를 신호 경로 안에 직접 끼워 넣는 완전한 회로 편집은 다음 단계에서 넷 편집기로 확장하면 됩니다.</div>
-                      <div>그래도 이제 JSON 저장과 PCB 미리보기에서는 패드, 넷, 레이어, 구리 영역, 킵아웃이 모두 실데이터로 남습니다.</div>
-                    </div>
-                    <div className="mt-3 text-[10px] text-slate-600">
-                      Routed components: {routedComponents.length} / {components.length}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+      {activeStageReasons.length > 0 && !importedPcbDocument ? (
+        <div className="pointer-events-none absolute bottom-3 left-3 z-10 max-w-[min(560px,calc(100%-24px))] rounded-[10px] border border-[#efd3d3] bg-[#fff8f8]/92 px-3 py-2 text-[11px] leading-5 text-[#b24f4f] shadow-sm backdrop-blur">
+          <div className="mb-1 flex items-center gap-1.5 font-semibold">
+            <ShieldAlert size={13} />
+            {isManufacturing ? t('제조 단계 잠금', 'Manufacturing locked') : t('PCB 단계 점검 필요', 'PCB stage needs review')}
           </div>
+          {activeStageReasons.slice(0, 2).map(reason => (
+            <div key={reason}>{reason}</div>
+          ))}
         </div>
-      </div>
+      ) : null}
+
+      {lastKiCadDrcError ? (
+        <div className="absolute bottom-3 left-3 z-20 max-w-[min(620px,calc(100%-24px))] rounded-[10px] border border-[#efd3d3] bg-[#fff8f8] px-3 py-2 text-[11px] leading-5 text-[#b24f4f] shadow-lg">
+          {lastKiCadDrcError}
+        </div>
+      ) : null}
     </div>
   );
 }

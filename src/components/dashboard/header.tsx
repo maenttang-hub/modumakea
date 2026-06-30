@@ -15,7 +15,9 @@ import { getBoardById } from '@/constants/boards';
 import { buildStarterCode } from '@/lib/code-starter';
 import { buildImportedSchematicIntegratedValidationJson } from '@/lib/build-imported-schematic-integrated-validation-json';
 import { buildKiCadSchematic, buildKiCadSchematicFilename } from '@/lib/export-kicad';
+import { validateImportedPcbDocument } from '@/lib/imported-pcb-validation';
 import { importKiCadSchematicAsync } from '@/lib/import-kicad-schematic-async';
+import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
 import {
   buildCloudProjectShareSummary,
   buildCloudProjectPath,
@@ -194,6 +196,7 @@ export function Header() {
     redo,
     serializeProject,
     hydrateProject,
+    setImportedPcbDocument,
     saveProjectToBrowser,
     loadProjectFromBrowser,
     clearCloudProjectState,
@@ -626,6 +629,21 @@ export function Header() {
     try {
       const text = await file.text();
       const isKiCadSchematic = file.name.toLowerCase().endsWith('.kicad_sch');
+      const isKiCadPcb = file.name.toLowerCase().endsWith('.kicad_pcb');
+      if (isKiCadPcb) {
+        const pcbDocument = parseKiCadPcb(text, { sourceFilename: file.name });
+        const validation = validateImportedPcbDocument(pcbDocument);
+        setImportedPcbDocument(pcbDocument, text, validation);
+        clearCloudProjectState();
+        if (cloudProjectId) {
+          router.replace('/', { scroll: false });
+        }
+        toast.success(t('KiCad PCB 파일을 불러왔습니다.', 'Loaded KiCad PCB file.'), {
+          description: `${pcbDocument.stats.footprintCount} footprints · ${pcbDocument.stats.segmentCount} tracks · ${validation.issueCount} findings`,
+        });
+        return;
+      }
+
       const payload = isKiCadSchematic
         ? await (async () => {
             const imported = await importKiCadSchematicAsync(text, {
@@ -664,8 +682,8 @@ export function Header() {
           error instanceof Error && error.message
             ? error.message
             : t(
-                'ModuMake JSON 또는 KiCad .kicad_sch 파일을 읽는 중 오류가 발생했습니다.',
-                'There was a problem reading the ModuMake JSON or KiCad .kicad_sch file.'
+                'ModuMake JSON 또는 KiCad 파일을 읽는 중 오류가 발생했습니다.',
+                'There was a problem reading the ModuMake JSON or KiCad file.'
               ),
       });
     }
@@ -824,7 +842,7 @@ export function Header() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".json,.modumake.json,.kicad_sch,application/json,text/plain"
+        accept=".json,.modumake.json,.kicad_sch,.kicad_pcb,application/json,text/plain"
         className="hidden"
         onChange={async event => {
           const file = event.target.files?.[0];

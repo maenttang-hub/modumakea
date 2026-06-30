@@ -19,9 +19,9 @@ export function WorkspaceShell({
     <div className="flex h-screen w-full flex-col overflow-hidden bg-[#f7f2ea] text-[#3f342c]">
       <div className="relative flex h-full w-full flex-col overflow-hidden bg-[#fbf8f3]">
         {titleBar}
-        <div className="hidden min-h-0 flex-1 gap-1.5 bg-[#f7f2ea] px-2 pb-2 pt-1.5 lg:flex">
+        <div className="hidden min-h-0 flex-1 bg-[#f1eadf] lg:flex">
           {leftSidebar}
-          <div className="min-w-0 flex-1 bg-[#f5efe6]">{canvasArea}</div>
+          <div className="min-w-0 flex-1 border-x border-[#ddd2c4] bg-[#f5efe6]">{canvasArea}</div>
           {rightSidebar}
         </div>
         <div className="flex min-h-0 flex-1 items-center justify-center bg-[#f7f2ea] px-5 py-8 lg:hidden">

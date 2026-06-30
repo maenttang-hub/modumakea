@@ -144,7 +144,7 @@ function getImportedReviewFitPadding(
 }
 
 function getImportedReviewZoomBias(viewMode: 'original' | 'structured') {
-  return viewMode === 'original' ? 1.34 : 1;
+  return viewMode === 'original' ? 1 : 1;
 }
 
 function getImportedReviewFocusBounds(
@@ -463,7 +463,15 @@ export function useComponentCanvasController() {
           : getImportedSchematicReviewViewportBounds(components, importedSchematicScene);
       }
 
-      return getImportedSchematicReviewViewportBounds(components, importedSchematicScene);
+      const sourceFaithfulBounds = getImportedSchematicSceneBounds([], importedSchematicScene);
+      return sourceFaithfulBounds
+        ? {
+            x: 0,
+            y: 0,
+            width: sourceFaithfulBounds.width,
+            height: sourceFaithfulBounds.height,
+          }
+        : getImportedSchematicReviewViewportBounds(components, importedSchematicScene);
     },
     [components, importedSchematicScene, importedSchematicViewMode, manualConnections]
   );

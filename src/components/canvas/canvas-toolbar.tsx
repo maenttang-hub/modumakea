@@ -128,7 +128,7 @@ export function CanvasToolbar({
                   : 'text-[#8b7d70] hover:bg-[#f6f1ea]'
               }`}
             >
-              정리
+              자동정리
             </button>
           </div>
         </div>

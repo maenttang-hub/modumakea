@@ -1,6 +1,6 @@
 'use client';
 
-import { Bolt, ChevronDown, ChevronRight, FileCode2, FileText, HelpCircle, Microchip, Plug, Waves, X } from 'lucide-react';
+import { Bolt, ChevronDown, ChevronRight, CircuitBoard, FileCode2, FileText, HelpCircle, Microchip, Plug, Waves, X } from 'lucide-react';
 
 type SidebarComponentItem = {
   id: string;
@@ -22,7 +22,7 @@ type SidebarNetItem = {
 type SidebarFileItem = {
   id: string;
   label: string;
-  kind: 'schematic' | 'code';
+  kind: 'schematic' | 'pcb' | 'code';
   removable?: boolean;
 };
 
@@ -65,27 +65,42 @@ function componentIcon(kind: SidebarComponentItem['kind']) {
   }
 }
 
+function fileIcon(kind: SidebarFileItem['kind']) {
+  switch (kind) {
+    case 'pcb':
+      return CircuitBoard;
+    case 'code':
+      return FileCode2;
+    default:
+      return FileText;
+  }
+}
+
 export function SidebarLeft({
   components,
   nets,
   files,
   selectedComponentId,
+  selectedFileId,
   sectionState,
   onToggleSection,
   onSelectComponent,
+  onSelectFile,
   onRemoveFile,
 }: {
   components: SidebarComponentItem[];
   nets: SidebarNetItem[];
   files: SidebarFileItem[];
   selectedComponentId: string | null;
+  selectedFileId?: string | null;
   sectionState: Record<'components' | 'nets' | 'files', boolean>;
   onToggleSection: (section: 'components' | 'nets' | 'files') => void;
   onSelectComponent: (id: string) => void;
+  onSelectFile: (id: string) => void;
   onRemoveFile: (id: string) => void;
 }) {
   return (
-    <aside className="flex h-full w-[clamp(172px,14vw,196px)] shrink-0 flex-col overflow-hidden rounded-[20px] border border-[#e2d7c8] bg-[linear-gradient(180deg,#fdfaf6_0%,#f7f1e8_100%)] shadow-[0_18px_40px_rgba(103,79,56,0.07)]">
+    <aside className="flex h-full w-[clamp(172px,14vw,196px)] shrink-0 flex-col overflow-hidden border-r border-[#e2d7c8] bg-[linear-gradient(180deg,#fdfaf6_0%,#f7f1e8_100%)]">
       <div className="border-b border-[#e7ddd1] px-4 pb-3 pt-4">
         <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a29487]">탐색</div>
         <div className="mt-1 text-[15px] font-semibold text-[#40342c]">회로 구조</div>
@@ -142,10 +157,32 @@ export function SidebarLeft({
 
       <Section title="파일" collapsed={sectionState.files} onToggle={() => onToggleSection('files')}>
         <div className="space-y-0.5 px-2">
-          {files.map(file => (
-            <div key={file.id} className="flex h-[30px] items-center gap-2 rounded-[8px] px-2 text-[11px] text-[#5c5147] hover:bg-[#f3eee6]">
-              {file.kind === 'schematic' ? <FileText size={13} className="text-[#8b7d70]" /> : <FileCode2 size={13} className="text-[#5f8cbc]" />}
-              <span className="min-w-0 flex-1 truncate">{file.label}</span>
+          {files.map(file => {
+            const Icon = fileIcon(file.kind);
+            const active = file.id === selectedFileId;
+            const iconClass = file.kind === 'pcb'
+              ? 'text-[#6f5235]'
+              : file.kind === 'code'
+                ? 'text-[#5f8cbc]'
+                : 'text-[#8b7d70]';
+
+            return (
+            <div
+              key={file.id}
+              className={`flex h-[30px] items-center gap-1 rounded-[8px] px-1 text-[11px] transition ${
+                active
+                  ? 'bg-[#dbe9f7] text-[#2f5d91]'
+                  : 'text-[#5c5147] hover:bg-[#f3eee6]'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => onSelectFile(file.id)}
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-[7px] px-1 text-left"
+              >
+                <Icon size={13} className={iconClass} />
+                <span className="min-w-0 flex-1 truncate">{file.label}</span>
+              </button>
               {file.removable ? (
                 <button
                   type="button"
@@ -157,7 +194,8 @@ export function SidebarLeft({
                 </button>
               ) : null}
             </div>
-          ))}
+            );
+          })}
         </div>
       </Section>
       <div className="mt-auto border-t border-[#e9dfd3] bg-[#fcf8f2] px-4 py-3">

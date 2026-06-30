@@ -42,7 +42,7 @@ export function SidebarRight({
   codePanel: ReactNode;
 }) {
   return (
-    <aside className="flex h-full w-[clamp(280px,24vw,360px)] shrink-0 flex-col overflow-hidden rounded-[20px] border border-[#e2d7c8] bg-[linear-gradient(180deg,#fdfaf6_0%,#f7f1e8_100%)] shadow-[0_18px_40px_rgba(103,79,56,0.07)]">
+    <aside className="flex h-full w-[clamp(280px,24vw,360px)] shrink-0 flex-col overflow-hidden border-l border-[#e2d7c8] bg-[linear-gradient(180deg,#fdfaf6_0%,#f7f1e8_100%)]">
       <div className="border-b border-[#e7ddd1] px-4 pb-3 pt-4">
         <div className="flex items-center justify-between gap-3">
           <div>

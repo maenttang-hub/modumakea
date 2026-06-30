@@ -10,6 +10,7 @@ import {
   shouldToneDownIssueForReviewDecision,
 } from '@/lib/issue-feedback';
 import { buildReviewIssueKey, emitReviewFocus } from '@/lib/review-focus';
+import { persistReportWorkspaceSnapshot } from '@/lib/report-workspace-snapshot';
 import { pickLanguage } from '@/lib/ui-language';
 import { useBoardStore } from '@/store/use-board-store';
 import { useValidationReport, type ValidationDisplayIssue } from '@/hooks/use-validation-report';
@@ -312,6 +313,7 @@ export function ValidationPanel() {
   };
 
   const openReportWindow = (downloadPdf = false) => {
+    persistReportWorkspaceSnapshot(useBoardStore.getState());
     const url = downloadPdf ? '/report?download=pdf' : '/report';
     window.open(url, '_blank', 'noopener,noreferrer');
   };

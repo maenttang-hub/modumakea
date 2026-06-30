@@ -372,6 +372,54 @@
   pointer-events: none !important;
 }
 
+@media print {
+  @page {
+    margin: 14mm;
+    size: A4;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  .mm-report-toolbar {
+    display: none !important;
+  }
+
+  .mm-report-shell {
+    background: #ffffff !important;
+    color: #201a15 !important;
+    min-height: auto !important;
+  }
+
+  .mm-report-canvas {
+    padding: 0 !important;
+  }
+
+  .mm-report-paper {
+    background: #fffdf9 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    max-width: none !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .mm-report-section,
+  .mm-report-finding,
+  .mm-report-table-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .mm-report-document-header {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+}
+
 /* ── 스크롤바 ── */
 ::-webkit-scrollbar {
   width: 4px;

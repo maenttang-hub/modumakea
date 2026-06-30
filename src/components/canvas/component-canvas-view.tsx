@@ -265,15 +265,12 @@ export function ComponentCanvasView({
           ) : null}
         </div>
       ) : null}
-      <div className={importedSchematicMode ? 'absolute inset-2 sm:inset-3' : 'absolute inset-0'}>
+      <div className="absolute inset-0">
         <div
           className={importedSchematicMode
-            ? 'absolute inset-0 overflow-hidden rounded-[22px] border border-[#dfd2c2] bg-[linear-gradient(180deg,#fffdf9_0%,#fbf7ef_100%)] shadow-[0_24px_60px_rgba(110,84,58,0.11)]'
+            ? 'absolute inset-0 overflow-hidden bg-[linear-gradient(180deg,#fffdf9_0%,#fbf7ef_100%)]'
             : 'absolute inset-0 overflow-hidden'}
         >
-          {importedSchematicMode ? (
-            <div className="pointer-events-none absolute inset-0 z-[1] rounded-[22px] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]" />
-          ) : null}
           <div className="absolute inset-0">
             <ReactFlow
               key={importedViewportKey ?? activeBoardId}

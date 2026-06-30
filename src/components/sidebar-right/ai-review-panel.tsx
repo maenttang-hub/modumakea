@@ -1,6 +1,10 @@
 'use client';
 
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Sparkles, Zap } from 'lucide-react';
+import {
+  buildSchematicPcbAugmentationCandidates,
+  schematicPcbAugmentationDirectionLabel,
+} from '@/lib/schematic-pcb-augmentation-candidates';
 import { countIssueSeverities } from '@/lib/validation-issue-classification';
 import type { ProjectAuditIssue } from '@/types';
 
@@ -136,6 +140,7 @@ export function AiReviewPanel({
   const lead = issues[0];
   const decision = decisionLabel(errorCount, warningCount);
   const actionLine = nextActionLine(lead);
+  const augmentationCandidates = buildSchematicPcbAugmentationCandidates(issues);
   const visibleItems: ReviewItem[] =
     issues.length > 0
       ? issues.slice(0, 4).map((issue, index) => ({
@@ -219,6 +224,49 @@ export function AiReviewPanel({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        {augmentationCandidates.length > 0 ? (
+          <section className="mb-4 rounded-[14px] border border-[#d9c9b8] bg-[#fffaf2] px-3.5 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9b8066]">
+                  회로도 ↔ PCB 보강 후보
+                </div>
+                <div className="mt-1 text-[11px] leading-5 text-[#6a5a4c]">
+                  자동 반영 없이 누락/불일치 후보만 기록합니다.
+                </div>
+              </div>
+              <div className="rounded-full border border-[#d4c2ae] bg-white px-2 py-0.5 text-[10px] font-semibold text-[#6f5235]">
+                {augmentationCandidates.length}
+              </div>
+            </div>
+            <div className="mt-3 space-y-2">
+              {augmentationCandidates.slice(0, 5).map(candidate => (
+                <button
+                  key={candidate.id}
+                  type="button"
+                  onClick={() => onSelectIssue(candidate.sourceIssue)}
+                  className="w-full rounded-[12px] border border-[#eadfce] bg-white px-3 py-2.5 text-left transition hover:border-[#d6cab8] hover:bg-[#fffdfa]"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-[#efe5d8] px-2 py-0.5 text-[10px] font-semibold text-[#6f5235]">
+                      {schematicPcbAugmentationDirectionLabel(candidate.direction)}
+                    </span>
+                    <span className="rounded-full bg-[#edf4fb] px-2 py-0.5 text-[10px] font-semibold text-[#496f9e]">
+                      후보 기록됨
+                    </span>
+                  </div>
+                  <div className="mt-2 text-[11px] font-semibold text-[#43372f]">
+                    {candidate.targetLabel} · {candidate.title}
+                  </div>
+                  <div className="mt-1 line-clamp-2 text-[10px] leading-[1.55] text-[#76685b]">
+                    {candidate.suggestedAction}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a19386]">
           <Zap size={12} className="text-[#537fb2]" />
           감수 항목

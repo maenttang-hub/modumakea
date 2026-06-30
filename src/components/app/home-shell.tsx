@@ -13,6 +13,8 @@ import { CanvasArea } from '@/components/canvas/canvas-area';
 import { ComponentCanvas } from '@/components/canvas/component-canvas';
 import { CanvasToolbar } from '@/components/canvas/canvas-toolbar';
 import { AppContextMenu } from '@/components/dashboard/app-context-menu';
+import { PcbWorkspace } from '@/components/dashboard/pcb-workspace';
+import { WorkspaceModeBar } from '@/components/dashboard/workspace-mode-bar';
 import { useProjectComments } from '@/components/comments/project-comments-provider';
 import { BottomBar } from '@/components/layout/bottom-bar';
 import { TitleBar } from '@/components/layout/title-bar';
@@ -30,6 +32,9 @@ import { getLocalizedTemplateName } from '@/lib/catalog-i18n';
 import { buildCloudProjectPath } from '@/lib/cloud-projects';
 import { buildImportedSchematicIntegratedValidationJson } from '@/lib/build-imported-schematic-integrated-validation-json';
 import { importKiCadSchematicAsync } from '@/lib/import-kicad-schematic-async';
+import { getImportedPcbIssueId, isImportedPcbAuditIssue } from '@/lib/imported-pcb-audit-issues';
+import { validateImportedPcbDocument } from '@/lib/imported-pcb-validation';
+import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
 import { pickLanguage } from '@/lib/ui-language';
 import { useAppContextMenu } from '@/hooks/use-app-context-menu';
 import { useAutoSave } from '@/hooks/use-auto-save';
@@ -38,7 +43,7 @@ import { useGlobalShortcuts } from '@/hooks/use-global-shortcuts';
 import { useUiPreferences, type RightTabValue } from '@/hooks/use-ui-preferences';
 import { useValidationReport } from '@/hooks/use-validation-report';
 import { useBoardStore } from '@/store/use-board-store';
-import { REPORT_WORKSPACE_SNAPSHOT_KEY } from '@/store/store-config';
+import { persistReportWorkspaceSnapshot } from '@/lib/report-workspace-snapshot';
 import {
   FileUp,
 } from 'lucide-react';
@@ -48,9 +53,8 @@ import { buildReviewIssueKey, emitReviewFocus, REVIEW_FOCUS_EVENT, type ReviewFo
 import { getDevScenarioDocument } from '@/lib/dev-scenarios';
 import { isImportedSchematicProject } from '@/lib/component-template-utils';
 import { getImportedSchematicPalette } from '@/lib/imported-schematic-theme';
-import { pickReferencedTemplateCache } from '@/lib/template-cache-registry';
 import { countIssueSeverities } from '@/lib/validation-issue-classification';
-import type { AppLanguage, ComponentTemplate } from '@/types';
+import type { AppLanguage, ComponentTemplate, ProjectAuditIssue } from '@/types';
 
 const UI_PREFERENCES_STORAGE_KEY = 'modumake-ui-preferences-v2';
 
@@ -68,16 +72,21 @@ function normalizeLegacyRightTab(tab: RightTabValue): RightPanelTab {
 }
 
 type WorkspacePresence = 'empty' | 'restored' | 'imported';
+type WorkspaceFileKind = WorkspacePresence | 'pcb';
 
 function buildWorkspaceFileLabel({
   projectName,
   presence,
 }: {
   projectName: string;
-  presence: WorkspacePresence;
+  presence: WorkspaceFileKind;
 }) {
   if (presence === 'imported') {
     return `${projectName || 'project'}.kicad_sch`;
+  }
+
+  if (presence === 'pcb') {
+    return `${projectName || 'project'}.kicad_pcb`;
   }
 
   if (presence === 'restored') {
@@ -119,10 +128,15 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
   const appLanguage = useBoardStore(state => state.appLanguage);
   const setAppLanguage = useBoardStore(state => state.setAppLanguage);
   const components = useBoardStore(state => state.components);
+  const manualConnections = useBoardStore(state => state.manualConnections);
   const importedSchematicScene = useBoardStore(state => state.importedSchematicScene);
   const importedSchematicSource = useBoardStore(state => state.importedSchematicSource);
+  const importedPcbDocument = useBoardStore(state => state.importedPcbDocument);
+  const importedPcbSource = useBoardStore(state => state.importedPcbSource);
   const generatedCode = useBoardStore(state => state.generatedCode);
   const setGeneratedCode = useBoardStore(state => state.setGeneratedCode);
+  const setImportedPcbDocument = useBoardStore(state => state.setImportedPcbDocument);
+  const setWorkspaceMode = useBoardStore(state => state.setWorkspaceMode);
   const isGenerating = useBoardStore(state => state.isGenerating);
   const projectName = useBoardStore(state => state.projectName);
   const setProjectName = useBoardStore(state => state.setProjectName);
@@ -164,26 +178,51 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
   );
   const { audit, issues: validationIssues } = useValidationReport();
   const validationSeverityCounts = useMemo(
-    () => countIssueSeverities(audit.issues),
-    [audit.issues]
+    () => countIssueSeverities(validationIssues),
+    [validationIssues]
   );
-  const hasWorkspaceContent = useMemo(
+  const hasSchematicContent = useMemo(
     () =>
       components.length > 0 ||
       Boolean(importedSchematicSource?.trim()) ||
-      Boolean(importedSchematicScene) ||
-      Boolean(generatedCode.trim()),
-    [components.length, generatedCode, importedSchematicScene, importedSchematicSource]
+      Boolean(importedSchematicScene),
+    [components.length, importedSchematicScene, importedSchematicSource]
   );
-  const workspacePresence: WorkspacePresence = importedSchematicMode || Boolean(importedSchematicSource?.trim())
+  const hasWorkspaceContent = useMemo(
+    () =>
+      hasSchematicContent ||
+      Boolean(importedPcbDocument) ||
+      Boolean(importedPcbSource?.trim()) ||
+      Boolean(generatedCode.trim()),
+    [generatedCode, hasSchematicContent, importedPcbDocument, importedPcbSource]
+  );
+  const workspacePresence: WorkspaceFileKind = importedSchematicMode || Boolean(importedSchematicSource?.trim())
     ? 'imported'
     : hasWorkspaceContent
       ? 'restored'
       : 'empty';
-  const workspaceFileLabel = useMemo(
+  const showPcbWorkspace =
+    (workspaceMode === 'pcb' || workspaceMode === 'manufacturing') &&
+    (Boolean(importedPcbDocument) || surfaceFlags.showPcbWorkspace);
+  const schematicFileLabel = useMemo(
     () => buildWorkspaceFileLabel({ projectName, presence: workspacePresence }),
     [projectName, workspacePresence]
   );
+  const pcbFileLabel = useMemo(
+    () => importedPcbDocument?.sourceFilename ?? buildWorkspaceFileLabel({ projectName, presence: 'pcb' }),
+    [importedPcbDocument?.sourceFilename, projectName]
+  );
+  const generatedCodeFileLabel = board.targetLanguage === 'Python' ? 'firmware.py' : 'firmware.ino';
+  const selectedFileId = editorRightTab === 'code' && generatedCode.trim()
+    ? 'generated-code'
+    : showPcbWorkspace
+      ? 'pcb-file'
+      : 'schematic-file';
+  const workspaceFileLabel = selectedFileId === 'pcb-file'
+    ? pcbFileLabel
+    : selectedFileId === 'generated-code'
+      ? generatedCodeFileLabel
+      : schematicFileLabel;
   const showReviewDropzone = useMemo(
     () => !isCloudProjectLoading && workspacePresence === 'empty',
     [isCloudProjectLoading, workspacePresence]
@@ -233,7 +272,11 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
   }, []);
 
   useEffect(() => {
-    if (surfaceFlags.showPcbWorkspace || (workspaceMode !== 'pcb' && workspaceMode !== 'manufacturing')) {
+    if (
+      importedPcbDocument ||
+      surfaceFlags.showPcbWorkspace ||
+      (workspaceMode !== 'pcb' && workspaceMode !== 'manufacturing')
+    ) {
       return;
     }
 
@@ -244,7 +287,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
         'Review mode is limited to schematic and simulation.'
       ),
     });
-  }, [surfaceFlags.showPcbWorkspace, t, workspaceMode]);
+  }, [importedPcbDocument, surfaceFlags.showPcbWorkspace, t, workspaceMode]);
 
   const {
     setActiveRightTab,
@@ -263,6 +306,51 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
     setActiveRightTab(nextTab);
     setEditorRightTab(nextTab === 'code' ? 'code' : nextTab === 'comments' ? 'property' : 'ai');
   }, [effectiveShellMode, isViewOnly, setActiveRightTab]);
+
+  const handleSelectValidationIssue = useCallback((issue: ProjectAuditIssue) => {
+    if (isImportedPcbAuditIssue(issue) && (importedPcbDocument || surfaceFlags.showPcbWorkspace)) {
+      setWorkspaceMode('pcb');
+      const pcbIssueId = getImportedPcbIssueId(issue);
+      if (pcbIssueId) {
+        window.dispatchEvent(new CustomEvent('modumake:pcb-issue-focus', {
+          detail: { issueId: pcbIssueId },
+        }));
+      }
+    }
+
+    const componentIds = issue.evidence?.affectedComponents ?? issue.visualTargets?.componentIds ?? [];
+    const targetComponents = components.filter(component =>
+      componentIds.includes(component.instanceId) ||
+      (issue.componentName != null && component.name === issue.componentName)
+    );
+    const targetComponentId = targetComponents[0]?.instanceId ?? null;
+
+    if (targetComponentId) {
+      setSelectedComponentId(targetComponentId);
+    }
+
+    emitReviewFocus({
+      source: 'review',
+      interaction: 'focus',
+      emphasis: 'card',
+      issueKey: buildReviewIssueKey(issue),
+      code: issue.code,
+      componentInstanceId: targetComponentId ?? undefined,
+      componentInstanceIds: targetComponents.map(component => component.instanceId),
+      componentName: issue.componentName,
+      boardPin: issue.boardPin,
+      pinIds: issue.visualTargets?.pinIds,
+      netIds: issue.evidence?.affectedNets ?? issue.visualTargets?.netIds,
+      severity: issue.severity,
+      title: issue.title,
+      message: issue.message,
+      line: issue.line,
+      operation: issue.operation,
+      ruleId: issue.ruleId,
+    });
+    openRightTab('validation');
+  }, [components, importedPcbDocument, openRightTab, setSelectedComponentId, setWorkspaceMode, surfaceFlags.showPcbWorkspace]);
+
   useEffect(() => {
     const handleOpenCommentsPanel = () => openRightTab('comments');
     window.addEventListener(COMMENT_PANEL_OPEN_EVENT, handleOpenCommentsPanel);
@@ -441,38 +529,76 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
     const files: Array<{
       id: string;
       label: string;
-      kind: 'schematic' | 'code';
+      kind: 'schematic' | 'pcb' | 'code';
       removable?: boolean;
-    }> = [
-      {
+    }> = [];
+
+    if (hasSchematicContent || !importedPcbDocument) {
+      files.push({
         id: 'schematic-file',
-        label: workspaceFileLabel,
+        label: schematicFileLabel,
         kind: 'schematic' as const,
-      },
-    ];
+      });
+    }
+
+    if (importedPcbDocument || importedPcbSource?.trim()) {
+      files.push({
+        id: 'pcb-file',
+        label: pcbFileLabel,
+        kind: 'pcb' as const,
+      });
+    }
 
     if (generatedCode.trim()) {
       files.push({
         id: 'generated-code',
-        label: board.targetLanguage === 'Python' ? 'firmware.py' : 'firmware.ino',
+        label: generatedCodeFileLabel,
         kind: 'code' as const,
         removable: true,
       });
     }
 
     return files;
-  }, [board.targetLanguage, generatedCode, workspaceFileLabel]);
+  }, [generatedCode, generatedCodeFileLabel, hasSchematicContent, importedPcbDocument, importedPcbSource, pcbFileLabel, schematicFileLabel]);
 
   const importDroppedKiCadFile = useCallback(async (file: File) => {
-    if (!file.name.toLowerCase().endsWith('.kicad_sch')) {
-      toast.info(t('KiCad 회로도 파일만 바로 올릴 수 있습니다.', 'This quick-review surface accepts KiCad schematic files.'), {
-        description: t('`.kicad_sch` 파일을 올리거나, 메뉴에서 다른 프로젝트 파일을 열어 주세요.', 'Drop a `.kicad_sch` file here, or use the menu to open a different project file.'),
+    const filename = file.name.toLowerCase();
+    const isKiCadSchematic = filename.endsWith('.kicad_sch');
+    const isKiCadPcb = filename.endsWith('.kicad_pcb');
+
+    if (!isKiCadSchematic && !isKiCadPcb) {
+      toast.info(t('KiCad 파일만 바로 올릴 수 있습니다.', 'This quick-review surface accepts KiCad files.'), {
+        description: t('`.kicad_sch` 또는 `.kicad_pcb` 파일을 올려 주세요.', 'Drop a `.kicad_sch` or `.kicad_pcb` file.'),
       });
       return;
     }
 
     try {
       const text = await file.text();
+      if (isKiCadPcb) {
+        const document = parseKiCadPcb(text, { sourceFilename: file.name });
+        const validation = validateImportedPcbDocument(document, {
+          schematicParity: {
+            components,
+            manualConnections,
+            importedSchematicScene,
+            resolveTemplate: getTemplateById,
+          },
+        });
+        setImportedPcbDocument(document, text, validation);
+        setWorkspaceMode('pcb');
+        clearCloudProjectState();
+        if (initialCloudProjectId) {
+          router.replace('/editor', { scroll: false });
+        }
+        toast.success(t('KiCad PCB 파일을 불러왔습니다.', 'KiCad PCB loaded.'), {
+          description: appLanguage === 'ko'
+            ? `${file.name}을 PCB 검증 화면으로 가져왔습니다.`
+            : `Imported ${file.name} into the PCB review workspace.`,
+        });
+        return;
+      }
+
       const imported = await importKiCadSchematicAsync(text, {
         projectName: file.name.replace(/\.kicad_sch$/i, ''),
       });
@@ -503,10 +629,10 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
       toast.error(t('불러오기 실패', 'Load failed'), {
         description: error instanceof Error && error.message
           ? error.message
-          : t('KiCad 회로도 파일을 읽는 중 문제가 발생했습니다.', 'There was a problem reading the KiCad schematic file.'),
+          : t('KiCad 파일을 읽는 중 문제가 발생했습니다.', 'There was a problem reading the KiCad file.'),
       });
     }
-  }, [appLanguage, clearCloudProjectState, hydrateProject, initialCloudProjectId, router, t]);
+  }, [appLanguage, clearCloudProjectState, components, hydrateProject, importedSchematicScene, initialCloudProjectId, manualConnections, router, setImportedPcbDocument, setWorkspaceMode, t]);
 
   const handleReviewDrop = useCallback(async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -570,31 +696,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
   }, [openRightTab]);
 
   const persistCurrentWorkspaceSnapshotForReport = useCallback(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const state = useBoardStore.getState();
-    window.localStorage.setItem(REPORT_WORKSPACE_SNAPSHOT_KEY, JSON.stringify({
-      state: {
-        projectName: state.projectName,
-        appLanguage: state.appLanguage,
-        activeBoardId: state.activeBoardId,
-        components: state.components,
-        manualConnections: state.manualConnections,
-        importedSchematicScene: state.importedSchematicScene,
-        importedSchematicSource: state.importedSchematicSource,
-        powerInputMode: state.powerInputMode,
-        componentPowerModes: state.componentPowerModes,
-        componentUnusedPinModes: state.componentUnusedPinModes,
-        generatedCode: state.generatedCode,
-        validationReviewDecisions: state.validationReviewDecisions,
-        footprintPinPadOverrideCache: state.footprintPinPadOverrideCache,
-        templateCache: pickReferencedTemplateCache(state.components, state.templateCache),
-        customComponentPackages: state.customComponentPackages,
-      },
-      version: 0,
-    }));
+    persistReportWorkspaceSnapshot(useBoardStore.getState());
   }, []);
 
   const handleOpenReportView = useCallback(() => {
@@ -646,6 +748,27 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
     toast.success(t('코드 파일을 제거했습니다.', 'Removed the code file.'));
   }, [setGeneratedCode, t]);
 
+  const handleSelectFile = useCallback((fileId: string) => {
+    if (fileId === 'pcb-file') {
+      if (!importedPcbDocument && !surfaceFlags.showPcbWorkspace) {
+        toast.info(t('열린 PCB 파일이 없습니다.', 'No PCB file is open.'));
+        return;
+      }
+
+      setWorkspaceMode('pcb');
+      openRightTab('validation');
+      return;
+    }
+
+    if (fileId === 'generated-code') {
+      openRightTab('code');
+      return;
+    }
+
+    setWorkspaceMode('schematic');
+    openRightTab('validation');
+  }, [importedPcbDocument, openRightTab, setWorkspaceMode, surfaceFlags.showPcbWorkspace, t]);
+
   const handleToggleLeftSection = useCallback((section: 'components' | 'nets' | 'files') => {
     setLeftSectionState(current => ({
       ...current,
@@ -686,14 +809,15 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
       <input
         ref={schematicFileInputRef}
         type="file"
-        accept=".kicad_sch"
+        accept=".kicad_sch,.kicad_pcb,text/plain"
         className="hidden"
         onChange={async event => {
           const file = event.target.files?.[0];
+          const currentTarget = event.currentTarget;
           if (file) {
             await handleImportSchematicFile(file);
           }
-          event.currentTarget.value = '';
+          currentTarget.value = '';
         }}
       />
       <input
@@ -703,10 +827,11 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
         className="hidden"
         onChange={async event => {
           const file = event.target.files?.[0];
+          const currentTarget = event.currentTarget;
           if (file) {
             await handleImportCodeFile(file);
           }
-          event.currentTarget.value = '';
+          currentTarget.value = '';
         }}
       />
 
@@ -734,36 +859,44 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
             nets={sidebarNetItems}
             files={sidebarFiles}
             selectedComponentId={selectedComponentId}
+            selectedFileId={selectedFileId}
             sectionState={leftSectionState}
             onToggleSection={handleToggleLeftSection}
             onSelectComponent={id => {
+              setWorkspaceMode('schematic');
               setSelectedComponentId(id);
               setEditorRightTab('property');
             }}
+            onSelectFile={handleSelectFile}
             onRemoveFile={handleRemoveFile}
           />
         }
         canvasArea={
           <CanvasArea
             toolbar={
-              <CanvasToolbar
-                mode={canvasMode}
-                showGrid={showGrid}
-                showMinimap={showMinimap}
-                zoomLabel={canvasZoomLabel}
-                importedSchematicMode={importedSchematicMode}
-                importedSchematicViewMode={importedSchematicViewMode}
-                onModeChange={setCanvasMode}
-                onZoomIn={() => window.dispatchEvent(new CustomEvent('modumake:zoom-in'))}
-                onZoomOut={() => window.dispatchEvent(new CustomEvent('modumake:zoom-out'))}
-                onFitView={() => window.dispatchEvent(new CustomEvent('modumake:fit-view'))}
-                onToggleGrid={toggleGrid}
-                onToggleMinimap={toggleMinimap}
-                onImportedSchematicViewModeChange={setImportedSchematicViewMode}
-              />
+              <>
+                {surfaceFlags.showPcbWorkspace || importedPcbDocument ? <WorkspaceModeBar /> : null}
+                {!showPcbWorkspace ? (
+                  <CanvasToolbar
+                    mode={canvasMode}
+                    showGrid={showGrid}
+                    showMinimap={showMinimap}
+                    zoomLabel={canvasZoomLabel}
+                    importedSchematicMode={importedSchematicMode}
+                    importedSchematicViewMode={importedSchematicViewMode}
+                    onModeChange={setCanvasMode}
+                    onZoomIn={() => window.dispatchEvent(new CustomEvent('modumake:zoom-in'))}
+                    onZoomOut={() => window.dispatchEvent(new CustomEvent('modumake:zoom-out'))}
+                    onFitView={() => window.dispatchEvent(new CustomEvent('modumake:fit-view'))}
+                    onToggleGrid={toggleGrid}
+                    onToggleMinimap={toggleMinimap}
+                    onImportedSchematicViewModeChange={setImportedSchematicViewMode}
+                  />
+                ) : null}
+              </>
             }
-            canvas={<ComponentCanvas />}
-            overlay={showReviewDropzone ? (
+            canvas={showPcbWorkspace ? <PcbWorkspace /> : <ComponentCanvas />}
+            overlay={!showPcbWorkspace && showReviewDropzone ? (
               <div
                 className="absolute inset-0 z-20 flex items-center justify-center p-6"
                 onDrop={handleReviewDrop}
@@ -793,12 +926,12 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
                     <FileUp size={26} />
                   </div>
                   <div className="mt-5 text-2xl font-semibold" style={{ color: importedSchematicMode ? importedPalette.shellForeground : '#40362e' }}>
-                    {t('KiCad 회로도를 올려서 바로 리뷰 시작', 'Drop a KiCad schematic to start the review')}
+                    {t('KiCad 파일을 올려서 바로 리뷰 시작', 'Drop a KiCad file to start the review')}
                   </div>
                   <div className="mx-auto mt-3 max-w-2xl text-sm leading-6" style={{ color: importedSchematicMode ? importedPalette.shellMutedText : '#8f8377' }}>
                     {t(
-                      '기존 `.kicad_sch` 파일을 바로 가져와서 연결 상태와 리뷰 이슈를 먼저 확인하는 흐름입니다.',
-                      'Bring in an existing `.kicad_sch` file and jump straight into review.'
+                      '기존 `.kicad_sch` 회로도나 `.kicad_pcb` 보드를 바로 가져와서 리뷰와 검증을 시작합니다.',
+                      'Bring in an existing `.kicad_sch` schematic or `.kicad_pcb` board and jump straight into review.'
                     )}
                   </div>
                   <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
@@ -817,7 +950,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
                         color: importedSchematicMode ? importedPalette.shellForeground : '#74685d',
                       }}
                     >
-                      {t('지원 형식 · .kicad_sch', 'Supported · .kicad_sch')}
+                      {t('지원 형식 · .kicad_sch · .kicad_pcb', 'Supported · .kicad_sch · .kicad_pcb')}
                     </div>
                   </div>
                 </div>
@@ -843,40 +976,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
                 boardName={board.name}
                 fileLabel={workspaceFileLabel}
                 issues={validationIssues}
-                onSelectIssue={issue => {
-                  const componentIds = issue.evidence?.affectedComponents ?? issue.visualTargets?.componentIds ?? [];
-                  const targetComponents = components.filter(component =>
-                    componentIds.includes(component.instanceId) ||
-                    (issue.componentName != null && component.name === issue.componentName)
-                  );
-                  const targetComponentId = targetComponents[0]?.instanceId ?? null;
-
-                  if (targetComponentId) {
-                    setSelectedComponentId(targetComponentId);
-                  }
-
-                  emitReviewFocus({
-                    source: 'review',
-                    interaction: 'focus',
-                    emphasis: 'card',
-                    issueKey: buildReviewIssueKey(issue),
-                    code: issue.code,
-                    componentInstanceId: targetComponentId ?? undefined,
-                    componentInstanceIds: targetComponents.map(component => component.instanceId),
-                    componentName: issue.componentName,
-                    boardPin: issue.boardPin,
-                    pinIds: issue.visualTargets?.pinIds,
-                    netIds: issue.evidence?.affectedNets ?? issue.visualTargets?.netIds,
-                    severity: issue.severity,
-                    title: issue.title,
-                    message: issue.message,
-                    line: issue.line,
-                    operation: issue.operation,
-                    ruleId: issue.ruleId,
-                  });
-                  setEditorRightTab('ai');
-                  setActiveRightTab('validation');
-                }}
+                onSelectIssue={handleSelectValidationIssue}
               />
             }
             propertyPanel={
@@ -899,7 +999,9 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
           <BottomBar
             errorCount={validationSeverityCounts.error}
             warningCount={validationSeverityCounts.warning}
-            okLabel={audit.issueCount === 0 ? 'ERC 통과' : `ERC 이슈 ${audit.issueCount}`}
+            okLabel={validationIssues.length === 0 ? '분석 통과' : `분석 이슈 ${validationIssues.length}`}
+            issues={validationIssues}
+            onSelectIssue={handleSelectValidationIssue}
             onExportReport={handleExportReport}
             onShare={handleShare}
           />

@@ -1,41 +1,237 @@
 'use client';
 
-import { AlertTriangle, Check, FileText, Share2, XCircle } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, Check, ChevronRight, FileText, ListChecks, Share2, X, XCircle } from 'lucide-react';
+import type { ProjectAuditIssue } from '@/types';
+
+type BottomBarIssue = ProjectAuditIssue & {
+  relatedComponentLabels?: string[];
+  relatedNetLabels?: string[];
+};
+
+type IssueListMode = 'error' | 'warning' | 'erc';
 
 function Divider() {
   return <span className="h-3 w-px bg-[#ddd5ca]" aria-hidden="true" />;
+}
+
+function issueTone(severity: ProjectAuditIssue['severity']) {
+  if (severity === 'error') {
+    return {
+      icon: <XCircle size={12} />,
+      label: '오류',
+      chip: 'bg-[#fbe7e7] text-[#b24f4f]',
+      text: 'text-[#b94747]',
+      border: 'border-[#efd2d2]',
+      bg: 'bg-[#fff8f8]',
+    };
+  }
+
+  if (severity === 'warning') {
+    return {
+      icon: <AlertTriangle size={12} />,
+      label: '경고',
+      chip: 'bg-[#fbefd3] text-[#a57019]',
+      text: 'text-[#b67b17]',
+      border: 'border-[#eadcbd]',
+      bg: 'bg-[#fffdf7]',
+    };
+  }
+
+  return {
+    icon: <Check size={12} />,
+    label: '정보',
+    chip: 'bg-[#e8f4ea] text-[#34764a]',
+    text: 'text-[#2f8a46]',
+    border: 'border-[#d8eadc]',
+    bg: 'bg-[#fbfffb]',
+  };
+}
+
+function panelTitle(mode: IssueListMode) {
+  if (mode === 'error') {
+    return '오류 목록';
+  }
+
+  if (mode === 'warning') {
+    return '경고 목록';
+  }
+
+  return 'ERC 이슈 목록';
+}
+
+function issueTargetLabel(issue: BottomBarIssue) {
+  const components = issue.relatedComponentLabels ?? issue.evidence?.affectedComponents ?? issue.visualTargets?.componentIds ?? [];
+  const nets = issue.relatedNetLabels ?? issue.evidence?.affectedNets ?? issue.visualTargets?.netIds ?? [];
+  const componentLabel = issue.componentName ?? components[0];
+  const netLabel = nets[0];
+
+  if (componentLabel && netLabel) {
+    return `${componentLabel} · ${netLabel}`;
+  }
+
+  return componentLabel ?? netLabel ?? issue.boardPin ?? issue.ruleId ?? issue.code ?? '프로젝트 전체';
 }
 
 export function BottomBar({
   errorCount,
   warningCount,
   okLabel,
+  issues,
+  onSelectIssue,
   onExportReport,
   onShare,
 }: {
   errorCount: number;
   warningCount: number;
   okLabel: string;
+  issues: BottomBarIssue[];
+  onSelectIssue: (issue: BottomBarIssue) => void;
   onExportReport: () => void;
   onShare: () => void;
 }) {
+  const [openMode, setOpenMode] = useState<IssueListMode | null>(null);
+  const rootRef = useRef<HTMLElement | null>(null);
+  const filteredIssues = useMemo(() => {
+    if (!openMode) {
+      return [];
+    }
+
+    if (openMode === 'erc') {
+      return issues;
+    }
+
+    return issues.filter(issue => issue.severity === openMode);
+  }, [issues, openMode]);
+
+  useEffect(() => {
+    if (!openMode) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target;
+      if (target instanceof Node && rootRef.current?.contains(target)) {
+        return;
+      }
+
+      setOpenMode(null);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpenMode(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openMode]);
+
+  const toggleMode = (mode: IssueListMode) => {
+    setOpenMode(current => current === mode ? null : mode);
+  };
+
   return (
-    <footer className="flex h-[38px] items-center justify-between border-t border-[#e3d7c9] bg-[#fbf8f3] px-4 text-[11px]">
+    <footer ref={rootRef} className="relative flex h-[38px] items-center justify-between border-t border-[#e3d7c9] bg-[#fbf8f3] px-4 text-[11px]">
+      {openMode ? (
+        <div className="absolute bottom-[calc(100%+8px)] left-3 z-50 w-[min(560px,calc(100vw-32px))] overflow-hidden rounded-[16px] border border-[#d9cdbd] bg-[#fffdf9] shadow-[0_22px_70px_rgba(76,58,42,0.18)]">
+          <div className="flex items-center justify-between gap-3 border-b border-[#eadfd1] bg-[#fbf6ef] px-4 py-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-[12px] font-semibold text-[#3f342c]">
+                <ListChecks size={14} className="text-[#6d8db4]" />
+                {panelTitle(openMode)}
+              </div>
+              <div className="mt-1 text-[10px] text-[#8a7a6b]">
+                {filteredIssues.length > 0 ? `${filteredIssues.length}개 항목` : '표시할 항목이 없습니다.'}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpenMode(null)}
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[#8a7a6b] transition hover:bg-[#efe5d8] hover:text-[#4f4339]"
+              aria-label="닫기"
+            >
+              <X size={13} />
+            </button>
+          </div>
+          <div className="max-h-[360px] overflow-y-auto p-2.5">
+            {filteredIssues.length > 0 ? (
+              <div className="space-y-2">
+                {filteredIssues.map((issue, index) => {
+                  const tone = issueTone(issue.severity);
+                  const evidenceLine = issue.evidence?.evidenceSummary ?? issue.message;
+                  return (
+                    <button
+                      type="button"
+                      key={`${issue.ruleId ?? issue.code ?? issue.title}-${index}`}
+                      onClick={() => {
+                        onSelectIssue(issue);
+                        setOpenMode(null);
+                      }}
+                      className={`flex w-full items-start gap-3 rounded-[12px] border px-3 py-2.5 text-left transition hover:border-[#cdbda8] hover:bg-[#fffaf3] ${tone.border} ${tone.bg}`}
+                    >
+                      <span className={`mt-0.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${tone.chip}`}>
+                        {tone.icon}
+                        {tone.label}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[12px] font-semibold text-[#40352d]">
+                          {issue.title}
+                        </span>
+                        <span className="mt-0.5 block truncate text-[10px] font-semibold text-[#6d7f9a]">
+                          {issueTargetLabel(issue)}
+                        </span>
+                        <span className="mt-1 line-clamp-2 block text-[10px] leading-[1.55] text-[#76675a]">
+                          {evidenceLine}
+                        </span>
+                      </span>
+                      <ChevronRight size={14} className="mt-1 shrink-0 text-[#b5a797]" />
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-[12px] border border-[#e7dccf] bg-[#fcfaf6] px-4 py-6 text-center text-[11px] font-semibold text-[#7d6e61]">
+                선택한 분류에는 현재 항목이 없습니다.
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
       <div className="flex items-center gap-2 text-[#6c6056]">
-        <span className="inline-flex items-center gap-1 text-[#b94747]">
+        <button
+          type="button"
+          onClick={() => toggleMode('error')}
+          className={`inline-flex h-7 items-center gap-1 rounded-[9px] px-2 font-semibold text-[#b94747] transition hover:bg-[#fbeaea] ${openMode === 'error' ? 'bg-[#fbeaea]' : ''}`}
+          aria-expanded={openMode === 'error'}
+        >
           <XCircle size={12} />
           오류 {errorCount}
-        </span>
+        </button>
         <Divider />
-        <span className="inline-flex items-center gap-1 text-[#b67b17]">
+        <button
+          type="button"
+          onClick={() => toggleMode('warning')}
+          className={`inline-flex h-7 items-center gap-1 rounded-[9px] px-2 font-semibold text-[#b67b17] transition hover:bg-[#fbf0d7] ${openMode === 'warning' ? 'bg-[#fbf0d7]' : ''}`}
+          aria-expanded={openMode === 'warning'}
+        >
           <AlertTriangle size={12} />
           경고 {warningCount}
-        </span>
+        </button>
         <Divider />
-        <span className="inline-flex items-center gap-1 text-[#2f8a46]">
+        <button
+          type="button"
+          onClick={() => toggleMode('erc')}
+          className={`inline-flex h-7 items-center gap-1 rounded-[9px] px-2 font-semibold text-[#2f8a46] transition hover:bg-[#e7f4ea] ${openMode === 'erc' ? 'bg-[#e7f4ea]' : ''}`}
+          aria-expanded={openMode === 'erc'}
+        >
           <Check size={12} />
           {okLabel}
-        </span>
+        </button>
       </div>
       <div className="flex items-center gap-3">
         <button

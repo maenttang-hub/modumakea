@@ -9,6 +9,7 @@ import {
   getImportedSchematicDisplayDrawings,
   getImportedSchematicDisplayJunctions,
   getImportedSchematicDisplayLabels,
+  getImportedSchematicDisplayNoConnects,
   getImportedSchematicDisplayPageFrame,
   getImportedSchematicDisplaySheetFrames,
   getImportedSchematicDisplaySymbols,
@@ -22,9 +23,11 @@ import {
   getImportedTextDisplayAnchor,
   getImportedTextDisplayBaseline,
   getImportedTextFontSizePx,
+  getImportedNetLabelDisplay,
   getImportedPinLabelDisplay,
   getImportedReadableTextOffset,
   getImportedTextOverviewOpacity,
+  classifyImportedNetLabel,
   isLowPriorityImportedPinText,
   shouldFlattenImportedTextForReadability,
   shouldUseImportedBodyFill,
@@ -136,6 +139,19 @@ function shouldRenderPrimitiveInOriginalOverview(
   return !isLowPriorityImportedPinText(primitive);
 }
 
+function orderImportedPrimitivesForOriginalOverview(
+  primitives: ImportedSchematicPrimitive[]
+) {
+  return [...primitives].sort((left, right) => {
+    const leftText = left.kind === 'text' ? 1 : 0;
+    const rightText = right.kind === 'text' ? 1 : 0;
+    if (leftText !== rightText) {
+      return leftText - rightText;
+    }
+    return 0;
+  });
+}
+
 function resolveImportedStrokeDasharray(
   strokeStyle: 'default' | 'dash' | 'dot' | 'dash_dot' | 'dash_dot_dot' | undefined,
   context: 'symbol' | 'drawing' = 'symbol'
@@ -206,23 +222,68 @@ function isPowerSceneSymbol(symbol: ImportedSchematicSceneSymbol) {
   );
 }
 
-function classifyNetLabel(text: string) {
-  const normalized = text.trim().toUpperCase();
-  if (['GND', 'GNDPWR', 'AGND', 'DGND', 'PGND', 'VSS'].includes(normalized)) {
-    return 'ground';
-  }
-  if (/^\+?(3V3|3\.3V|5V|12V|24V|VBAT|VBUS|VIN|VCC|VSYS)$/.test(normalized)) {
-    return 'power';
-  }
-  return 'signal';
-}
-
 function truncateOverlayText(text: string, maxChars: number) {
   const trimmed = text.trim();
   if (trimmed.length <= maxChars) {
     return trimmed;
   }
   return `${trimmed.slice(0, Math.max(1, maxChars - 1))}…`;
+}
+
+function resolveCrowdedPowerLabelSide(
+  label: ImportedSchematicScene['labels'][number],
+  labels: ImportedSchematicScene['labels'],
+  index: number
+): 'left' | 'right' | undefined {
+  const angle = label.angle ?? 0;
+  if (angle !== 90 && angle !== 270) {
+    return undefined;
+  }
+
+  if (classifyImportedNetLabel(label.text) === 'signal') {
+    return undefined;
+  }
+
+  const neighbors = labels
+    .map((candidate, candidateIndex) => ({ candidate, candidateIndex }))
+    .filter(({ candidate, candidateIndex }) => {
+      if (candidateIndex === index) {
+        return false;
+      }
+      if ((candidate.angle ?? 0) !== angle) {
+        return false;
+      }
+      if (classifyImportedNetLabel(candidate.text) === 'signal') {
+        return false;
+      }
+      return (
+        Math.abs(candidate.at.x - label.at.x) <= 26 &&
+        Math.abs(candidate.at.y - label.at.y) <= 44
+      );
+    });
+
+  if (neighbors.length === 0) {
+    return undefined;
+  }
+
+  const nearest = [...neighbors].sort(
+    (left, right) =>
+      Math.hypot(left.candidate.at.x - label.at.x, left.candidate.at.y - label.at.y) -
+      Math.hypot(right.candidate.at.x - label.at.x, right.candidate.at.y - label.at.y)
+  )[0]?.candidate;
+
+  if (!nearest) {
+    return undefined;
+  }
+
+  if (label.at.x < nearest.at.x) {
+    return 'left';
+  }
+  if (label.at.x > nearest.at.x) {
+    return 'right';
+  }
+
+  return index % 2 === 0 ? 'left' : 'right';
 }
 
 function getDisplaySheetFrameTitle(frame: NonNullable<ImportedSchematicScene['sheetFrames']>[number]) {
@@ -568,6 +629,10 @@ export function ImportedSchematicOverlayNode({
     () => getImportedSchematicDisplayJunctions(scene),
     [scene]
   );
+  const displayNoConnects = useMemo(
+    () => getImportedSchematicDisplayNoConnects(scene),
+    [scene]
+  );
   const displaySymbols = useMemo(
     () => getImportedSchematicDisplaySymbols(scene),
     [scene]
@@ -661,6 +726,7 @@ export function ImportedSchematicOverlayNode({
               <SceneDrawingsLayer drawings={displayDrawings} palette={palette} dimmed={data.dimNonTargets && hasFocusedComponents} />
               <WiresLayer segments={displayWireSegments} palette={palette} dimmed={data.dimNonTargets && hasFocusedComponents} />
               <JunctionsLayer junctions={displayJunctions} palette={palette} dimmed={data.dimNonTargets && hasFocusedComponents} />
+              <NoConnectsLayer noConnects={displayNoConnects} palette={palette} dimmed={data.dimNonTargets && hasFocusedComponents} />
             </>
           ) : (
             <>
@@ -678,7 +744,7 @@ export function ImportedSchematicOverlayNode({
             <>
               <SymbolsLayer symbols={powerSymbols} palette={palette} highlightedComponentIds={highlightedComponentIds} dimNonTargets={data.dimNonTargets === true} pulse={data.pulse === true} structuredMode={false} componentOffsets={{}} />
               <SymbolsLayer symbols={componentSymbols} palette={palette} highlightedComponentIds={highlightedComponentIds} dimNonTargets={data.dimNonTargets === true} pulse={data.pulse === true} structuredMode={false} componentOffsets={{}} />
-              <LabelsLayer labels={displayLabels} dimmed={data.dimNonTargets && hasFocusedComponents} />
+              <LabelsLayer labels={displayLabels} palette={palette} dimmed={data.dimNonTargets && hasFocusedComponents} />
             </>
           ) : (
             <>
@@ -988,43 +1054,80 @@ const JunctionsLayer = memo(function JunctionsLayer({
   );
 });
 
+const NoConnectsLayer = memo(function NoConnectsLayer({
+  noConnects,
+  palette,
+  dimmed,
+}: {
+  noConnects: NonNullable<ImportedSchematicScene['noConnects']>;
+  palette: ImportedSchematicOverlayPalette;
+  dimmed?: boolean;
+}) {
+  return (
+    <>
+      {noConnects.map((point, index) => {
+        const size = 4;
+        return (
+          <g
+            key={`no-connect-${index}`}
+            data-mm-imported-no-connect="true"
+            opacity={dimmed ? 0.22 : 0.82}
+            stroke={palette.symbolStroke}
+            strokeWidth={1.7}
+            strokeLinecap="round"
+          >
+            <line x1={point.x - size} y1={point.y - size} x2={point.x + size} y2={point.y + size} />
+            <line x1={point.x + size} y1={point.y - size} x2={point.x - size} y2={point.y + size} />
+          </g>
+        );
+      })}
+    </>
+  );
+});
+
 const LabelsLayer = memo(function LabelsLayer({
   labels,
+  palette,
   dimmed,
 }: {
   labels: ImportedSchematicScene['labels'];
+  palette: ImportedSchematicOverlayPalette;
   dimmed?: boolean;
 }) {
   return (
     <>
       {labels.map((label, index) => {
-        const renderedAngle = getImportedTextDisplayAngle(label.angle ?? 0, 'annotation', {
-          text: label.text,
-        });
         const fontSize = Math.min(Math.max((label.sizeMm ?? 1.27) * (1 / 0.18) * 0.66, 6.25), 7.4);
-        const kind = classifyNetLabel(label.text);
+        const display = getImportedNetLabelDisplay({
+          ...label,
+          side: resolveCrowdedPowerLabelSide(label, labels, index),
+        });
+        const kind = display.kind;
         const displayText = truncateOverlayText(label.text, kind === 'signal' ? 20 : 14);
         const textFill =
           kind === 'power' ? '#9c6f1f' : kind === 'ground' ? '#5e564f' : '#486b8d';
-        const labelOpacity = dimmed ? 0.16 : kind === 'signal' ? 0.52 : 0.62;
+        const labelOpacity = dimmed ? 0.16 : kind === 'signal' ? 0.52 : 0.72;
         return (
           <g
             key={`label-${index}`}
             data-mm-imported-label="true"
             opacity={labelOpacity}
             transform={
-              renderedAngle
-                ? `rotate(${renderedAngle} ${label.at.x} ${label.at.y})`
+              display.angle
+                ? `rotate(${display.angle} ${display.x} ${display.y})`
                 : undefined
             }
           >
             <text
-              x={label.at.x}
-              y={label.at.y}
+              x={display.x}
+              y={display.y}
               fontSize={fontSize}
               fill={textFill}
-              textAnchor={label.angle === 180 ? 'end' : label.angle === 90 || label.angle === 270 ? 'middle' : 'start'}
-              dominantBaseline="middle"
+              stroke={display.background ? palette.canvasBackground : undefined}
+              strokeWidth={display.background ? Math.max(fontSize * 0.34, 1.5) : undefined}
+              paintOrder={display.background ? 'stroke' : undefined}
+              textAnchor={display.textAnchor}
+              dominantBaseline={display.baseline}
               fontFamily={IMPORTED_SCHEMATIC_FONT_FAMILY}
             >
               {displayText}
@@ -1080,7 +1183,7 @@ const SymbolsLayer = memo(function SymbolsLayer({
             {structuredMode ? (
               <StructuredSymbolShape symbol={symbol} palette={palette} highlighted={isHighlighted} />
             ) : (
-              symbol.primitives
+              orderImportedPrimitivesForOriginalOverview(symbol.primitives)
                 .filter(primitive => shouldRenderPrimitiveInOriginalOverview(symbol, primitive, isHighlighted))
                 .map((primitive, index) => (
                   <ImportedPrimitiveShape
@@ -1522,6 +1625,14 @@ function ImportedPrimitiveShape({
     ? 'middle'
     : primitive.baseline ?? getImportedTextDisplayBaseline(sourceAngle, primitive.role);
   const textOpacity = highlighted ? 1 : getImportedTextOverviewOpacity(primitive);
+  const protectPassivePropertyText =
+    symbol.family === 'passive' &&
+    (primitive.role === 'reference' || primitive.role === 'value');
+  const useTextHalo = flattenForReadability || protectPassivePropertyText;
+  const textHaloWidth = Math.max(
+    fontSize * (flattenForReadability ? 0.32 : 0.22),
+    flattenForReadability ? 1.3 : 1.05
+  );
   const fill =
     primitive.role === 'reference'
       ? palette.referenceText
@@ -1540,9 +1651,9 @@ function ImportedPrimitiveShape({
       fontSize={fontSize}
       fill={fill}
       opacity={textOpacity}
-      stroke={flattenForReadability ? palette.canvasBackground : undefined}
-      strokeWidth={flattenForReadability ? Math.max(fontSize * 0.32, 1.3) : undefined}
-      paintOrder={flattenForReadability ? 'stroke' : undefined}
+      stroke={useTextHalo ? palette.canvasBackground : undefined}
+      strokeWidth={useTextHalo ? textHaloWidth : undefined}
+      paintOrder={useTextHalo ? 'stroke' : undefined}
       textAnchor={resolvedTextAnchor}
       dominantBaseline={resolvedBaseline}
       transform={
