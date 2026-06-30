@@ -3943,11 +3943,11 @@ export function getProjectStageReadiness(
   }
 
   if (audit.genericCount > 0) {
-    manufacturingReasons.push(`제조 단계 전에는 generic-module 센서 ${audit.genericCount}개를 검증 상태로 바꾸는 편이 좋습니다.`);
+    manufacturingReasons.push(`출력 단계 전에는 generic-module 센서 ${audit.genericCount}개를 검증 상태로 바꾸는 편이 좋습니다.`);
   }
 
   if (audit.partialCount > 0) {
-    manufacturingReasons.push(`partial 상태 센서 ${audit.partialCount}개는 최종 제조 전 전기 특성표를 다시 확인해야 합니다.`);
+    manufacturingReasons.push(`partial 상태 센서 ${audit.partialCount}개는 실물 제작 전 전기 특성표를 다시 확인해야 합니다.`);
   }
 
   return {

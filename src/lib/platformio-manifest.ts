@@ -5,7 +5,9 @@ import {
   findArduinoLibraryByName,
 } from '@/lib/arduino-library-registry';
 import {
+  getPublicCloudCompileDisabledReason,
   getUnsandboxedCloudCompileDisabledReason,
+  isPublicCloudCompileEnabled,
   isUnsandboxedCloudCompileEnabled,
 } from '@/lib/compile-policy';
 import type {
@@ -250,6 +252,18 @@ function buildCloudTarget(payload: AICodeGenerationPayload): CompilerCloudTarget
       boardName: board.name,
       targetLanguage: board.targetLanguage,
       reason: '이 보드는 아직 클라우드 컴파일 대상 FQBN 매핑이 준비되지 않았습니다.',
+    };
+  }
+
+  if (!isPublicCloudCompileEnabled()) {
+    return {
+      provider: 'arduino-cli',
+      supported: false,
+      boardId: payload.boardId,
+      boardName: board.name,
+      targetLanguage: board.targetLanguage,
+      fqbn: env.fqbn,
+      reason: getPublicCloudCompileDisabledReason(),
     };
   }
 

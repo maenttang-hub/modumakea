@@ -121,7 +121,7 @@ function sectionMeta(bucket: ActionBucket, t: (ko: string, en: string) => string
   if (bucket === 'must-fix') {
     return {
       title: t('반드시 수정', 'Must Fix'),
-      description: t('PCB 주문 전에 먼저 정리해야 하는 항목입니다.', 'Resolve these before sending the design to fabrication.'),
+      description: t('실물 제작이나 PCB 검토 전에 먼저 정리해야 하는 항목입니다.', 'Resolve these before build handoff or PCB review.'),
       icon: <ShieldAlert size={14} className="text-[#a94040]" />,
     };
   }
@@ -134,7 +134,7 @@ function sectionMeta(bucket: ActionBucket, t: (ko: string, en: string) => string
   }
   return {
     title: t('참고 정보', 'Informational'),
-    description: t('결론을 바꾸지는 않지만 같이 남겨두는 항목입니다.', 'Helpful context that does not currently block fabrication.'),
+    description: t('결론을 바꾸지는 않지만 같이 남겨두는 항목입니다.', 'Helpful context that does not currently block the review.'),
     icon: <CheckCircle2 size={14} className="text-[#3d6d47]" />,
   };
 }
@@ -394,21 +394,21 @@ export function ProjectVerificationReportPage() {
       ? t('수정 필요', 'Fix required')
       : verificationReport.status === 'warning'
         ? t('검토 필요', 'Review required')
-        : t('주문 가능', 'Ready for fabrication');
+        : t('검토 통과', 'Review clear');
   const generatedAtLabel = formatGeneratedAt(generatedAt, locale);
   const verificationStatus = verificationReport?.status ?? 'warning';
   const executiveSummary = verificationStatus === 'critical'
     ? t(
-        '현재 설계는 제작 전에 반드시 처리해야 할 차단 이슈가 있습니다. 오류 항목을 먼저 닫은 뒤 PCB 제작 단계로 이동하세요.',
-        'This design has blocking findings that should be resolved before fabrication. Close the error items before moving to PCB manufacturing.'
+        '현재 설계에는 실물 제작 전에 반드시 확인해야 할 차단 이슈가 있습니다. 오류 항목을 먼저 닫은 뒤 PCB 검토 단계로 이동하세요.',
+        'This design has blocking findings that should be resolved before build handoff. Close the error items before moving to PCB review.'
       )
     : verificationStatus === 'warning'
       ? t(
-          '제작을 막는 확정 오류는 제한적이지만, 데이터시트 또는 모듈 조건 확인이 필요한 항목이 있습니다.',
+          '확정 오류는 제한적이지만, 데이터시트 또는 모듈 조건 확인이 필요한 항목이 있습니다.',
           'No broad blocking failure is present, but several findings should be checked against datasheets or module conditions.'
         )
       : t(
-          '현재 자동 검증 기준에서 제작을 막는 주요 이슈는 보이지 않습니다. 실제 PCB 배치와 제조 조건은 별도 확인이 필요합니다.',
+          '현재 자동 검증 기준에서 주요 차단 이슈는 보이지 않습니다. 실제 PCB 배치와 제조 조건은 별도 확인이 필요합니다.',
           'No major blocking issue is visible under the current automated checks. Final PCB layout and manufacturing constraints still need review.'
         );
 
@@ -535,7 +535,7 @@ export function ProjectVerificationReportPage() {
             <div>
               <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#5d4b3d]">ModuMake Hardware Review</div>
               <div className="mt-2 text-[12px] leading-6 text-[#75685d]">
-                {t('자동 검증 엔진 기반 제작 전 검토 문서', 'Pre-fabrication review document from the automated verification engine')}
+                {t('자동 검증 엔진 기반 회로 검토 문서', 'Circuit review document from the automated verification engine')}
               </div>
             </div>
             <div className="grid min-w-[240px] gap-1.5 text-[11px] text-[#5f5146]">
@@ -570,7 +570,7 @@ export function ProjectVerificationReportPage() {
                   {workspace.projectName || t('이름 없는 프로젝트', 'Untitled Project')}
                 </h1>
                 <p className="mt-3 text-[14px] font-semibold leading-6 text-[#5c5045]">
-                  {t('PCB 제작 전 검증 보고서', 'Pre-Fabrication Circuit Review Report')}
+                  {t('회로 검토 및 실물 제작 전 확인 리포트', 'Circuit Review and Build-Readiness Report')}
                 </p>
                 <p className="mt-5 max-w-[650px] text-[13px] leading-7 text-[#5f544a]">
                   {executiveSummary}
@@ -623,7 +623,7 @@ export function ProjectVerificationReportPage() {
                   </div>
                 </div>
                 <div className="mt-4 border-l-4 border-[#6f5235] bg-white px-4 py-3 text-[12px] leading-6 text-[#5a4d42]">
-                  {t('이 문서는 제작 전 의사결정을 위한 검토 자료입니다. 실제 제조 전에는 PCB 레이아웃, 전류 경로, 부품 실장 조건을 함께 확인하세요.', 'This document supports pre-fabrication decisions. Confirm PCB layout, current paths, and assembly conditions before manufacturing.')}
+                  {t('이 문서는 회로 검토를 돕는 자료입니다. 실제 제작 전에는 PCB 레이아웃, 전류 경로, 부품 실장 조건을 함께 확인하세요.', 'This document supports circuit review. Confirm PCB layout, current paths, and assembly conditions before manufacturing.')}
                 </div>
               </div>
             </div>

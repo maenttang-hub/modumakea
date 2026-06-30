@@ -1589,6 +1589,7 @@ export interface CompileJobResponse {
     | 'COMPILATION_UNAVAILABLE'
     | 'BAD_REQUEST';
   buildLogs: string;
+  errorCode?: string;
   errorDetails?: string;
   hexBinary?: string;
   queueJob?: {

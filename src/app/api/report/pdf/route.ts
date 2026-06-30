@@ -158,7 +158,7 @@ function buildReportHtml(payload: ReportPdfRequest) {
     ? (lang === 'ko' ? '수정 필요' : 'Fix required')
     : payload.status === 'warning'
       ? (lang === 'ko' ? '검토 필요' : 'Review required')
-      : (lang === 'ko' ? '주문 가능' : 'Ready for fabrication');
+      : (lang === 'ko' ? '검토 통과' : 'Review clear');
 
   return `<!doctype html>
 <html lang="${lang}">
@@ -340,7 +340,7 @@ function buildReportHtml(payload: ReportPdfRequest) {
       <section class="cover">
         <div class="status-pill">${escapeHtml(statusLabel)}</div>
         <h1>${escapeHtml(payload.title)}</h1>
-        <p>${lang === 'ko' ? 'PCB 제작 전 자동 검증 결과와 제작 리스크를 정리한 문서형 보고서입니다.' : 'A document-style report summarizing automated pre-fabrication checks and fabrication risk.'}</p>
+        <p>${lang === 'ko' ? '자동 검증 결과와 실물 제작 전 확인할 리스크를 정리한 문서형 보고서입니다.' : 'A document-style report summarizing automated review results and build-readiness risks.'}</p>
         <div class="metric-row">
           <div class="metric"><span>${lang === 'ko' ? '오류' : 'Errors'}</span><strong>${payload.errorCount}</strong></div>
           <div class="metric"><span>${lang === 'ko' ? '경고' : 'Warnings'}</span><strong>${payload.warningCount}</strong></div>

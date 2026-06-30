@@ -83,7 +83,7 @@ export function WorkspaceModeBar() {
                 type="button"
                 onClick={() => {
                   if (mode.locked) {
-                    toast.warning(t('제조 단계는 아직 잠겨 있습니다.', 'Manufacturing is still locked.'), {
+                    toast.warning(t('출력 단계는 아직 잠겨 있습니다.', 'Output stage is still locked.'), {
                       description: readiness.manufacturingReasons.slice(0, 3).join(' / '),
                     });
                     return;

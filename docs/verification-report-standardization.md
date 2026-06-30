@@ -6,7 +6,7 @@
 
 1. The review engine already merges rule-engine, netlist/power, and code-circuit findings into one report source.
 2. The validation UI already distinguishes confidence levels such as `confirmed`, `strong-inference`, and `needs-review`.
-3. The exported verification report builder now produces a pre-fabrication review structure instead of a generic audit dump.
+3. The exported verification report builder now produces a circuit review and build-readiness structure instead of a generic audit dump.
 
 ### What is still missing
 
@@ -16,13 +16,13 @@
 
 ## Target standard
 
-The report should read as a fabrication review artifact, not an AI summary.
+The report should read as a circuit review artifact, not a manufacturing release certificate or generic AI summary.
 
 1. Title:
    `ModuMake Circuit Review Report`
-   `Pre-Fabrication Circuit Review Report`
+   `Circuit Review and Build-Readiness Report`
 2. Opening decision:
-   `Ready for fabrication` / `Review required` / `Fix required`
+   `Review clear` / `Review required` / `Fix required`
 3. Action buckets:
    `Must fix`
    `Review recommended`
@@ -42,7 +42,7 @@ The report should read as a fabrication review artifact, not an AI summary.
 ## Implemented in this turn
 
 1. Reframed the report title away from front-loaded AI wording.
-2. Added a pre-fabrication decision section at the top.
+2. Added a review decision section at the top.
 3. Split issues into `Must fix` and `Review recommended`.
 4. Added certainty badges derived from existing confidence metadata.
 5. Rewrote each issue block as `Evidence / Impact / How to fix`.
@@ -69,7 +69,7 @@ Implementation checklist:
 Required sections:
 
 1. Cover / project meta
-2. Pre-fabrication decision
+2. Review decision
 3. Must-fix findings
 4. Review-recommended findings
 5. Power/GND analysis

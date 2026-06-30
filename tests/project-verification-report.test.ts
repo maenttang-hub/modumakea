@@ -90,8 +90,8 @@ test('project verification report groups formal, DRC, and power findings', () =>
   assert.equal(report.errorCount, 1);
   assert.equal(report.warningCount, 1);
   assert.match(report.markdown, /ModuMake Circuit Review Report/);
-  assert.match(report.markdown, /Pre-Fabrication Decision/);
-  assert.match(report.markdown, /Fabrication status: Fix required/);
+  assert.match(report.markdown, /Review Decision/);
+  assert.match(report.markdown, /Review status: Fix required/);
   assert.match(report.markdown, /Must fix: 1/);
   assert.match(report.markdown, /\[High-confidence finding\] Code is driving a grounded net/);
   assert.match(report.markdown, /Location: Line 42 \/ LED 1 \/ Pin D2 \/ digitalWrite/);

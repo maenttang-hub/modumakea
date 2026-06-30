@@ -25,7 +25,9 @@ const basePayload: AICodeGenerationPayload = {
 
 test('compiler manifest infers known header dependencies and marks Arduino UNO as cloud ready', () => {
   const previous = process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE;
+  const previousPublic = process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
   process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE = 'true';
+  process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED = 'true';
 
   const code = [
     '#include <DHT.h>',
@@ -49,6 +51,11 @@ test('compiler manifest infers known header dependencies and marks Arduino UNO a
       delete process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE;
     } else {
       process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE = previous;
+    }
+    if (previousPublic === undefined) {
+      delete process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
+    } else {
+      process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED = previousPublic;
     }
   }
 });
@@ -93,7 +100,9 @@ test('compiler manifest keeps Python boards in local review mode', () => {
 
 test('compiler manifest includes explicitly installed project libraries', () => {
   const previous = process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE;
+  const previousPublic = process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
   process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE = 'true';
+  process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED = 'true';
 
   try {
     const manifest = buildCompilerManifest(
@@ -123,12 +132,45 @@ test('compiler manifest includes explicitly installed project libraries', () => 
     } else {
       process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE = previous;
     }
+    if (previousPublic === undefined) {
+      delete process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
+    } else {
+      process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED = previousPublic;
+    }
   }
 });
 
-test('compiler manifest keeps unsandboxed cloud compile disabled by default', () => {
+test('compiler manifest keeps public cloud compile disabled by default', () => {
   const previous = process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE;
+  const previousPublic = process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
   delete process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE;
+  delete process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
+
+  const code = '#include <DHT.h>\nvoid setup() {}\n';
+  try {
+    const manifest = buildCompilerManifest(basePayload, code);
+    assert.equal(manifest.compileStrategy, 'local-review-only');
+    assert.equal(manifest.cloudTarget.supported, false);
+    assert.match(manifest.cloudTarget.reason ?? '', /MVP|public cloud compile/);
+  } finally {
+    if (previous === undefined) {
+      delete process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE;
+    } else {
+      process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE = previous;
+    }
+    if (previousPublic === undefined) {
+      delete process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
+    } else {
+      process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED = previousPublic;
+    }
+  }
+});
+
+test('compiler manifest still requires sandbox opt-in after public gate is enabled', () => {
+  const previous = process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE;
+  const previousPublic = process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
+  delete process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE;
+  process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED = 'true';
 
   const code = '#include <DHT.h>\nvoid setup() {}\n';
   try {
@@ -141,6 +183,11 @@ test('compiler manifest keeps unsandboxed cloud compile disabled by default', ()
       delete process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE;
     } else {
       process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE = previous;
+    }
+    if (previousPublic === undefined) {
+      delete process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
+    } else {
+      process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED = previousPublic;
     }
   }
 });

@@ -27,7 +27,9 @@ const payload: AICodeGenerationPayload = {
 
 test('compile preflight route returns ready status for known headers', async () => {
   const previous = process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE;
+  const previousPublic = process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
   process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE = 'true';
+  process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED = 'true';
 
   try {
     const response = await compilePreflightPost(
@@ -52,12 +54,19 @@ test('compile preflight route returns ready status for known headers', async () 
     } else {
       process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE = previous;
     }
+    if (previousPublic === undefined) {
+      delete process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
+    } else {
+      process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED = previousPublic;
+    }
   }
 });
 
 test('compile preflight route surfaces unresolved headers for cloud compile', async () => {
   const previous = process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE;
+  const previousPublic = process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
   process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE = 'true';
+  process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED = 'true';
 
   try {
     const response = await compilePreflightPost(
@@ -82,12 +91,19 @@ test('compile preflight route surfaces unresolved headers for cloud compile', as
     } else {
       process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE = previous;
     }
+    if (previousPublic === undefined) {
+      delete process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
+    } else {
+      process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED = previousPublic;
+    }
   }
 });
 
 test('compile preflight route respects explicitly installed project libraries', async () => {
   const previous = process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE;
+  const previousPublic = process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
   process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE = 'true';
+  process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED = 'true';
 
   try {
     const response = await compilePreflightPost(
@@ -125,12 +141,19 @@ test('compile preflight route respects explicitly installed project libraries', 
     } else {
       process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE = previous;
     }
+    if (previousPublic === undefined) {
+      delete process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
+    } else {
+      process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED = previousPublic;
+    }
   }
 });
 
 test('compile preflight route keeps real cloud compile disabled by default', async () => {
   const previous = process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE;
+  const previousPublic = process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
   delete process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE;
+  delete process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
 
   try {
     const response = await compilePreflightPost(
@@ -148,12 +171,17 @@ test('compile preflight route keeps real cloud compile disabled by default', asy
     const result = (await response.json()) as CompilerPreflightResponse;
     assert.equal(result.ready, false);
     assert.equal(result.manifest.compileStrategy, 'local-review-only');
-    assert.match(result.summary, /샌드박스/);
+    assert.match(result.summary, /MVP|public cloud compile/);
   } finally {
     if (previous === undefined) {
       delete process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE;
     } else {
       process.env.MODUMAKE_ENABLE_UNSANDBOXED_COMPILE = previous;
+    }
+    if (previousPublic === undefined) {
+      delete process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED;
+    } else {
+      process.env.MODUMAKE_COMPILE_PUBLIC_ENABLED = previousPublic;
     }
   }
 });

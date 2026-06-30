@@ -252,6 +252,13 @@ export function TerminalPanel() {
     });
 
     const result = (await response.json()) as CompileJobResponse;
+    if (response.status === 401 || response.status === 429) {
+      addLog('warn', `클라우드 컴파일 제한: ${result.errorDetails ?? '권한 또는 사용량 한도 확인이 필요합니다.'}`);
+      addLog('info', '로컬 가상 컴파일로 자동 전환합니다.');
+      runVirtualCompilation('cpp', code);
+      return;
+    }
+
     if (response.status === 503 || result.status === 'COMPILATION_UNAVAILABLE') {
       addLog('warn', `컴파일 서버 연결 실패: ${result.errorDetails ?? '백엔드 응답 없음'}`);
       addLog('info', '로컬 가상 컴파일로 자동 전환합니다.');

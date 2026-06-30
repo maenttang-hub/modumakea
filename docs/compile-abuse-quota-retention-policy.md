@@ -15,7 +15,14 @@
 - one-shot runtime 경계
 - signed artifact download path
 
-하지만 운영 정책은 아직 없다.
+그리고 이번 MVP 기준으로 public compile API 앞단에 다음 방어선이 들어가 있다.
+
+- `MODUMAKE_COMPILE_PUBLIC_ENABLED=false` 기본 차단
+- `MODUMAKE_COMPILE_REQUIRE_AUTH=true` 기본 인증 요구
+- 단일 인스턴스 in-memory per-IP / per-user rate limit
+- 단일 인스턴스 in-memory per-user hourly / daily quota
+
+아직 production-grade 운영 정책 전체가 코드로 완성된 것은 아니다.
 
 이 문서는 운영 기준을 고정하지만, 모든 항목이 코드로 enforcement된 것은 아니다.
 
@@ -23,7 +30,7 @@
 - 실패 반복이나 burst traffic을 막는 다중 인스턴스 rate limit
 - artifact/log retention cleanup worker
 
-현재 코드에는 production placeholder secret 차단과 signed artifact download path가 들어가 있다.
+현재 코드에는 production placeholder secret 차단, signed artifact download path, public compile gate, auth gate, 단일 인스턴스 rate/quota 방어가 들어가 있다.
 
 ## 기본 원칙
 
@@ -47,6 +54,12 @@
 
 - public cloud compile: 기본 비활성화
 - beta allowlist 외: preflight only
+
+현재 코드 동작:
+
+- `MODUMAKE_COMPILE_PUBLIC_ENABLED=false`: `POST /api/compile/job`는 `503 COMPILE_PUBLIC_DISABLED`
+- `MODUMAKE_COMPILE_REQUIRE_AUTH=true`이고 사용자 식별자가 없으면 `401 COMPILE_AUTH_REQUIRED`
+- 임시/dev 인증 식별자는 `x-modumake-user-id`, `x-user-id`, 또는 충분히 긴 `Authorization: Bearer ...` 값을 사용한다.
 
 ### 인증 사용자 기본
 
@@ -216,7 +229,7 @@ MODUMAKE_COMPILE_DELETE_SOURCE_AFTER_TERMINAL=true
 
 ## 구현 우선순위
 
-1. API rate limit
+1. durable multi-instance quota store
 2. per-user concurrent quota
 3. retention cleanup worker
 4. audit failure class 표준화

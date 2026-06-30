@@ -804,8 +804,8 @@ export function Sidebar({
       {
         title: t('2. 회로 검증 확인', '2. Check circuit review'),
         body: t(
-          '전원, 미연결, 쇼트, 매핑 누락처럼 제작 전에 막아야 할 항목을 우측에서 확인합니다.',
-          'Review power, missing nets, shorts, and mapping gaps before fabrication.'
+          '전원, 미연결, 쇼트, 매핑 누락처럼 실물 제작 전 확인할 항목을 우측에서 확인합니다.',
+          'Review power, missing nets, shorts, and mapping gaps before build handoff.'
         ),
       },
       {

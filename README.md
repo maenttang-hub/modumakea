@@ -1,15 +1,15 @@
 # ModuMake
 
-ModuMake is a verification-first hardware design workspace for Arduino- and Raspberry Pi-style projects.
+ModuMake is a review-first hardware workspace for Arduino- and Raspberry Pi-style projects.
 
 The current product direction is intentionally narrow:
 
 - Draw and arrange simple circuits quickly
-- Catch wiring and power mistakes before hardware is built
+- Catch wiring and power risks before hardware is built
 - Generate starter firmware and review it against the circuit
 - Simulate enough of the design flow to help learners and prototypers move forward
 
-PCB production is not the primary goal of this MVP.
+PCB production and public cloud compile are not the primary goals of this MVP.
 
 ## Local development
 
@@ -30,9 +30,11 @@ cp .env.example .env.local
 
 Then set `OPENAI_API_KEY` in `.env.local`. The server-side Launch Desk route uses that key with the OpenAI Agents SDK. `LAUNCH_DESK_MODEL` defaults to `gpt-5.5`.
 
-Cloud compile is now disabled by default until a real sandboxed runtime exists. For internal development only, you must explicitly opt in with:
+Cloud compile is disabled by default for the public MVP. For internal development only, you must explicitly opt in with:
 
 - `MODUMAKE_ENABLE_UNSANDBOXED_COMPILE=true`
+- `MODUMAKE_COMPILE_PUBLIC_ENABLED=true`
+- `MODUMAKE_COMPILE_REQUIRE_AUTH=false` for local manual QA, or pass an authenticated user header such as `x-modumake-user-id`
 - `MODUMAKE_COMPILE_DISPATCH_MODE=direct-http` or `queue`
 - `MODUMAKE_COMPILE_QUEUE_STORE=file` or `supabase`
 - `MODUMAKE_COMPILE_QUEUE_FILE=.modumake/compile-queue-store.json`
@@ -56,6 +58,14 @@ Cloud compile is now disabled by default until a real sandboxed runtime exists. 
 - `MODUMAKE_SANDBOX_RUNTIME_UID_GID=10001:10001`
 - `MODUMAKE_PREBAKED_LIBRARY_ALLOWLIST=...`
 - `MODUMAKE_COMPILE_SERVER_SHARED_TOKEN=...`
+
+The public compile API also enforces single-instance request controls before a job reaches the backend:
+
+- public compile gate: `MODUMAKE_COMPILE_PUBLIC_ENABLED=false` by default
+- auth gate: `MODUMAKE_COMPILE_REQUIRE_AUTH=true` by default
+- per-IP burst: `MODUMAKE_COMPILE_RATE_LIMIT_IP_PER_MINUTE=5`
+- per-user burst: `MODUMAKE_COMPILE_RATE_LIMIT_USER_PER_MINUTE=10`
+- per-user quota: `MODUMAKE_COMPILE_QUOTA_USER_PER_HOUR=30`, `MODUMAKE_COMPILE_QUOTA_USER_PER_DAY=150`
 
 The backend compile path now has four layers. `queue` writes durable queue records, the internal launcher route at `/api/internal/compile/queue/launch` creates durable sandbox launch requests by default, worker routes can claim `/api/internal/compile/sandbox/launch/claim`, acknowledge `/api/internal/compile/sandbox/launch/[launchRequestId]`, then hand off to `/api/v1/sandbox-launch`, and the sandbox launcher service writes one-shot runtime specs into its own durable launch queue. `npm run dev:compile-worker` runs the app-side polling worker, `npm run dev:sandbox-launcher` accepts internal `/api/v1/sandbox-launch` requests, and `npm run dev:sandbox-launcher-worker` drains the launcher queue and posts terminal results back through `/api/internal/compile/sandbox/launch/[launchRequestId]/result`.
 
@@ -211,6 +221,6 @@ Included sample files live in:
 
 - The parser facade is ready for a future Tree-sitter backend, but still uses a lightweight fallback parser today.
 - The simulator API is stable, but transient and AC traces are still preview-grade rather than a full ngspice WASM implementation.
-- Real cloud compile is gated off by default until a sandboxed per-job runtime replaces the current unsandboxed compile server path.
+- Real cloud compile is gated off by default. The current public API has auth/rate/quota guards, but production still needs a durable multi-instance quota store and a sandboxed per-job runtime before broad public use.
 - There is no full Monaco inline diagnostic overlay yet.
 - Cross-browser E2E automation and fuzz testing are not finished.

@@ -44,7 +44,7 @@ The product promise is still:
 These are valuable, but they are not part of the current MVP promise:
 
 - full PCB layout workflow
-- manufacturing / fabrication outputs
+- production-ready output packages
 - Gerber generation
 - advanced router parity with KiCad / Altium / EasyEDA
 - commerce and BOM ordering integrations

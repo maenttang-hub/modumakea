@@ -6,9 +6,9 @@ import { DevWarningSuppressor } from '@/components/dev-warning-suppressor';
 import { APP_LANGUAGE_COOKIE, resolveAppLanguage } from '@/lib/ui-language';
 
 export const metadata: Metadata = {
-  title: 'ModuMake — PCB 만들기 전에 회로 실수를 잡아주는 AI 하드웨어 리뷰어',
+  title: 'ModuMake — 회로 리뷰와 KiCad 검토를 돕는 AI 하드웨어 리뷰어',
   description:
-    '센서/보드 조합 오류를 데이터시트 기준으로 잡아주고, PCB 넘어가기 전 하드웨어 실수를 줄여주는 검증 중심 설계 도구',
+    'KiCad 회로도와 센서/보드 연결을 데이터시트 기준으로 검토하고, 실물 제작 전 확인할 리스크를 정리하는 review-first 도구',
   keywords: ['Arduino', 'ESP32', 'Raspberry Pi', '하드웨어 검증', '데이터시트', '회로 설계', 'AI 하드웨어 리뷰어'],
 };
 

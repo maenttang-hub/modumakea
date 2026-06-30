@@ -383,7 +383,7 @@ export function PcbWorkspace() {
             {importedPcbDocument
               ? importedPcbDocument.sourceFilename ?? 'imported.kicad_pcb'
               : isManufacturing
-                ? t('제조 산출물 준비', 'Manufacturing output')
+                ? t('출력물 검토 준비', 'Output review')
                 : t('PCB 레이아웃', 'PCB layout')}
           </span>
         </div>
@@ -463,7 +463,7 @@ export function PcbWorkspace() {
         <div className="pointer-events-none absolute bottom-3 left-3 z-10 max-w-[min(560px,calc(100%-24px))] rounded-[10px] border border-[#efd3d3] bg-[#fff8f8]/92 px-3 py-2 text-[11px] leading-5 text-[#b24f4f] shadow-sm backdrop-blur">
           <div className="mb-1 flex items-center gap-1.5 font-semibold">
             <ShieldAlert size={13} />
-            {isManufacturing ? t('제조 단계 잠금', 'Manufacturing locked') : t('PCB 단계 점검 필요', 'PCB stage needs review')}
+            {isManufacturing ? t('출력 단계 잠금', 'Output locked') : t('PCB 단계 점검 필요', 'PCB stage needs review')}
           </div>
           {activeStageReasons.slice(0, 2).map(reason => (
             <div key={reason}>{reason}</div>

@@ -38,7 +38,7 @@ function confidenceMeta(confidence: ProjectAuditIssueConfidence) {
     case 'confirmed':
       return {
         title: '확정 오류',
-        description: '지금 수정하지 않으면 제작 리스크가 큽니다.',
+        description: '실물 제작 전 반드시 확인해야 할 가능성이 큽니다.',
         accent: 'border-[#efcfcf] bg-[#fff7f7]',
         chip: 'bg-[#fbe8e8] text-[#b24f4f]',
       };
@@ -377,7 +377,7 @@ export function ValidationPanel() {
               <div className="text-[10px] uppercase tracking-[0.14em] text-[#ab928a]">{t('수정 필요', 'Fix required')}</div>
               <div className="mt-1 text-[20px] font-semibold text-[#b24f4f]">{effectiveCounts.confirmed + effectiveCounts['strong-inference']}</div>
               <div className="mt-1 text-[10px] leading-5 text-[#8a6c65]">
-                {t('제작 전 반영 권장 이슈 수', 'Issues to resolve before build')}
+                {t('실물 제작 전 확인할 이슈 수', 'Issues to check before build')}
               </div>
             </div>
             <div className="rounded-[14px] border border-[#dce5ef] bg-[#f9fbfe] px-3.5 py-3">

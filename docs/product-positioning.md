@@ -2,7 +2,7 @@
 
 ## One-line description
 
-ModuMake is an AI hardware reviewer that catches circuit mistakes before you move to PCB.
+ModuMake is an AI hardware reviewer that helps find circuit risks before build handoff.
 
 ## What we are
 
@@ -20,7 +20,7 @@ ModuMake is an AI hardware reviewer that catches circuit mistakes before you mov
 
 - Tinkercad focuses on simulation
 - EasyEDA focuses on schematic and PCB production
-- ModuMake focuses on preventing hardware mistakes before fabrication
+- ModuMake focuses on circuit review and risk explanation before build handoff
 
 ## Core value proposition
 
@@ -39,14 +39,14 @@ ModuMake should catch those mistakes inside the design surface and say:
 - "Level shifting is required."
 - "Avoid this pin."
 - "Official documentation is incomplete."
-- "Fix these issues before PCB."
+- "Fix these issues before build handoff."
 
 ## Primary target users
 
 1. Non-hardware founders building IoT prototypes
 2. Arduino and ESP32 beginners
 3. Maker educators and training programs
-4. Startup teams before outsourced PCB work
+4. Startup teams before outsourced PCB review work
 
 ## MVP priorities
 
@@ -65,7 +65,7 @@ ModuMake should catch those mistakes inside the design surface and say:
 
 ### Tier 3
 
-- PCB conversion
+- PCB review assistance
 - Simulation
 - Advanced manual wiring editing
 
@@ -78,4 +78,4 @@ ModuMake should catch those mistakes inside the design surface and say:
 5. Add project PDF report export
 6. Add BOM output
 7. Ship 5 demo projects showing failure and recovery flows
-8. Keep product copy centered on validation, not generic AI circuit generation
+8. Keep product copy centered on review and validation, not generic AI circuit generation or manufacturing guarantees

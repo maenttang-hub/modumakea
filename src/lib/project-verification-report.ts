@@ -107,7 +107,7 @@ function summarizeStatus(status: VerificationReportStatus, language: AppLanguage
     return t('검토 필요', 'Review required');
   }
 
-  return t('주문 가능', 'Ready for fabrication');
+  return t('검토 통과', 'Review clear');
 }
 
 function issueLocation(issue: ProjectAuditIssue, language: AppLanguage) {
@@ -228,8 +228,8 @@ export function buildProjectVerificationReport(input: ProjectVerificationReportI
   const limitations = [
     pcbIssueCount > 0
       ? t(
-          '가져온 PCB의 형상, 넷 연속성, 제조성 검증 결과를 함께 반영했습니다. 제조사별 공정값과 실제 생산 조건은 별도 확인이 필요합니다.',
-          'Imported PCB geometry, net-continuity, and manufacturability findings are included. Manufacturer-specific process limits and production conditions still need separate review.'
+          '가져온 PCB의 형상, 넷 연속성, 제조성 관련 점검 결과를 함께 반영했습니다. 제조사별 공정값과 실제 생산 조건은 별도 확인이 필요합니다.',
+          'Imported PCB geometry, net-continuity, and manufacturability-related findings are included. Manufacturer-specific process limits and production conditions still need separate review.'
         )
       : t(
           '이 리포트는 schematic/netlist 기준 자동 검증 결과이며 실제 PCB trace 길이와 copper area는 반영하지 않습니다.',
@@ -250,7 +250,7 @@ export function buildProjectVerificationReport(input: ProjectVerificationReportI
 
   const markdown = [
     `# ${t('ModuMake 회로 리뷰 리포트', 'ModuMake Circuit Review Report')}`,
-    `${t('PCB 제작 전 검증 보고서', 'Pre-Fabrication Circuit Review Report')}`,
+    `${t('회로 검토 및 실물 제작 전 확인 리포트', 'Circuit Review and Build-Readiness Report')}`,
     '',
     `Project Name: ${input.projectName || 'Untitled Project'}`,
     `Target Board / MCU: ${input.boardId}`,
@@ -258,9 +258,9 @@ export function buildProjectVerificationReport(input: ProjectVerificationReportI
     `Engine Version: ${input.audit.engineId}`,
     `Report ID: ${reportId}`,
     '',
-    `## 1. ${t('제작 전 결론', 'Pre-Fabrication Decision')}`,
+    `## 1. ${t('검토 결론', 'Review Decision')}`,
     '',
-    `${t('제작 전 상태', 'Fabrication status')}: ${summarizeStatus(status, input.language)}`,
+    `${t('검토 상태', 'Review status')}: ${summarizeStatus(status, input.language)}`,
     `${t('반드시 수정', 'Must fix')}: ${mustFixIssues.length}`,
     `${t('확인 권장', 'Review recommended')}: ${reviewIssues.length}`,
     `${t('통과', 'Passed checks')}: ${input.audit.verifiedCount}`,

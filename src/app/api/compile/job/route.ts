@@ -11,6 +11,7 @@ import {
 } from '@/lib/compile-policy';
 import { submitCompileJob } from '@/lib/server/compile-backend';
 import { getCompileJobDispatcher } from '@/lib/server/compile-dispatch';
+import { evaluateCompileUsagePolicy } from '@/lib/server/compile-usage-policy';
 import { sanitizePlainText } from '@/lib/security-input';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,28 @@ export async function POST(req: Request) {
   const api = createApiRequestContext(req, 'compile.job');
   auditApiRequest(api, 'start');
   try {
+    const usagePolicy = evaluateCompileUsagePolicy(req);
+    if (!usagePolicy.allowed) {
+      auditApiRequest(api, 'error', {
+        status: usagePolicy.httpStatus,
+        errorCode: usagePolicy.errorCode,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          status: 'COMPILATION_UNAVAILABLE',
+          buildLogs: '',
+          errorCode: usagePolicy.errorCode,
+          errorDetails: usagePolicy.message,
+          requestId: api.requestId,
+        },
+        {
+          status: usagePolicy.httpStatus,
+          headers: buildApiResponseHeaders(api, usagePolicy.headers),
+        }
+      );
+    }
+
     if (!isUnsandboxedCloudCompileEnabled()) {
       const message = getUnsandboxedCloudCompileDisabledReason();
       auditApiRequest(api, 'error', { status: 503, message });
@@ -54,6 +77,7 @@ export async function POST(req: Request) {
       status: httpStatus,
       boardId: payload.boardId,
       dispatchMode: dispatcher.mode,
+      requesterType: usagePolicy.requester.userKey ? 'user' : 'ip',
     });
     return NextResponse.json(
       { ...result, requestId: api.requestId, dispatchMode: dispatcher.mode },
