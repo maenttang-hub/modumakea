@@ -80,10 +80,12 @@ function readQueueStoreMode(): QueueStoreMode {
 function getCompileQueueFilePath() {
   const configured = process.env.MODUMAKE_COMPILE_QUEUE_FILE?.trim();
   if (configured) {
-    return path.isAbsolute(configured) ? configured : path.join(process.cwd(), configured);
+    return path.isAbsolute(configured)
+      ? configured
+      : path.join(/* turbopackIgnore: true */ process.cwd(), configured);
   }
 
-  return path.join(process.cwd(), '.modumake', 'compile-queue-store.json');
+  return path.join(/* turbopackIgnore: true */ process.cwd(), '.modumake', 'compile-queue-store.json');
 }
 
 function toPublicRecord(job: ClaimedCompileQueueJobRecord): CompileQueueJobRecord {
@@ -190,7 +192,7 @@ async function readFileQueueSnapshot(): Promise<CompileQueueSnapshot> {
   const filePath = getCompileQueueFilePath();
 
   try {
-    const raw = await readFile(filePath, 'utf8');
+    const raw = await readFile(/* turbopackIgnore: true */ filePath, 'utf8');
     const parsed = JSON.parse(raw) as Partial<CompileQueueSnapshot>;
     return {
       version: 1,

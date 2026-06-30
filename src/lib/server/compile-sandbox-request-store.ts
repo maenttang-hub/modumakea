@@ -86,10 +86,12 @@ function readSandboxLaunchStoreMode(): SandboxLaunchStoreMode {
 function getSandboxLaunchRequestFilePath() {
   const configured = process.env.MODUMAKE_COMPILE_SANDBOX_REQUEST_FILE?.trim();
   if (configured) {
-    return path.isAbsolute(configured) ? configured : path.join(process.cwd(), configured);
+    return path.isAbsolute(configured)
+      ? configured
+      : path.join(/* turbopackIgnore: true */ process.cwd(), configured);
   }
 
-  return path.join(process.cwd(), '.modumake', 'compile-sandbox-launch-requests.json');
+  return path.join(/* turbopackIgnore: true */ process.cwd(), '.modumake', 'compile-sandbox-launch-requests.json');
 }
 
 function getSupabase() {
@@ -213,7 +215,7 @@ async function readFileSnapshot(): Promise<CompileSandboxLaunchRequestSnapshot> 
   const filePath = getSandboxLaunchRequestFilePath();
 
   try {
-    const raw = await readFile(filePath, 'utf8');
+    const raw = await readFile(/* turbopackIgnore: true */ filePath, 'utf8');
     const parsed = JSON.parse(raw) as Partial<CompileSandboxLaunchRequestSnapshot>;
     return {
       version: 1,

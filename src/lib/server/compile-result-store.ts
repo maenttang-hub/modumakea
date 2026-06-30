@@ -75,10 +75,12 @@ function readCompileResultStoreMode(): CompileResultStoreMode {
 function getCompileResultStoreFilePath() {
   const configured = process.env.MODUMAKE_COMPILE_RESULT_FILE?.trim();
   if (configured) {
-    return path.isAbsolute(configured) ? configured : path.join(process.cwd(), configured);
+    return path.isAbsolute(configured)
+      ? configured
+      : path.join(/* turbopackIgnore: true */ process.cwd(), configured);
   }
 
-  return path.join(process.cwd(), '.modumake', 'compile-results.json');
+  return path.join(/* turbopackIgnore: true */ process.cwd(), '.modumake', 'compile-results.json');
 }
 
 function getSupabase() {
@@ -163,7 +165,7 @@ async function withStoreLock<T>(work: () => Promise<T>): Promise<T> {
 async function readFileSnapshot(): Promise<CompileResultStoreSnapshot> {
   const filePath = getCompileResultStoreFilePath();
   try {
-    const raw = await readFile(filePath, 'utf8');
+    const raw = await readFile(/* turbopackIgnore: true */ filePath, 'utf8');
     const parsed = JSON.parse(raw) as Partial<CompileResultStoreSnapshot>;
     return {
       version: 1,

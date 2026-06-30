@@ -31,6 +31,7 @@
 .modumake/
 .venv/
 /downloads/
+/tmp/
 __pycache__/
 *.py[cod]
 

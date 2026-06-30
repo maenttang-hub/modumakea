@@ -15,6 +15,8 @@ PCB production is not the primary goal of this MVP.
 
 ModuMake's editor is currently a desktop workspace. Use a browser viewport of at least 1024px wide; 1280px or wider is recommended. Narrower screens show a desktop-use notice instead of the three-panel editor.
 
+Use Node.js 22 for local development. The repository includes `.nvmrc`, and CI also runs on Node 22. Next.js 16 uses Turbopack as the default production bundler, so `npm run build` intentionally runs `next build` without forcing webpack.
+
 ```bash
 npm install
 npm run dev
@@ -71,14 +73,23 @@ npm run build:sandbox-runtime-image
 npm run build:sandbox-runtime-image:full
 ```
 
+운영 문서:
+
+- [Compile Production Deployment Spec](/Users/gimdong-il/Desktop/프로그램/modumake/docs/compile-production-deployment-spec.md)
+- [Compile Abuse, Quota, and Retention Policy](/Users/gimdong-il/Desktop/프로그램/modumake/docs/compile-abuse-quota-retention-policy.md)
+
 Main quality checks:
 
 ```bash
-npm run test
-npm run test:coverage
 npm run lint
 npm run build
+npm test
+npm run test:e2e
+npm run test:validation:baseline
+npm run test:validation:extended
 ```
+
+The current public MVP scope is documented in [Review MVP Scope](/Users/gimdong-il/Desktop/프로그램/modumake/docs/review-mvp-scope.md). Keep PCB manufacturing, public cloud compile, and broad CAD replacement claims out of the default product surface unless that scope document is updated first.
 
 Large KiCad stress fixtures are intentionally not committed. Keep local real-project samples under `tests/kicad_samples/` or the existing absolute fixture paths, and run them only when needed:
 

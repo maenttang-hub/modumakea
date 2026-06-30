@@ -1,7 +1,10 @@
 import { createHmac, randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { getCompileBackendSharedToken } from '@/lib/compile-policy';
+import {
+  assertValidProductionSecret,
+  getCompileBackendSharedToken,
+} from '@/lib/compile-policy';
 import { getSupabaseAdminClient } from '@/lib/supabase-admin';
 
 type ArtifactBlobStoreMode = 'memory' | 'file' | 'supabase';
@@ -38,10 +41,12 @@ function readArtifactBlobStoreMode(): ArtifactBlobStoreMode {
 function getArtifactBlobRootPath() {
   const configured = process.env.MODUMAKE_COMPILE_ARTIFACT_BLOB_ROOT?.trim();
   if (configured) {
-    return path.isAbsolute(configured) ? configured : path.join(process.cwd(), configured);
+    return path.isAbsolute(configured)
+      ? configured
+      : path.join(/* turbopackIgnore: true */ process.cwd(), configured);
   }
 
-  return path.join(process.cwd(), '.modumake', 'compile-artifact-blobs');
+  return path.join(/* turbopackIgnore: true */ process.cwd(), '.modumake', 'compile-artifact-blobs');
 }
 
 function getArtifactBlobSnapshotPath() {
@@ -63,6 +68,7 @@ function getSupabaseBucketName() {
 function getArtifactDownloadSecret() {
   const explicit = process.env.MODUMAKE_ARTIFACT_DOWNLOAD_SECRET?.trim();
   if (explicit) {
+    assertValidProductionSecret('MODUMAKE_ARTIFACT_DOWNLOAD_SECRET', explicit);
     return explicit;
   }
 
@@ -190,9 +196,9 @@ export async function readCompileArtifactBlobContent(input: {
     return await data.text();
   }
 
-  const filePath = path.join(getArtifactBlobRootPath(), input.storageObjectKey);
+  const filePath = path.join(/* turbopackIgnore: true */ getArtifactBlobRootPath(), input.storageObjectKey);
   try {
-    return await readFile(filePath, 'utf8');
+    return await readFile(/* turbopackIgnore: true */ filePath, 'utf8');
   } catch (error) {
     if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') {
       return null;

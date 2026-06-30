@@ -60,7 +60,7 @@ test('editor loads without browser console errors', async ({ page }) => {
   await expect(page.getByText('회로 구조', { exact: true })).toBeVisible();
   await expect(page.getByText('검토 패널', { exact: true })).toBeVisible();
   await expect(titleBarFileButton(page, '파일을 열어주세요')).toBeVisible();
-  await expect(page.getByText('KiCad 회로도를 올려서 바로 리뷰 시작')).toBeVisible();
+  await expect(page.getByText('KiCad 파일을 올려서 바로 리뷰 시작')).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -86,7 +86,7 @@ test('editor shows restored project state without the empty file prompt', async 
   await expect(page.getByText(directLedWorkspace.projectName).first()).toBeVisible();
   await expect(titleBarFileButton(page, `${directLedWorkspace.projectName}.modumake.json`)).toBeVisible();
   await expect(page.getByText('파일을 열어주세요')).toHaveCount(0);
-  await expect(page.getByText('KiCad 회로도를 올려서 바로 리뷰 시작')).toHaveCount(0);
+  await expect(page.getByText('KiCad 파일을 올려서 바로 리뷰 시작')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
@@ -99,7 +99,7 @@ test('editor shows imported schematic state without the empty file prompt', asyn
   await expect(page.getByText(importedSchematicWorkspace.projectName).first()).toBeVisible();
   await expect(titleBarFileButton(page, `${importedSchematicWorkspace.projectName}.kicad_sch`)).toBeVisible();
   await expect(page.getByText('파일을 열어주세요')).toHaveCount(0);
-  await expect(page.getByText('KiCad 회로도를 올려서 바로 리뷰 시작')).toHaveCount(0);
+  await expect(page.getByText('KiCad 파일을 올려서 바로 리뷰 시작')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
