@@ -400,10 +400,13 @@ export function PcbWorkspace() {
         />
       )}
 
-      <div className="pointer-events-none absolute left-3 top-3 z-10 flex max-w-[calc(100%-24px)] flex-wrap items-center gap-2">
-        <div className="pointer-events-auto flex h-9 items-center gap-2 rounded-[10px] border border-[#d8cbbb] bg-[#fffdf9]/92 px-3 text-[11px] font-semibold text-[#43372f] shadow-sm backdrop-blur">
+      <div
+        className="pointer-events-none absolute left-3 right-3 top-3 z-10 flex max-w-[calc(100%-24px)] flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden pb-1 [scrollbar-width:none]"
+        data-testid="pcb-workspace-top-controls"
+      >
+        <div className="pointer-events-auto flex h-9 shrink-0 items-center gap-2 rounded-[10px] border border-[#d8cbbb] bg-[#fffdf9]/92 px-3 text-[11px] font-semibold text-[#43372f] shadow-sm backdrop-blur">
           {importedPcbDocument ? <Box size={14} className="text-[#6f5235]" /> : isManufacturing ? <Factory size={14} className="text-[#a57019]" /> : <CircuitBoard size={14} className="text-[#34764a]" />}
-          <span className="max-w-[260px] truncate">
+          <span className="max-w-[180px] truncate xl:max-w-[260px]">
             {importedPcbDocument
               ? importedPcbDocument.sourceFilename ?? 'imported.kicad_pcb'
               : isManufacturing
@@ -413,7 +416,7 @@ export function PcbWorkspace() {
         </div>
 
         <div
-          className={`pointer-events-auto flex h-9 items-center gap-1.5 rounded-[10px] border px-3 text-[11px] font-semibold shadow-sm backdrop-blur ${
+          className={`pointer-events-auto flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border px-3 text-[11px] font-semibold shadow-sm backdrop-blur ${
             importedPcbDocument
               ? effectiveImportedPcbValidation && effectiveImportedPcbValidation.errorCount > 0
                 ? 'border-[#efd3d3] bg-[#fff8f8]/92 text-[#b24f4f]'
@@ -429,10 +432,14 @@ export function PcbWorkspace() {
         <button
           type="button"
           onClick={() => pcbFileInputRef.current?.click()}
-          className="pointer-events-auto flex h-9 items-center gap-1.5 rounded-[10px] border border-[#d8cbbb] bg-[#fffdf9]/92 px-3 text-[11px] font-semibold text-[#5b4e42] shadow-sm transition hover:bg-white"
+          className="pointer-events-auto flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border border-[#d8cbbb] bg-[#fffdf9]/92 px-3 text-[11px] font-semibold text-[#5b4e42] shadow-sm transition hover:bg-white"
+          title={importedPcbDocument ? t('다른 PCB', 'Open another PCB') : t('KiCad PCB 열기', 'Open KiCad PCB')}
+          aria-label={importedPcbDocument ? t('다른 PCB', 'Open another PCB') : t('KiCad PCB 열기', 'Open KiCad PCB')}
         >
           <Upload size={13} />
-          {importedPcbDocument ? t('다른 PCB', 'Open another PCB') : t('KiCad PCB 열기', 'Open KiCad PCB')}
+          <span className="hidden xl:inline">
+            {importedPcbDocument ? t('다른 PCB', 'Open another PCB') : t('KiCad PCB 열기', 'Open KiCad PCB')}
+          </span>
         </button>
 
         {importedPcbDocument ? (
@@ -443,11 +450,14 @@ export function PcbWorkspace() {
                 void handleRunKiCadDrc();
               }}
               disabled={isRunningKiCadDrc || !importedPcbSource}
-              className="pointer-events-auto flex h-9 items-center gap-1.5 rounded-[10px] border border-[#c9b494] bg-[#6f5235] px-3 text-[11px] font-semibold text-[#fff6eb] shadow-sm transition hover:bg-[#5f452c] disabled:cursor-not-allowed disabled:opacity-60"
-              title={importedPcbSource ? t('KiCad CLI DRC를 실행합니다.', 'Run KiCad CLI DRC.') : t('원본 PCB 파일이 없어 실행할 수 없습니다.', 'Cannot run without the original PCB source.')}
+              className="pointer-events-auto flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border border-[#c9b494] bg-[#6f5235] px-3 text-[11px] font-semibold text-[#fff6eb] shadow-sm transition hover:bg-[#5f452c] disabled:cursor-not-allowed disabled:opacity-60"
+              title={importedPcbSource ? t('KiCad DRC', 'KiCad DRC') : t('원본 PCB 파일이 없어 실행할 수 없습니다.', 'Cannot run without the original PCB source.')}
+              aria-label={importedPcbSource ? t('KiCad DRC', 'KiCad DRC') : t('원본 PCB 파일이 없어 실행할 수 없습니다.', 'Cannot run without the original PCB source.')}
             >
               <RefreshCw size={13} className={isRunningKiCadDrc ? 'animate-spin' : ''} />
-              {isRunningKiCadDrc ? t('DRC 실행 중', 'Running DRC') : 'KiCad DRC'}
+              <span className="hidden xl:inline">
+                {isRunningKiCadDrc ? t('DRC 실행 중', 'Running DRC') : 'KiCad DRC'}
+              </span>
             </button>
             <button
               type="button"
@@ -456,8 +466,9 @@ export function PcbWorkspace() {
                 setSelectedPcbIssueId(null);
                 setWorkspaceMode('schematic');
               }}
-              className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#efd3d3] bg-[#fff8f8]/92 text-[#b24f4f] shadow-sm transition hover:bg-white"
+              className="pointer-events-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-[#efd3d3] bg-[#fff8f8]/92 text-[#b24f4f] shadow-sm transition hover:bg-white"
               title={t('가져온 PCB 닫기', 'Close imported PCB')}
+              aria-label={t('가져온 PCB 닫기', 'Close imported PCB')}
             >
               <XCircle size={14} />
             </button>

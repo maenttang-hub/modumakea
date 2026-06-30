@@ -68,16 +68,19 @@ export function WorkspaceModeBar() {
   }).length;
 
   return (
-    <div className="flex h-11 items-center justify-between border-b border-[#e4d8ca] bg-[#fbf8f3] px-3">
-      <div className="flex items-center gap-1.5">
+    <div
+      className="flex h-11 items-center justify-between gap-3 border-b border-[#e4d8ca] bg-[#fbf8f3] px-3"
+      data-testid="workspace-mode-bar"
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none]">
         {modes.map((mode, index) => {
           const Icon = mode.icon;
           const isActive = workspaceMode === mode.id;
 
           return (
-            <div key={mode.id} className="flex items-center">
+            <div key={mode.id} className="flex shrink-0 items-center">
               {index > 0 && (
-                <div className="mx-1 h-px w-5 bg-[#e6ddd2]" />
+                <div className="mx-1 h-px w-5 shrink-0 bg-[#e6ddd2]" />
               )}
               <button
                 type="button"
@@ -91,7 +94,7 @@ export function WorkspaceModeBar() {
 
                   setWorkspaceMode(mode.id);
                 }}
-                className={`flex h-8 items-center gap-2 rounded-[10px] border px-2.5 text-left transition-colors ${
+                className={`flex h-8 shrink-0 items-center gap-2 rounded-[10px] border px-2.5 text-left transition-colors ${
                   isActive
                     ? 'border-[#cdbba7] bg-[#fbf6ef] text-[#43372f]'
                     : mode.locked
@@ -101,9 +104,9 @@ export function WorkspaceModeBar() {
                 title={mode.locked ? readiness.manufacturingReasons[0] : undefined}
               >
                 <Icon size={13} />
-                <span className="flex flex-col leading-none">
-                  <span className="text-[11px] font-semibold">{mode.label}</span>
-                  <span className="mt-1 text-[9px] opacity-65">{mode.caption}</span>
+                <span className="flex min-w-0 flex-col leading-none">
+                  <span className="whitespace-nowrap text-[11px] font-semibold">{mode.label}</span>
+                  <span className="mt-1 hidden whitespace-nowrap text-[9px] opacity-65 xl:block">{mode.caption}</span>
                 </span>
               </button>
             </div>
@@ -111,7 +114,7 @@ export function WorkspaceModeBar() {
         })}
       </div>
 
-      <div className="hidden items-center gap-3 text-[10px] text-[#8d8074] md:flex">
+      <div className="hidden shrink-0 items-center gap-3 text-[10px] text-[#8d8074] xl:flex">
         <span>
           {t('부품', 'Parts')} <strong className="text-[#43372f]">{components.length}</strong>
         </span>

@@ -133,6 +133,74 @@ test('editor shows imported PCB zoom controls and changes the board view', async
   expect(errors).toEqual([]);
 });
 
+test.describe('compact desktop PCB rendering', () => {
+  test.use({ viewport: { width: 1024, height: 768 } });
+
+  test('keeps PCB controls single-line and avoids overlay collisions', async ({ page }) => {
+    const errors = collectPageErrors(page);
+
+    await page.goto('/editor');
+    await page
+      .locator('input[type="file"][accept=".kicad_sch,.kicad_pcb,.pcb,text/plain"]')
+      .setInputFiles(importedPcbFixturePath);
+
+    const pcbSvg = page.getByTestId('imported-pcb-svg');
+    const modeBar = page.getByTestId('workspace-mode-bar');
+    const topControls = page.getByTestId('pcb-workspace-top-controls');
+    const layerControls = page.getByTestId('imported-pcb-layer-controls');
+    const zoomControls = page.getByTestId('imported-pcb-zoom-controls');
+    const issueSummary = page.getByTestId('imported-pcb-issue-summary');
+    const issueLocationButtons = page.getByText('항목 위치 보기');
+
+    await expect(pcbSvg).toBeVisible({ timeout: 15000 });
+    await expect(modeBar).toBeVisible();
+    await expect(topControls).toBeVisible();
+    await expect(layerControls).toBeVisible();
+    await expect(zoomControls).toBeVisible();
+    await expect(issueSummary).toBeVisible();
+    await expect(issueLocationButtons.first()).toBeVisible();
+    await issueLocationButtons.first().click();
+    await expect(page.getByTestId('imported-pcb-selected-issue')).toBeVisible();
+
+    const boxes = await page.evaluate(() => {
+      const box = (testId: string) => {
+        const element = document.querySelector(`[data-testid="${testId}"]`);
+        if (!element) {
+          return null;
+        }
+        const rect = element.getBoundingClientRect();
+        return {
+          bottom: rect.bottom,
+          height: rect.height,
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          width: rect.width,
+        };
+      };
+      return {
+        bodyOverflowX: document.documentElement.scrollWidth - window.innerWidth,
+        issueSummary: box('imported-pcb-issue-summary'),
+        layerControls: box('imported-pcb-layer-controls'),
+        modeBar: box('workspace-mode-bar'),
+        selectedIssue: box('imported-pcb-selected-issue'),
+        topControls: box('pcb-workspace-top-controls'),
+        zoomControls: box('imported-pcb-zoom-controls'),
+      };
+    });
+
+    expect(boxes.modeBar?.height).toBeLessThanOrEqual(44);
+    expect(boxes.topControls?.height).toBeLessThanOrEqual(44);
+    expect(boxes.layerControls?.height).toBeLessThanOrEqual(40);
+    expect(boxes.bodyOverflowX).toBeLessThanOrEqual(0);
+    expect(boxes.topControls && boxes.layerControls ? boxes.topControls.bottom <= boxes.layerControls.top : false).toBe(true);
+    expect(boxes.zoomControls && boxes.issueSummary ? boxes.zoomControls.right <= boxes.issueSummary.left : false).toBe(true);
+    expect(boxes.selectedIssue && boxes.zoomControls ? boxes.selectedIssue.bottom <= boxes.zoomControls.top : false).toBe(true);
+    expect(boxes.selectedIssue && boxes.issueSummary ? boxes.selectedIssue.right <= boxes.issueSummary.left : false).toBe(true);
+    expect(errors).toEqual([]);
+  });
+});
+
 test('editor and report show matching validation counts from the report button flow', async ({ page }) => {
   const errors = collectPageErrors(page);
   await seedWorkspace(page, directLedWorkspace);

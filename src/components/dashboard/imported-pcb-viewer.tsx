@@ -403,7 +403,7 @@ function LayerToggle({
     <button
       type="button"
       onClick={onToggle}
-      className="pointer-events-auto flex h-7 items-center gap-1.5 rounded-full border px-2 text-[10px] font-semibold transition hover:bg-white"
+      className="pointer-events-auto flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-2 text-[10px] font-semibold transition hover:bg-white"
       style={{
         borderColor: active ? `${layerColor(layer)}99` : '#e6dfd4',
         background: active ? `${layerColor(layer)}14` : '#fffdfa',
@@ -668,8 +668,11 @@ export function ImportedPcbViewer({
         </button>
       </div>
 
-      <div className="pointer-events-none absolute right-3 top-16 z-10 flex max-h-28 max-w-[min(720px,calc(100%-24px))] flex-wrap justify-end gap-1.5 overflow-y-auto">
-        <div className="pointer-events-auto flex h-7 items-center gap-1.5 rounded-full border border-[#e6dfd4] bg-[#fffdfa]/92 px-2 text-[10px] font-semibold text-[#6b5d51] shadow-sm backdrop-blur">
+      <div
+        className="pointer-events-none absolute left-3 right-3 top-16 z-10 flex h-8 max-w-[calc(100%-24px)] flex-nowrap items-center gap-1.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none]"
+        data-testid="imported-pcb-layer-controls"
+      >
+        <div className="pointer-events-auto flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-[#e6dfd4] bg-[#fffdfa]/92 px-2 text-[10px] font-semibold text-[#6b5d51] shadow-sm backdrop-blur">
           <Layers3 size={11} />
           {availableLayers.length}
         </div>
@@ -685,6 +688,7 @@ export function ImportedPcbViewer({
 
       {validation && validation.issueCount > 0 ? (
         <div
+          data-testid="imported-pcb-issue-summary"
           className={`absolute right-3 z-10 max-w-[min(360px,calc(100%-24px))] rounded-[10px] border border-[#e6dfd4] bg-[#fffdfa]/94 px-3 py-2 text-[11px] leading-5 text-[#4e4238] shadow-sm backdrop-blur ${
             selectedIssue ? 'bottom-[118px] md:bottom-3' : 'bottom-3'
           }`}
@@ -706,6 +710,7 @@ export function ImportedPcbViewer({
 
       {selectedIssue ? (
         <div
+          data-testid="imported-pcb-selected-issue"
           className="absolute bottom-14 left-3 z-10 max-w-[min(520px,calc(100%-24px))] rounded-[10px] border bg-[#fffdfa]/94 px-3 py-2 text-[11px] leading-5 text-[#4e4238] shadow-sm backdrop-blur"
           style={{ borderColor: `${severityColor(selectedIssue.severity)}66` }}
         >
