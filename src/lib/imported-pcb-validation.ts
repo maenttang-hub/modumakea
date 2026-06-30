@@ -25,6 +25,8 @@ const DEFAULT_COPPER_TO_EDGE_MM = 0.25;
 const DEFAULT_LENGTH_MATCH_TOLERANCE_MM = 1;
 const DEFAULT_DIFF_PAIR_GAP_TOLERANCE_MM = 0.08;
 const DEFAULT_DIFF_PAIR_WIDTH_TOLERANCE_MM = 0.03;
+const MAX_TRACK_PAD_CLEARANCE_GROUPS = 120;
+const MAX_TRACK_PAD_CLEARANCE_ITEMS = 6;
 
 export type ImportedPcbManufacturingProfile = {
   name: string;
@@ -273,6 +275,10 @@ function padMaskLayers(pad: ImportedPcbPad) {
 function layersOverlap(first: string[], second: string[]) {
   const secondSet = new Set(second);
   return first.some(layer => secondSet.has(layer));
+}
+
+function padTouchesCopperLayer(pad: ImportedPcbPad, layer: string) {
+  return padCopperLayers(pad).includes(layer);
 }
 
 function pointLineSegmentDistance(
@@ -981,29 +987,101 @@ function validateClearance(document: ImportedPcbDocument, issues: ImportedPcbVal
   let index = issues.length;
   const clearance = getClearance(document);
   const pads = allPads(document);
+  const trackPadGroups = new Map<string, {
+    segment: ImportedPcbTrackSegment;
+    pad: ImportedPcbPad;
+    actualClearance: number;
+    requiredClearance: number;
+    at: ImportedPcbPoint;
+    count: number;
+    items: NonNullable<ImportedPcbValidationIssue['items']>;
+  }>();
 
   for (const segment of document.segments) {
     for (const pad of pads) {
       if (pad.netCode === segment.netCode && pad.netCode !== 0) {
         continue;
       }
+      if (!padTouchesCopperLayer(pad, segment.layer)) {
+        continue;
+      }
       const result = pointSegmentDistance(pad.absoluteAt, segment);
       const actualClearance = result.distance - getPadCopperRadius(pad) - segment.width / 2;
-      if (actualClearance + 1e-6 < clearance) {
-        issues.push(makeIssue({
-          severity: 'error',
-          code: 'PCB_CLEARANCE_TRACK_PAD',
-          title: '배선과 패드 간격 부족',
-          message: `${segment.layer} 배선과 ${pad.footprintRef}.${pad.number} 패드 간격 ${formatMm(Math.max(0, actualClearance))}가 최소 ${formatMm(clearance)}보다 작습니다.`,
-          recommendation: '배선을 패드에서 더 멀리 이동하거나 보드 clearance 규칙을 확인해 주세요.',
-          layer: segment.layer,
-          netName: segment.netName || pad.netName,
-          footprintRef: pad.footprintRef,
-          padNumber: pad.number,
-          at: result.closest,
-        }, index++));
+      const requiredClearance = Math.max(pad.clearance ?? clearance, clearance);
+      if (actualClearance + 1e-6 < requiredClearance) {
+        const groupKey = [
+          segment.layer,
+          segment.netName || `net-${segment.netCode}`,
+          pad.footprintRef,
+          pad.number,
+          pad.netName || `net-${pad.netCode}`,
+        ].join(':');
+        const description = `${segment.netName || `net ${segment.netCode}`} 배선 간격 ${formatMm(Math.max(0, actualClearance))}`;
+        const existing = trackPadGroups.get(groupKey);
+        if (!existing) {
+          trackPadGroups.set(groupKey, {
+            segment,
+            pad,
+            actualClearance,
+            requiredClearance,
+            at: result.closest,
+            count: 1,
+            items: [{ description, at: result.closest }],
+          });
+          continue;
+        }
+
+        existing.count += 1;
+        if (existing.items.length < MAX_TRACK_PAD_CLEARANCE_ITEMS) {
+          existing.items.push({ description, at: result.closest });
+        }
+        if (actualClearance < existing.actualClearance) {
+          existing.segment = segment;
+          existing.pad = pad;
+          existing.actualClearance = actualClearance;
+          existing.requiredClearance = requiredClearance;
+          existing.at = result.closest;
+        }
       }
     }
+  }
+
+  const sortedTrackPadGroups = Array.from(trackPadGroups.values())
+    .sort((a, b) => a.actualClearance - b.actualClearance);
+  const emittedTrackPadGroups = sortedTrackPadGroups.slice(0, MAX_TRACK_PAD_CLEARANCE_GROUPS);
+  for (const group of emittedTrackPadGroups) {
+    const hiddenCount = Math.max(0, group.count - group.items.length);
+    const items = group.count > 1
+      ? [
+          ...group.items,
+          ...(hiddenCount > 0 ? [{ description: `같은 패드 주변 추가 ${hiddenCount}건은 대표 이슈에 묶었습니다.` }] : []),
+        ]
+      : undefined;
+    issues.push(makeIssue({
+      severity: 'warning',
+      code: 'PCB_CLEARANCE_TRACK_PAD',
+      title: '배선과 패드 간격 확인 필요',
+      message: group.count > 1
+        ? `${group.segment.layer} 배선과 ${group.pad.footprintRef}.${group.pad.number} 패드 간격 대표값 ${formatMm(Math.max(0, group.actualClearance))}가 최소 ${formatMm(group.requiredClearance)}보다 작습니다. 같은 패드 주변 ${group.count}건을 대표 이슈 1건으로 묶었습니다.`
+        : `${group.segment.layer} 배선과 ${group.pad.footprintRef}.${group.pad.number} 패드 간격 ${formatMm(Math.max(0, group.actualClearance))}가 최소 ${formatMm(group.requiredClearance)}보다 작습니다.`,
+      recommendation: '배선을 패드에서 더 멀리 이동하거나 보드 clearance 규칙을 확인해 주세요. 최종 판정은 KiCad DRC와 제조사 규칙으로 확인해 주세요.',
+      layer: group.segment.layer,
+      netName: group.segment.netName || group.pad.netName,
+      footprintRef: group.pad.footprintRef,
+      padNumber: group.pad.number,
+      at: group.at,
+      items,
+    }, index++));
+  }
+  const omittedTrackPadGroups = sortedTrackPadGroups.length - emittedTrackPadGroups.length;
+  if (omittedTrackPadGroups > 0) {
+    issues.push(makeIssue({
+      severity: 'warning',
+      code: 'PCB_CLEARANCE_TRACK_PAD_GROUP_LIMIT',
+      title: '배선-패드 간격 후보가 많아 대표 항목만 표시했습니다',
+      message: `배선-패드 간격 후보 ${sortedTrackPadGroups.length}개 그룹 중 가장 가까운 ${MAX_TRACK_PAD_CLEARANCE_GROUPS}개만 표시했습니다. 나머지 ${omittedTrackPadGroups}개 그룹은 KiCad DRC에서 일괄 확인해 주세요.`,
+      recommendation: 'ModuMake 목록은 대표 위치 선별용으로 보고, 전체 clearance 목록은 KiCad DRC 리포트로 확인해 주세요.',
+    }, index++));
   }
 
   for (let aIndex = 0; aIndex < document.segments.length; aIndex += 1) {

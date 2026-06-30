@@ -68,6 +68,51 @@ const ADVANCED_RULE_PROJECT = `
 )
 `;
 
+const CROSS_LAYER_CLEARANCE_PROJECT = `
+(kicad_pcb
+  (version 20240101)
+  (generator modumake-test)
+  (layers
+    (0 "F.Cu" signal)
+    (31 "B.Cu" signal)
+  )
+  (setup
+    (trace_clearance 0.2)
+  )
+  (net 1 "PAD")
+  (net 2 "TRACE")
+  (footprint "Test:J" (layer "F.Cu") (at 0 0)
+    (fp_text reference "J1" (at 0 0) (layer "F.SilkS") (effects (font (size 1 1))))
+    (fp_text value "J" (at 0 1) (layer "F.Fab") (effects (font (size 1 1))))
+    (pad "1" smd circle (at 0 0) (size 1 1) (layers "F.Cu" "F.Mask") (net 1 "PAD"))
+  )
+  (segment (start -1 0) (end 1 0) (width 0.2) (layer "B.Cu") (net 2))
+)
+`;
+
+const REPEATED_TRACK_PAD_CLEARANCE_PROJECT = `
+(kicad_pcb
+  (version 20240101)
+  (generator modumake-test)
+  (layers
+    (0 "F.Cu" signal)
+  )
+  (setup
+    (trace_clearance 0.2)
+  )
+  (net 1 "PAD")
+  (net 2 "TRACE")
+  (footprint "Test:J" (layer "F.Cu") (at 0 0)
+    (fp_text reference "J1" (at 0 0) (layer "F.SilkS") (effects (font (size 1 1))))
+    (fp_text value "J" (at 0 1) (layer "F.Fab") (effects (font (size 1 1))))
+    (pad "1" smd circle (at 0 0) (size 1 1) (layers "F.Cu" "F.Mask") (net 1 "PAD"))
+  )
+  (segment (start -1 0) (end 1 0) (width 0.2) (layer "F.Cu") (net 2))
+  (segment (start -1 0.05) (end 1 0.05) (width 0.2) (layer "F.Cu") (net 2))
+  (segment (start -1 -0.05) (end 1 -0.05) (width 0.2) (layer "F.Cu") (net 2))
+)
+`;
+
 test('parseKiCadPcb extracts core board geometry from KiCad 5 module files', async () => {
   const source = await readFile(FAIL_PROJECT, 'utf8');
   const document = parseKiCadPcb(source, { sourceFilename: 'fail-project.kicad_pcb' });
@@ -165,4 +210,21 @@ test('advanced PCB validation covers polygon clearance, manufacturing, diff-pair
   assert.ok(codes.has('PCB_DIFF_PAIR_IMPEDANCE_UNVERIFIED'));
   assert.ok(codes.has('PCB_SCHEMATIC_MISSING_FOOTPRINT'));
   assert.ok(codes.has('PCB_SCHEMATIC_NET_MISSING'));
+});
+
+test('PCB clearance ignores tracks on copper layers that do not touch the pad', () => {
+  const document = parseKiCadPcb(CROSS_LAYER_CLEARANCE_PROJECT);
+  const report = validateImportedPcbDocument(document);
+
+  assert.equal(report.issues.some(issue => issue.code === 'PCB_CLEARANCE_TRACK_PAD'), false);
+});
+
+test('PCB track-pad clearance groups repeated candidates around the same pad', () => {
+  const document = parseKiCadPcb(REPEATED_TRACK_PAD_CLEARANCE_PROJECT);
+  const report = validateImportedPcbDocument(document);
+  const trackPadIssues = report.issues.filter(issue => issue.code === 'PCB_CLEARANCE_TRACK_PAD');
+
+  assert.equal(trackPadIssues.length, 1);
+  assert.match(trackPadIssues[0]?.message ?? '', /3건을 대표 이슈 1건/);
+  assert.ok((trackPadIssues[0]?.items?.length ?? 0) >= 3);
 });
