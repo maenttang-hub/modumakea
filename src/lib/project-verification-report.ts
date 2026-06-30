@@ -6,6 +6,10 @@ import {
   schematicPcbAugmentationDirectionLabel,
   type SchematicPcbAugmentationCandidate,
 } from '@/lib/schematic-pcb-augmentation-candidates';
+import {
+  resolveIssueSourceBucketInfo,
+  type IssueSourceBucketInfo,
+} from '@/lib/issue-source-bucket';
 import { pickLanguage } from '@/lib/ui-language';
 import {
   classifyIssueActionBucket,
@@ -136,22 +140,106 @@ function confidenceBadge(issue: ProjectAuditIssue, language: AppLanguage) {
   }
 }
 
-function buildIssueBlock(issue: ProjectAuditIssue, index: number, language: AppLanguage) {
+function sourceBucketLabel(sourceInfo: IssueSourceBucketInfo, language: AppLanguage) {
+  switch (sourceInfo.sourceBucket) {
+    case 'official':
+      return pickLanguage(language, { ko: '공식 근거', en: 'Official source' });
+    case 'partial':
+      return pickLanguage(language, { ko: '부분 근거', en: 'Partial source' });
+    case 'generic':
+      return pickLanguage(language, { ko: '범용/모듈 추정', en: 'Generic/module inference' });
+    case 'fallback':
+      return pickLanguage(language, { ko: 'fallback 해석', en: 'Fallback interpretation' });
+    default:
+      return pickLanguage(language, { ko: '기타 근거', en: 'Other source' });
+  }
+}
+
+function sourceQualityLabel(sourceInfo: IssueSourceBucketInfo, language: AppLanguage) {
+  switch (sourceInfo.sourceQuality) {
+    case 'official-complete':
+      return pickLanguage(language, { ko: '공식 데이터시트', en: 'Official datasheet' });
+    case 'official-partial':
+      return pickLanguage(language, { ko: '부분 공식 근거', en: 'Partial official source' });
+    case 'module-verified':
+      return pickLanguage(language, { ko: '모듈 검증', en: 'Module verified' });
+    case 'generic-module':
+      return pickLanguage(language, { ko: '범용 모듈 추정', en: 'Generic module' });
+    case 'needs-vendor-pin':
+      return pickLanguage(language, { ko: 'SKU 확인 필요', en: 'SKU needed' });
+    default:
+      return null;
+  }
+}
+
+function mappingConfidenceLabel(sourceInfo: IssueSourceBucketInfo, language: AppLanguage) {
+  switch (sourceInfo.mappingConfidence) {
+    case 'high':
+      return pickLanguage(language, { ko: '매핑 높음', en: 'High mapping confidence' });
+    case 'medium':
+      return pickLanguage(language, { ko: '매핑 보통', en: 'Medium mapping confidence' });
+    case 'low':
+      return pickLanguage(language, { ko: '매핑 낮음', en: 'Low mapping confidence' });
+    default:
+      return null;
+  }
+}
+
+function mappingSourceLabel(sourceInfo: IssueSourceBucketInfo, language: AppLanguage) {
+  switch (sourceInfo.mappingSource) {
+    case 'kicad-library':
+      return pickLanguage(language, { ko: 'KiCad 라이브러리', en: 'KiCad library' });
+    case 'refdes':
+      return pickLanguage(language, { ko: 'refdes 추정', en: 'refdes inference' });
+    case 'value-regex':
+      return pickLanguage(language, { ko: 'value 패턴 추정', en: 'value-pattern inference' });
+    case 'footprint-regex':
+      return pickLanguage(language, { ko: 'footprint 패턴 추정', en: 'footprint-pattern inference' });
+    case 'pin-shape':
+      return pickLanguage(language, { ko: 'pin shape 추정', en: 'pin-shape inference' });
+    case 'custom-fallback':
+      return pickLanguage(language, { ko: 'fallback 매핑', en: 'fallback mapping' });
+    default:
+      return null;
+  }
+}
+
+function evidenceAxisLine(sourceInfo: IssueSourceBucketInfo, language: AppLanguage) {
+  return [
+    sourceBucketLabel(sourceInfo, language),
+    sourceQualityLabel(sourceInfo, language),
+    mappingConfidenceLabel(sourceInfo, language),
+    mappingSourceLabel(sourceInfo, language),
+  ].filter(Boolean).join(' / ');
+}
+
+function buildIssueBlock(
+  issue: ProjectAuditIssue,
+  index: number,
+  language: AppLanguage,
+  components: PlacedComponent[]
+) {
   const translated = translateEngineIssue(issue, language);
   const recommendation = translated.recommendation ?? issue.recommendation;
   const evidence = issue.evidence;
   const evidenceSummary = evidence?.evidenceSummary ?? translated.message;
-  const observedFacts = evidence?.observedFacts?.slice(0, 2) ?? [];
-  const assumptions = evidence?.assumptions?.slice(0, 2) ?? [];
+  const observedFacts = evidence?.observedFacts?.slice(0, 4) ?? [];
+  const assumptions = evidence?.assumptions?.slice(0, 3) ?? [];
+  const sourceInfo = resolveIssueSourceBucketInfo(issue, components);
+  const sourceAxis = evidenceAxisLine(sourceInfo, language);
 
   return [
     `${index}. [${confidenceBadge(issue, language)}] ${translated.title}`,
     `   - ${pickLanguage(language, { ko: '위치', en: 'Location' })}: ${issueLocation(issue, language)}`,
+    sourceAxis ? `   - ${pickLanguage(language, { ko: '근거 축', en: 'Evidence quality' })}: ${sourceAxis}` : null,
     `   - ${pickLanguage(language, { ko: '근거', en: 'Evidence' })}: ${evidenceSummary}`,
     observedFacts.length > 0 ? `   - ${pickLanguage(language, { ko: '관찰 사실', en: 'Observed facts' })}: ${observedFacts.join(' / ')}` : null,
     `   - ${pickLanguage(language, { ko: '영향', en: 'Impact' })}: ${translated.message}`,
     recommendation ? `   - ${pickLanguage(language, { ko: '수정 방법', en: 'How to fix' })}: ${recommendation}` : null,
     assumptions.length > 0 ? `   - ${pickLanguage(language, { ko: '가정', en: 'Assumptions' })}: ${assumptions.join(' / ')}` : null,
+    sourceInfo.isConservativeFinding
+      ? `   - ${pickLanguage(language, { ko: '보수적 판단', en: 'Conservative basis' })}: ${sourceInfo.lowConfidenceReasons.join(' / ')} ${pickLanguage(language, { ko: '정확한 SKU/MPN 또는 원본 KiCad 소스를 넣으면 판단 정확도가 올라갑니다.', en: 'Adding the exact SKU/MPN or original KiCad source can improve judgment accuracy.' })}`
+      : null,
   ].filter(Boolean).join('\n');
 }
 
@@ -272,13 +360,13 @@ export function buildProjectVerificationReport(input: ProjectVerificationReportI
     `## 2. ${t('반드시 수정', 'Must Fix')}`,
     '',
     mustFixIssues.length > 0
-      ? mustFixIssues.map((issue, index) => buildIssueBlock(issue, index + 1, input.language)).join('\n\n')
+      ? mustFixIssues.map((issue, index) => buildIssueBlock(issue, index + 1, input.language, input.components)).join('\n\n')
       : t('현재 자동 검증 기준에서 즉시 수정해야 할 차단 이슈는 없습니다.', 'No blocking issue requires an immediate fix in the current automated review.'),
     '',
     `## 3. ${t('확인 권장', 'Review Recommended')}`,
     '',
     reviewIssues.length > 0
-      ? reviewIssues.map((issue, index) => buildIssueBlock(issue, index + 1, input.language)).join('\n\n')
+      ? reviewIssues.map((issue, index) => buildIssueBlock(issue, index + 1, input.language, input.components)).join('\n\n')
       : t('현재 검토 권장 항목은 없습니다.', 'There are no review-only items in the current report.'),
     '',
     `## 4. ${t('회로도 ↔ PCB 보강 후보', 'Schematic ↔ PCB Augmentation Candidates')}`,
@@ -301,7 +389,7 @@ export function buildProjectVerificationReport(input: ProjectVerificationReportI
     `## 7. ${t('코드-회로 크로스 검증', 'Code-to-Circuit Cross-Check')}`,
     '',
     formalIssues.length > 0
-      ? formalIssues.map((issue, index) => buildIssueBlock(issue, index + 1, input.language)).join('\n\n')
+      ? formalIssues.map((issue, index) => buildIssueBlock(issue, index + 1, input.language, input.components)).join('\n\n')
       : t('No code-to-circuit conflicts were detected in the current review.', 'No code-to-circuit conflicts were detected in the current review.'),
     '',
     `${t('코드 차단 이슈', 'Blocking code findings')}: ${formalCriticalCount}`,
@@ -310,7 +398,7 @@ export function buildProjectVerificationReport(input: ProjectVerificationReportI
     `## 8. ${t('룰 엔진 / DRC 세부 이슈', 'Rule Engine / DRC Findings')}`,
     '',
     drcIssues.length > 0
-      ? drcIssues.slice(0, 12).map((issue, index) => buildIssueBlock(issue, index + 1, input.language)).join('\n\n')
+      ? drcIssues.slice(0, 12).map((issue, index) => buildIssueBlock(issue, index + 1, input.language, input.components)).join('\n\n')
       : t('No datasheet or DRC findings are blocking the current design.', 'No datasheet or DRC findings are blocking the current design.'),
     '',
     `## 9. ${t('수정 체크리스트', 'Action Checklist')}`,

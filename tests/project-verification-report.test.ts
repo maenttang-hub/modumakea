@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { buildProjectVerificationReport } from '@/lib/project-verification-report';
 import type { DrcEngineReport } from '@/lib/drc-engine';
+import type { PlacedComponent } from '@/types';
 
 function buildReportFixture(): DrcEngineReport {
   return {
@@ -129,6 +130,64 @@ test('project verification report does not label generic solver review as power/
 
   assert.match(report.markdown, /회로 해석: 추가 확인 필요/);
   assert.doesNotMatch(report.markdown, /전원\/GND: 추가 확인 필요/);
+});
+
+test('project verification report keeps conservative source quality visible', () => {
+  const audit = buildReportFixture();
+  audit.issues = [
+    {
+      severity: 'warning',
+      code: 'part-master.generic-module-review',
+      ruleId: 'part-master.generic-module-review',
+      title: 'Generic module needs review',
+      message: 'Generic module pin assumptions should be checked.',
+      recommendation: 'Enter the exact module SKU before build handoff.',
+      componentName: 'Generic I2C Module',
+      confidence: 'needs-review',
+      visualTargets: {
+        componentIds: ['generic-i2c-1'],
+      },
+      evidence: {
+        confidence: 'needs-review',
+        evidenceSummary: 'The module was recognized through fallback mapping.',
+        observedFacts: [
+          'Affected component: Generic I2C Module',
+          'Detected interface: I2C',
+          'Mapping confidence: low',
+        ],
+        assumptions: ['Pin names may differ between vendor variants.'],
+        checkedBy: ['datasheet-rule'],
+        affectedComponents: ['generic-i2c-1'],
+        howToVerify: 'Check the exact vendor pinout before fabrication.',
+        sourceQuality: 'generic-module',
+      },
+    },
+  ];
+  audit.issueCount = 1;
+
+  const components = [
+    {
+      instanceId: 'generic-i2c-1',
+      name: 'Generic I2C Module',
+      importedMapping: {
+        confidence: 'low',
+        source: 'custom-fallback',
+      },
+    },
+  ] as PlacedComponent[];
+
+  const report = buildProjectVerificationReport({
+    projectName: 'generic_module_review',
+    boardId: 'kicad_generic',
+    audit,
+    components,
+    language: 'en',
+    generatedAt: new Date('2026-06-29T10:28:00.000Z'),
+  });
+
+  assert.match(report.markdown, /Evidence quality: Fallback interpretation \/ Generic module \/ Low mapping confidence \/ fallback mapping/);
+  assert.match(report.markdown, /Conservative basis:/);
+  assert.match(report.markdown, /Adding the exact SKU\/MPN or original KiCad source can improve judgment accuracy/);
 });
 
 test('project verification report includes schematic PCB augmentation candidates', () => {

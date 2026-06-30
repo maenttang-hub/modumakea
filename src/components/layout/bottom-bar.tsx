@@ -2,11 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Check, ChevronRight, FileText, ListChecks, Share2, X, XCircle } from 'lucide-react';
-import type { ProjectAuditIssue } from '@/types';
+import type { ImportedKiCadMapping, ProjectAuditIssue } from '@/types';
 
 type BottomBarIssue = ProjectAuditIssue & {
   relatedComponentLabels?: string[];
   relatedNetLabels?: string[];
+  sourceBucketLabel?: string;
+  sourceQualityLabel?: string;
+  mappingConfidence?: ImportedKiCadMapping['confidence'];
+  mappingSource?: ImportedKiCadMapping['source'];
+  lowConfidenceReasons?: string[];
+  isConservativeFinding?: boolean;
 };
 
 type IssueListMode = 'error' | 'warning' | 'erc';
@@ -71,6 +77,63 @@ function issueTargetLabel(issue: BottomBarIssue) {
   }
 
   return componentLabel ?? netLabel ?? issue.boardPin ?? issue.ruleId ?? issue.code ?? '프로젝트 전체';
+}
+
+function confidenceLabel(confidence?: ProjectAuditIssue['confidence']) {
+  switch (confidence) {
+    case 'confirmed':
+      return '확정';
+    case 'strong-inference':
+      return '강한 근거';
+    case 'needs-review':
+      return '검토';
+    case 'informational':
+      return '정보';
+    default:
+      return null;
+  }
+}
+
+function mappingConfidenceLabel(confidence?: ImportedKiCadMapping['confidence']) {
+  switch (confidence) {
+    case 'high':
+      return '매핑 높음';
+    case 'medium':
+      return '매핑 보통';
+    case 'low':
+      return '매핑 낮음';
+    default:
+      return null;
+  }
+}
+
+function mappingSourceLabel(source?: ImportedKiCadMapping['source']) {
+  switch (source) {
+    case 'kicad-library':
+      return 'KiCad 라이브러리';
+    case 'refdes':
+      return 'refdes 추정';
+    case 'value-regex':
+      return 'value 추정';
+    case 'footprint-regex':
+      return 'footprint 추정';
+    case 'pin-shape':
+      return 'pin shape 추정';
+    case 'custom-fallback':
+      return 'fallback';
+    default:
+      return null;
+  }
+}
+
+function issueBadges(issue: BottomBarIssue) {
+  return Array.from(new Set([
+    confidenceLabel(issue.confidence),
+    issue.sourceBucketLabel,
+    issue.sourceQualityLabel,
+    mappingConfidenceLabel(issue.mappingConfidence),
+    mappingSourceLabel(issue.mappingSource),
+  ].filter((item): item is string => Boolean(item))));
 }
 
 export function BottomBar({
@@ -164,6 +227,10 @@ export function BottomBar({
                 {filteredIssues.map((issue, index) => {
                   const tone = issueTone(issue.severity);
                   const evidenceLine = issue.evidence?.evidenceSummary ?? issue.message;
+                  const badges = issueBadges(issue);
+                  const conservativeReason = issue.isConservativeFinding
+                    ? issue.lowConfidenceReasons?.[0]
+                    : null;
                   return (
                     <button
                       type="button"
@@ -185,9 +252,23 @@ export function BottomBar({
                         <span className="mt-0.5 block truncate text-[10px] font-semibold text-[#6d7f9a]">
                           {issueTargetLabel(issue)}
                         </span>
+                        {badges.length > 0 ? (
+                          <span className="mt-1 flex flex-wrap gap-1.5">
+                            {badges.slice(0, 4).map(badge => (
+                              <span key={badge} className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-[#75685d]">
+                                {badge}
+                              </span>
+                            ))}
+                          </span>
+                        ) : null}
                         <span className="mt-1 line-clamp-2 block text-[10px] leading-[1.55] text-[#76675a]">
                           {evidenceLine}
                         </span>
+                        {conservativeReason ? (
+                          <span className="mt-1 line-clamp-1 block text-[10px] leading-[1.55] text-[#8a765c]">
+                            보수적 판단: {conservativeReason}
+                          </span>
+                        ) : null}
                       </span>
                       <ChevronRight size={14} className="mt-1 shrink-0 text-[#b5a797]" />
                     </button>

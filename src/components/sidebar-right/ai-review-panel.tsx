@@ -6,7 +6,16 @@ import {
   schematicPcbAugmentationDirectionLabel,
 } from '@/lib/schematic-pcb-augmentation-candidates';
 import { countIssueSeverities } from '@/lib/validation-issue-classification';
-import type { ProjectAuditIssue } from '@/types';
+import type { ImportedKiCadMapping, ProjectAuditIssue } from '@/types';
+
+type ReviewPanelIssue = ProjectAuditIssue & {
+  sourceBucketLabel?: string;
+  sourceQualityLabel?: string;
+  mappingConfidence?: ImportedKiCadMapping['confidence'];
+  mappingSource?: ImportedKiCadMapping['source'];
+  lowConfidenceReasons?: string[];
+  isConservativeFinding?: boolean;
+};
 
 type ReviewItem = {
   id: string;
@@ -19,6 +28,9 @@ type ReviewItem = {
   assumptions: string[];
   howToVerify?: string;
   componentName?: string;
+  sourceBadges: string[];
+  lowConfidenceReasons: string[];
+  isConservativeFinding: boolean;
 };
 
 function confidenceLabel(confidence: ProjectAuditIssue['confidence']) {
@@ -111,6 +123,48 @@ function severityLabel(severity: ProjectAuditIssue['severity']) {
   return '정보';
 }
 
+function mappingConfidenceLabel(confidence?: ImportedKiCadMapping['confidence']) {
+  switch (confidence) {
+    case 'high':
+      return '매핑 높음';
+    case 'medium':
+      return '매핑 보통';
+    case 'low':
+      return '매핑 낮음';
+    default:
+      return null;
+  }
+}
+
+function mappingSourceLabel(source?: ImportedKiCadMapping['source']) {
+  switch (source) {
+    case 'kicad-library':
+      return 'KiCad 라이브러리';
+    case 'refdes':
+      return 'refdes 추정';
+    case 'value-regex':
+      return 'value 추정';
+    case 'footprint-regex':
+      return 'footprint 추정';
+    case 'pin-shape':
+      return 'pin shape 추정';
+    case 'custom-fallback':
+      return 'fallback 매핑';
+    default:
+      return null;
+  }
+}
+
+function sourceBadgesForIssue(issue: ReviewPanelIssue) {
+  return Array.from(new Set([
+    issue.sourceLabel,
+    issue.sourceBucketLabel,
+    issue.sourceQualityLabel,
+    mappingConfidenceLabel(issue.mappingConfidence),
+    mappingSourceLabel(issue.mappingSource),
+  ].filter((item): item is string => Boolean(item))));
+}
+
 function nextActionLine(issue: ProjectAuditIssue | undefined) {
   if (!issue) {
     return '차단 이슈는 없습니다. 리포트로 내보내기 전에 실제 배선과 전원 입력 조건만 한 번 더 확인하세요.';
@@ -130,8 +184,8 @@ export function AiReviewPanel({
   projectName: string;
   boardName: string;
   fileLabel: string;
-  issues: ProjectAuditIssue[];
-  onSelectIssue: (issue: ProjectAuditIssue) => void;
+  issues: ReviewPanelIssue[];
+  onSelectIssue: (issue: ReviewPanelIssue) => void;
 }) {
   const severityCounts = countIssueSeverities(issues);
   const errorCount = severityCounts.error;
@@ -154,6 +208,9 @@ export function AiReviewPanel({
           assumptions: issue.evidence?.assumptions ?? [],
           howToVerify: issue.evidence?.howToVerify ?? issue.recommendation,
           componentName: issue.componentName,
+          sourceBadges: sourceBadgesForIssue(issue),
+          lowConfidenceReasons: issue.lowConfidenceReasons ?? [],
+          isConservativeFinding: Boolean(issue.isConservativeFinding),
         }))
       : [
           {
@@ -163,6 +220,9 @@ export function AiReviewPanel({
             body: '현재 눈에 띄는 차단 이슈가 없습니다. 배치와 코드 연결만 한 번 더 확인하면 됩니다.',
             observedFacts: [],
             assumptions: [],
+            sourceBadges: [],
+            lowConfidenceReasons: [],
+            isConservativeFinding: false,
           },
         ];
 
@@ -276,9 +336,14 @@ export function AiReviewPanel({
             const sourceIssue = issues[index];
             const tone = toneBySeverity(item.severity);
             const sectionTone = sectionTitleTone(item.severity);
-            const visibleFacts = item.observedFacts.slice(0, 3);
+            const visibleFacts = item.observedFacts.slice(0, 4);
             const evidenceLine = item.evidenceSummary ?? item.body;
-            const hasDetails = visibleFacts.length > 0 || item.assumptions.length > 0 || Boolean(item.howToVerify);
+            const hasDetails =
+              item.sourceBadges.length > 0 ||
+              visibleFacts.length > 0 ||
+              item.assumptions.length > 0 ||
+              item.lowConfidenceReasons.length > 0 ||
+              Boolean(item.howToVerify);
             return (
               <div
                 key={item.id}
@@ -305,6 +370,11 @@ export function AiReviewPanel({
                           {confidenceLabel(item.confidence)}
                         </span>
                       ) : null}
+                      {item.sourceBadges.slice(0, 3).map(badge => (
+                        <span key={badge} className="rounded-full bg-[#edf4fb] px-2 py-0.5 text-[10px] font-semibold text-[#496f9e]">
+                          {badge}
+                        </span>
+                      ))}
                     </div>
                     <div className="mt-2 text-[12px] font-semibold leading-5 text-[#43372f]">
                       {item.componentName ? `${item.componentName} — ${item.title}` : item.title}
@@ -324,6 +394,18 @@ export function AiReviewPanel({
                       <ChevronDown size={12} className="transition group-open:rotate-180" />
                       근거 상세
                     </summary>
+                    {item.sourceBadges.length > 0 ? (
+                      <div className="mt-2">
+                        <div className={`text-[10px] font-semibold ${sectionTone}`}>출처 / 신뢰 축</div>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {item.sourceBadges.map(badge => (
+                            <span key={badge} className="rounded-full border border-[#e7dccf] bg-[#fffdf9] px-2 py-0.5 text-[10px] font-semibold text-[#6f6359]">
+                              {badge}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                     {visibleFacts.length > 0 ? (
                       <div className="mt-2">
                         <div className={`text-[10px] font-semibold ${sectionTone}`}>관측 사실</div>
@@ -338,9 +420,22 @@ export function AiReviewPanel({
                       <div className="mt-2">
                         <div className="text-[10px] font-semibold text-[#8b745f]">가정</div>
                         <div className="mt-1 space-y-1 text-[10px] leading-[1.55] text-[#7a6d61]">
-                          {item.assumptions.slice(0, 2).map((assumption, assumptionIndex) => (
+                          {item.assumptions.slice(0, 3).map((assumption, assumptionIndex) => (
                             <div key={`${assumption}-${assumptionIndex}`}>- {assumption}</div>
                           ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {item.isConservativeFinding && item.lowConfidenceReasons.length > 0 ? (
+                      <div className="mt-2 rounded-[10px] border border-[#eadfcb] bg-[#fbf7f0] px-2.5 py-2 text-[10px] leading-[1.55] text-[#6f6359]">
+                        <div className="font-semibold text-[#6d5944]">보수적 판단 이유</div>
+                        <div className="mt-1 space-y-1">
+                          {item.lowConfidenceReasons.map((reason, reasonIndex) => (
+                            <div key={`${reason}-${reasonIndex}`}>- {reason}</div>
+                          ))}
+                        </div>
+                        <div className="mt-1 text-[#8b7a68]">
+                          정확한 SKU/MPN 또는 원본 KiCad 소스를 넣으면 판단 정확도가 올라갑니다.
                         </div>
                       </div>
                     ) : null}

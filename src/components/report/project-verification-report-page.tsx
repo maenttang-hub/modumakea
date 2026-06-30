@@ -11,6 +11,10 @@ import { translateEngineIssue } from '@/lib/engine-i18n';
 import { exportReportDocumentAsPdf } from '@/lib/export-report-pdf';
 import { mapImportedPcbValidationIssuesToProjectAuditIssues } from '@/lib/imported-pcb-audit-issues';
 import { buildProjectVerificationReport } from '@/lib/project-verification-report';
+import {
+  resolveIssueSourceBucketInfo,
+  type IssueSourceBucketInfo,
+} from '@/lib/issue-source-bucket';
 import { pickLanguage } from '@/lib/ui-language';
 import { setRuntimeCustomComponentPackages } from '@/lib/custom-component-registry';
 import { setRuntimeTemplateCache } from '@/lib/template-cache-registry';
@@ -97,6 +101,79 @@ function confidenceTone(confidence: ProjectAuditIssueConfidence) {
     default:
       return 'border-[#d9e5d9] bg-[#f8fff8] text-[#3d6d47]';
   }
+}
+
+function sourceBucketLabel(sourceInfo: IssueSourceBucketInfo, t: (ko: string, en: string) => string) {
+  switch (sourceInfo.sourceBucket) {
+    case 'official':
+      return t('공식 근거', 'Official source');
+    case 'partial':
+      return t('부분 근거', 'Partial source');
+    case 'generic':
+      return t('범용/모듈 추정', 'Generic/module inference');
+    case 'fallback':
+      return t('fallback 해석', 'Fallback interpretation');
+    default:
+      return t('기타 근거', 'Other source');
+  }
+}
+
+function sourceQualityLabel(sourceInfo: IssueSourceBucketInfo, t: (ko: string, en: string) => string) {
+  switch (sourceInfo.sourceQuality) {
+    case 'official-complete':
+      return t('공식 데이터시트', 'Official datasheet');
+    case 'official-partial':
+      return t('부분 공식 근거', 'Partial official source');
+    case 'module-verified':
+      return t('모듈 검증', 'Module verified');
+    case 'generic-module':
+      return t('범용 모듈 추정', 'Generic module');
+    case 'needs-vendor-pin':
+      return t('SKU 확인 필요', 'SKU needed');
+    default:
+      return null;
+  }
+}
+
+function mappingConfidenceLabel(sourceInfo: IssueSourceBucketInfo, t: (ko: string, en: string) => string) {
+  switch (sourceInfo.mappingConfidence) {
+    case 'high':
+      return t('매핑 높음', 'High mapping confidence');
+    case 'medium':
+      return t('매핑 보통', 'Medium mapping confidence');
+    case 'low':
+      return t('매핑 낮음', 'Low mapping confidence');
+    default:
+      return null;
+  }
+}
+
+function mappingSourceLabel(sourceInfo: IssueSourceBucketInfo, t: (ko: string, en: string) => string) {
+  switch (sourceInfo.mappingSource) {
+    case 'kicad-library':
+      return t('KiCad 라이브러리', 'KiCad library');
+    case 'refdes':
+      return t('refdes 추정', 'refdes inference');
+    case 'value-regex':
+      return t('value 패턴 추정', 'value-pattern inference');
+    case 'footprint-regex':
+      return t('footprint 패턴 추정', 'footprint-pattern inference');
+    case 'pin-shape':
+      return t('pin shape 추정', 'pin-shape inference');
+    case 'custom-fallback':
+      return t('fallback 매핑', 'fallback mapping');
+    default:
+      return null;
+  }
+}
+
+function sourceBadges(sourceInfo: IssueSourceBucketInfo, t: (ko: string, en: string) => string) {
+  return [
+    sourceBucketLabel(sourceInfo, t),
+    sourceQualityLabel(sourceInfo, t),
+    mappingConfidenceLabel(sourceInfo, t),
+    mappingSourceLabel(sourceInfo, t),
+  ].filter((item): item is string => Boolean(item));
 }
 
 function displayBoardName(boardName: string, t: (ko: string, en: string) => string) {
@@ -682,6 +759,8 @@ export function ProjectVerificationReportPage() {
                     const confidence = resolveIssueConfidence(issue);
                     const facts = issue.evidence?.observedFacts ?? [];
                     const assumptions = issue.evidence?.assumptions ?? [];
+                    const sourceInfo = resolveIssueSourceBucketInfo(issue, workspace.components);
+                    const badges = sourceBadges(sourceInfo, t);
                     return (
                       <article key={`${issue.ruleId ?? issue.code ?? issue.title}-${index}`} className="mm-report-finding border border-[#dcd0bf] bg-white px-4 py-4">
                         <div className="flex flex-wrap items-center gap-2">
@@ -691,6 +770,11 @@ export function ProjectVerificationReportPage() {
                           <span className="bg-[#efe5d8] px-2.5 py-1 text-[10px] font-semibold text-[#6d5c4f]">
                             {severityLabel(issue.severity, t)}
                           </span>
+                          {badges.slice(0, 3).map(badge => (
+                            <span key={badge} className="bg-[#f4efe8] px-2.5 py-1 text-[10px] font-semibold text-[#6d5c4f]">
+                              {badge}
+                            </span>
+                          ))}
                         </div>
                         <h3 className="mt-3 text-[16px] font-semibold text-[#382d26]">
                           {issue.componentName ? `${issue.componentName} - ${issue.title}` : issue.title}
@@ -715,6 +799,27 @@ export function ProjectVerificationReportPage() {
                               {issue.recommendation ?? t('관련 데이터시트와 회로 연결을 함께 검토하세요.', 'Review the datasheet and schematic context together.')}
                             </div>
                           </div>
+                        </div>
+
+                        <div className="mt-3 border border-[#e8ded2] bg-[#fffaf4] px-3.5 py-3">
+                          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('근거 수준', 'Evidence quality')}</div>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {badges.map(badge => (
+                              <span key={badge} className="bg-white px-2.5 py-1 text-[10px] font-semibold text-[#6d5c4f]">
+                                {badge}
+                              </span>
+                            ))}
+                          </div>
+                          {sourceInfo.isConservativeFinding ? (
+                            <div className="mt-2 space-y-1.5 text-[12px] leading-6 text-[#5f5145]">
+                              {sourceInfo.lowConfidenceReasons.map((reason, reasonIndex) => (
+                                <div key={`${reason}-${reasonIndex}`}>- {reason}</div>
+                              ))}
+                              <div>
+                                {t('정확한 SKU/MPN 또는 원본 KiCad 소스를 넣으면 판단 정확도가 올라갑니다.', 'Adding the exact SKU/MPN or original KiCad source can improve judgment accuracy.')}
+                              </div>
+                            </div>
+                          ) : null}
                         </div>
 
                         {(facts.length > 0 || assumptions.length > 0) ? (
