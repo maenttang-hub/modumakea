@@ -1,8 +1,13 @@
+import path from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
 import { directLedWorkspace, importedSchematicWorkspace } from './fixtures/workspaces';
 
 const workspaceStorageKey = 'modumake-workspace-v1';
 const reportSnapshotKey = 'modumake-report-workspace-snapshot-v1';
+const importedPcbFixturePath = path.join(
+  process.cwd(),
+  'tests/kicad_samples/rusefi/A4988_stepper_motor_driver/Motor_driver_A4988.kicad_pcb',
+);
 
 type PageErrorLog = {
   message: string;
@@ -100,6 +105,31 @@ test('editor shows imported schematic state without the empty file prompt', asyn
   await expect(titleBarFileButton(page, `${importedSchematicWorkspace.projectName}.kicad_sch`)).toBeVisible();
   await expect(page.getByText('파일을 열어주세요')).toHaveCount(0);
   await expect(page.getByText('KiCad 파일을 올려서 바로 리뷰 시작')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('editor shows imported PCB zoom controls and changes the board view', async ({ page }) => {
+  const errors = collectPageErrors(page);
+
+  await page.goto('/editor');
+  await page
+    .locator('input[type="file"][accept=".kicad_sch,.kicad_pcb,.pcb,text/plain"]')
+    .setInputFiles(importedPcbFixturePath);
+
+  const pcbSvg = page.getByTestId('imported-pcb-svg');
+  const zoomLabel = page.getByTestId('imported-pcb-zoom-label');
+  await expect(pcbSvg).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId('imported-pcb-zoom-controls')).toBeVisible();
+  await expect(zoomLabel).toHaveText('100%');
+
+  const initialViewBox = await pcbSvg.getAttribute('viewBox');
+  await page.getByTitle('확대').click();
+  await expect(zoomLabel).toHaveText('125%');
+  expect(await pcbSvg.getAttribute('viewBox')).not.toBe(initialViewBox);
+
+  await page.getByTitle('화면 맞춤').click();
+  await expect(zoomLabel).toHaveText('100%');
+  await expect.poll(() => pcbSvg.getAttribute('viewBox')).toBe(initialViewBox);
   expect(errors).toEqual([]);
 });
 

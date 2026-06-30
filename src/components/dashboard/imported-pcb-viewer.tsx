@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type WheelEvent } from 'react';
 import { pickLanguage } from '@/lib/ui-language';
 import type {
   AppLanguage,
@@ -12,7 +12,7 @@ import type {
   ImportedPcbValidationReport,
   ImportedPcbZone,
 } from '@/types';
-import { Eye, EyeOff, Layers3 } from 'lucide-react';
+import { Eye, EyeOff, Layers3, Minus, Plus, Scan } from 'lucide-react';
 
 const DEFAULT_VISIBLE_LAYERS = new Set([
   'Edge.Cuts',
@@ -167,6 +167,54 @@ function polygonPoints(points: Array<{ x: number; y: number }>) {
 }
 
 type GraphicShapeVariant = 'default' | 'outline-halo' | 'outline';
+type PcbViewBox = { x: number; y: number; width: number; height: number };
+type PcbViewBoxState = { key: string; viewBox: PcbViewBox };
+
+function viewBoxToString(viewBox: PcbViewBox) {
+  return `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`;
+}
+
+function clampZoomViewBox(next: PcbViewBox, base: PcbViewBox) {
+  const minWidth = Math.max(base.width / 8, 1);
+  const maxWidth = base.width;
+  const width = Math.min(maxWidth, Math.max(minWidth, next.width));
+
+  if (width >= maxWidth * 0.999) {
+    return base;
+  }
+
+  const height = width * (base.height / base.width);
+  const centerX = next.x + next.width / 2;
+  const centerY = next.y + next.height / 2;
+  return {
+    x: centerX - width / 2,
+    y: centerY - height / 2,
+    width,
+    height,
+  };
+}
+
+function zoomViewBox(current: PcbViewBox, base: PcbViewBox, factor: number, anchor?: { x: number; y: number }) {
+  const safeFactor = Number.isFinite(factor) && factor > 0 ? factor : 1;
+  const targetWidth = current.width / safeFactor;
+  const targetHeight = current.height / safeFactor;
+  const focus = anchor ?? {
+    x: current.x + current.width / 2,
+    y: current.y + current.height / 2,
+  };
+  const relativeX = (focus.x - current.x) / current.width;
+  const relativeY = (focus.y - current.y) / current.height;
+
+  return clampZoomViewBox(
+    {
+      x: focus.x - relativeX * targetWidth,
+      y: focus.y - relativeY * targetHeight,
+      width: targetWidth,
+      height: targetHeight,
+    },
+    base
+  );
+}
 
 function isBoardOutlineGraphic(graphic: ImportedPcbGraphic) {
   return graphic.layer === 'Edge.Cuts';
@@ -414,12 +462,23 @@ export function ImportedPcbViewer({
 
   const bounds = document.bounds ?? { minX: 0, minY: 0, maxX: 100, maxY: 70 };
   const padding = Math.max(4, Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY) * 0.08);
-  const viewBox = [
-    bounds.minX - padding,
-    bounds.minY - padding,
-    Math.max(20, bounds.maxX - bounds.minX + padding * 2),
-    Math.max(20, bounds.maxY - bounds.minY + padding * 2),
-  ].join(' ');
+  const baseViewBox = useMemo(
+    () => ({
+      x: bounds.minX - padding,
+      y: bounds.minY - padding,
+      width: Math.max(20, bounds.maxX - bounds.minX + padding * 2),
+      height: Math.max(20, bounds.maxY - bounds.minY + padding * 2),
+    }),
+    [bounds.maxX, bounds.maxY, bounds.minX, bounds.minY, padding]
+  );
+  const baseViewBoxKey = `${baseViewBox.x}:${baseViewBox.y}:${baseViewBox.width}:${baseViewBox.height}`;
+  const [activeViewBoxState, setActiveViewBoxState] = useState<PcbViewBoxState>(() => ({
+    key: baseViewBoxKey,
+    viewBox: baseViewBox,
+  }));
+  const activeViewBox = activeViewBoxState.key === baseViewBoxKey ? activeViewBoxState.viewBox : baseViewBox;
+  const viewBox = viewBoxToString(activeViewBox);
+  const zoomLabel = `${Math.round((baseViewBox.width / activeViewBox.width) * 100)}%`;
   const selectedIssue = validation?.issues.find(issue => issue.id === selectedIssueId) ?? null;
   const issueMarkerState = useMemo(() => {
     const issues = validation?.issues.filter(issue => issue.at) ?? [];
@@ -457,6 +516,41 @@ export function ImportedPcbViewer({
       return next;
     });
   };
+  const setZoomViewBox = (getNextViewBox: (current: PcbViewBox) => PcbViewBox) => {
+    setActiveViewBoxState(current => {
+      const currentViewBox = current.key === baseViewBoxKey ? current.viewBox : baseViewBox;
+      return {
+        key: baseViewBoxKey,
+        viewBox: getNextViewBox(currentViewBox),
+      };
+    });
+  };
+  const handleZoomIn = () => {
+    setZoomViewBox(current => zoomViewBox(current, baseViewBox, 1.25));
+  };
+  const handleZoomOut = () => {
+    setZoomViewBox(current => zoomViewBox(current, baseViewBox, 0.8));
+  };
+  const handleFitView = () => {
+    setZoomViewBox(() => baseViewBox);
+  };
+  const handleWheel = (event: WheelEvent<SVGSVGElement>) => {
+    event.preventDefault();
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) {
+      return;
+    }
+    const xRatio = (event.clientX - rect.left) / rect.width;
+    const yRatio = (event.clientY - rect.top) / rect.height;
+    const factor = event.deltaY < 0 ? 1.18 : 1 / 1.18;
+
+    setZoomViewBox(current =>
+      zoomViewBox(current, baseViewBox, factor, {
+        x: current.x + xRatio * current.width,
+        y: current.y + yRatio * current.height,
+      })
+    );
+  };
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-[#f7f1e8]">
@@ -470,10 +564,11 @@ export function ImportedPcbViewer({
       />
       <svg
         data-testid="imported-pcb-svg"
-        className="relative h-full w-full"
+        className="relative h-full w-full touch-none"
         viewBox={viewBox}
         role="img"
         aria-label="Imported KiCad PCB"
+        onWheel={handleWheel}
       >
         <rect x={bounds.minX - padding} y={bounds.minY - padding} width={bounds.maxX - bounds.minX + padding * 2} height={bounds.maxY - bounds.minY + padding * 2} fill="#fffdf9" />
         {document.zones.filter(zone => visibleLayers.has(zone.layer)).map(zone => (
@@ -536,6 +631,43 @@ export function ImportedPcbViewer({
         ))}
       </svg>
 
+      <div
+        className="absolute bottom-3 left-3 z-20 flex h-9 items-center gap-1 rounded-full border border-[#e6dfd4] bg-[#fffdfa]/95 px-1.5 text-[11px] font-semibold text-[#4e4238] shadow-sm backdrop-blur"
+        aria-label={t('PCB 확대/축소', 'PCB zoom controls')}
+        data-testid="imported-pcb-zoom-controls"
+      >
+        <button
+          type="button"
+          onClick={handleZoomOut}
+          className="flex h-7 w-7 items-center justify-center rounded-full text-[#6b5d51] transition hover:bg-[#f1e7d8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4e79ac]"
+          title={t('축소', 'Zoom out')}
+          aria-label={t('축소', 'Zoom out')}
+        >
+          <Minus size={14} />
+        </button>
+        <span className="min-w-10 text-center tabular-nums" data-testid="imported-pcb-zoom-label">
+          {zoomLabel}
+        </span>
+        <button
+          type="button"
+          onClick={handleZoomIn}
+          className="flex h-7 w-7 items-center justify-center rounded-full text-[#6b5d51] transition hover:bg-[#f1e7d8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4e79ac]"
+          title={t('확대', 'Zoom in')}
+          aria-label={t('확대', 'Zoom in')}
+        >
+          <Plus size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={handleFitView}
+          className="flex h-7 w-7 items-center justify-center rounded-full text-[#6b5d51] transition hover:bg-[#f1e7d8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4e79ac]"
+          title={t('화면 맞춤', 'Fit view')}
+          aria-label={t('화면 맞춤', 'Fit view')}
+        >
+          <Scan size={14} />
+        </button>
+      </div>
+
       <div className="pointer-events-none absolute right-3 top-16 z-10 flex max-h-28 max-w-[min(720px,calc(100%-24px))] flex-wrap justify-end gap-1.5 overflow-y-auto">
         <div className="pointer-events-auto flex h-7 items-center gap-1.5 rounded-full border border-[#e6dfd4] bg-[#fffdfa]/92 px-2 text-[10px] font-semibold text-[#6b5d51] shadow-sm backdrop-blur">
           <Layers3 size={11} />
@@ -574,7 +706,7 @@ export function ImportedPcbViewer({
 
       {selectedIssue ? (
         <div
-          className="absolute bottom-3 left-3 z-10 max-w-[min(520px,calc(100%-24px))] rounded-[10px] border bg-[#fffdfa]/94 px-3 py-2 text-[11px] leading-5 text-[#4e4238] shadow-sm backdrop-blur"
+          className="absolute bottom-14 left-3 z-10 max-w-[min(520px,calc(100%-24px))] rounded-[10px] border bg-[#fffdfa]/94 px-3 py-2 text-[11px] leading-5 text-[#4e4238] shadow-sm backdrop-blur"
           style={{ borderColor: `${severityColor(selectedIssue.severity)}66` }}
         >
           <div className="flex flex-wrap items-center gap-2">
