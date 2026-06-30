@@ -23,6 +23,13 @@ function formatCount(value: number, koUnit: string, enUnit: string, language: Ap
   return pickLanguage(language, { ko: `${value}${koUnit}`, en: `${value} ${enUnit}` });
 }
 
+type KiCadPcbDrcResponse = {
+  report?: unknown;
+  error?: string;
+  drcMode?: 'schematic-parity' | 'board-only';
+  warnings?: string[];
+};
+
 function collectPcbPoints(document: PcbDocument): PcbPoint[] {
   return [
     ...document.outline.flatMap(segment => [segment.start, segment.end]),
@@ -312,7 +319,7 @@ export function PcbWorkspace() {
           filename: importedPcbDocument.sourceFilename ?? 'imported.kicad_pcb',
         }),
       });
-      const payload = await response.json() as { report?: unknown; error?: string };
+      const payload = await response.json() as KiCadPcbDrcResponse;
       if (!response.ok || !payload.report) {
         throw new Error(payload.error || t('KiCad DRC 실행에 실패했습니다.', 'KiCad DRC failed.'));
       }
@@ -329,11 +336,28 @@ export function PcbWorkspace() {
       const merged = mergeImportedPcbValidationReports(localReport, kicadReport);
       setImportedPcbValidation(merged);
       setSelectedPcbIssueId(merged.issues[0]?.id ?? null);
-      toast.success(t('KiCad DRC 리포트를 반영했습니다.', 'KiCad DRC report applied.'), {
-        description: appLanguage === 'ko'
-          ? `오류 ${kicadReport.errorCount}개 · 경고 ${kicadReport.warningCount}개`
-          : `${kicadReport.errorCount} errors · ${kicadReport.warningCount} warnings`,
-      });
+      const findingSummary = appLanguage === 'ko'
+        ? `오류 ${kicadReport.errorCount}개 · 경고 ${kicadReport.warningCount}개`
+        : `${kicadReport.errorCount} errors · ${kicadReport.warningCount} warnings`;
+      const cappedMarkerNote = kicadReport.issueCount > 240
+        ? t('보드 마커는 우선순위순으로 일부만 표시됩니다.', 'Board markers are capped by priority.')
+        : null;
+      const boardOnlyNote = payload.drcMode === 'board-only'
+        ? t('schematic parity는 생략되었습니다.', 'Schematic parity was skipped.')
+        : null;
+      const description = [findingSummary, boardOnlyNote, cappedMarkerNote, payload.warnings?.[0]]
+        .filter(Boolean)
+        .join(' · ');
+
+      if (payload.drcMode === 'board-only') {
+        toast.warning(t('KiCad board-only DRC를 반영했습니다.', 'KiCad board-only DRC applied.'), {
+          description,
+        });
+      } else {
+        toast.success(t('KiCad DRC 리포트를 반영했습니다.', 'KiCad DRC report applied.'), {
+          description,
+        });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : t('KiCad DRC 실행 중 오류가 발생했습니다.', 'An error occurred while running KiCad DRC.');
       setLastKiCadDrcError(message);

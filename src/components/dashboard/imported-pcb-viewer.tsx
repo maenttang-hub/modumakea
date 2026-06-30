@@ -43,6 +43,8 @@ const LAYER_COLORS: Record<string, string> = {
   'Cmts.User': '#8d8074',
 };
 
+const MAX_VISIBLE_ISSUE_MARKERS = 240;
+
 function layerColor(layer: ImportedPcbLayerId) {
   return LAYER_COLORS[layer] ?? '#94a3b8';
 }
@@ -84,6 +86,16 @@ function severityColor(severity: ImportedPcbValidationIssue['severity']) {
     return '#a57019';
   }
   return '#4e79ac';
+}
+
+function severityRank(severity: ImportedPcbValidationIssue['severity']) {
+  if (severity === 'error') {
+    return 0;
+  }
+  if (severity === 'warning') {
+    return 1;
+  }
+  return 2;
 }
 
 function severityLabel(severity: ImportedPcbValidationIssue['severity'], language: AppLanguage) {
@@ -359,6 +371,30 @@ export function ImportedPcbViewer({
     Math.max(20, bounds.maxY - bounds.minY + padding * 2),
   ].join(' ');
   const selectedIssue = validation?.issues.find(issue => issue.id === selectedIssueId) ?? null;
+  const issueMarkerState = useMemo(() => {
+    const issues = validation?.issues.filter(issue => issue.at) ?? [];
+    const selectedMarker = selectedIssueId
+      ? issues.find(issue => issue.id === selectedIssueId)
+      : null;
+    const sorted = issues.slice().sort((a, b) => {
+      const severityDiff = severityRank(a.severity) - severityRank(b.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return a.id.localeCompare(b.id);
+    });
+    let visible = sorted.slice(0, MAX_VISIBLE_ISSUE_MARKERS);
+
+    if (selectedMarker && !visible.some(issue => issue.id === selectedMarker.id)) {
+      visible = [selectedMarker, ...visible.slice(0, MAX_VISIBLE_ISSUE_MARKERS - 1)];
+    }
+
+    return {
+      visible,
+      total: issues.length,
+      hidden: Math.max(0, issues.length - visible.length),
+    };
+  }, [selectedIssueId, validation]);
 
   const toggleLayer = (layer: string) => {
     setVisibleLayers(current => {
@@ -425,7 +461,7 @@ export function ImportedPcbViewer({
             .filter(pad => isPadVisible(pad, visibleLayers))
             .map(pad => <PadShape key={pad.id} pad={pad} visibleLayers={visibleLayers} />)
         )}
-        {validation?.issues.filter(issue => issue.at).map(issue => (
+        {issueMarkerState.visible.map(issue => (
           <g
             key={issue.id}
             role="button"
@@ -461,6 +497,27 @@ export function ImportedPcbViewer({
           />
         ))}
       </div>
+
+      {validation && validation.issueCount > 0 ? (
+        <div
+          className={`absolute right-3 z-10 max-w-[min(360px,calc(100%-24px))] rounded-[10px] border border-[#e6dfd4] bg-[#fffdfa]/94 px-3 py-2 text-[11px] leading-5 text-[#4e4238] shadow-sm backdrop-blur ${
+            selectedIssue ? 'bottom-[118px] md:bottom-3' : 'bottom-3'
+          }`}
+        >
+          <div className="font-semibold text-[#3f342c]">
+            {language === 'ko'
+              ? `이슈 ${validation.issueCount}개 · 오류 ${validation.errorCount} · 경고 ${validation.warningCount}`
+              : `${validation.issueCount} findings · ${validation.errorCount} errors · ${validation.warningCount} warnings`}
+          </div>
+          {issueMarkerState.hidden > 0 ? (
+            <div className="mt-0.5 text-[10px] text-[#8d8074]">
+              {language === 'ko'
+                ? `마커 ${issueMarkerState.visible.length}개 표시 · ${issueMarkerState.hidden}개는 목록에서 확인`
+                : `${issueMarkerState.visible.length} markers shown · ${issueMarkerState.hidden} in the list`}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {selectedIssue ? (
         <div
