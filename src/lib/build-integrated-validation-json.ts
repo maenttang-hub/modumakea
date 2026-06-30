@@ -1,6 +1,7 @@
 import { getBoardById } from '@/constants/boards';
 import { mergeCodePinUsage } from '@/lib/merge-code-pin-usage';
 import { summarizeComponentNetLabels } from '@/lib/net-label-utils';
+import { isReportableValidationComponent } from '@/lib/validation-reportable-component-policy';
 import type {
   DatasheetReviewBusProtocol,
   DatasheetReviewComponentInput,
@@ -305,7 +306,9 @@ export function buildIntegratedValidationJson(params: {
   const boardPinNames = dedupeStrings(params.boardPinNames ?? board.pinDefinitions.map(pin => pin.id));
   const boardPinNameSet = new Set(boardPinNames);
 
-  const components = params.unifiedModel.components.map(buildComponentInput);
+  const components = params.unifiedModel.components
+    .filter(isReportableValidationComponent)
+    .map(buildComponentInput);
   const nets = params.unifiedModel.nets.map(net => buildNetInput(net, params.boardId, boardPinNameSet));
   const extractionTargets = buildExtractionTargets(components);
   const codePinUsage = mergeCodePinUsage({

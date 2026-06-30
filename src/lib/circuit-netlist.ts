@@ -20,6 +20,7 @@ import type {
   ProjectAdcConfigurations,
   ProjectAuditIssue,
   ProjectMcp3208AdcConfig,
+  ProjectPullupSource,
 } from '@/types';
 
 type CircuitNodeOwnerType = 'board' | 'component';
@@ -200,7 +201,11 @@ class UnionFind {
 }
 
 function isGroundCircuitNet(net: CircuitNet) {
-  return net.knownVoltage === 0 || net.sourceLabels.some(label => label.toUpperCase().includes('GND'));
+  return (
+    net.knownVoltage === 0 ||
+    net.sourceLabels.some(label => label.toUpperCase().includes('GND')) ||
+    net.nodes.some(node => node.electricalType === 'ground')
+  );
 }
 
 function isPowerCircuitNet(net: CircuitNet) {
@@ -1168,6 +1173,78 @@ function getI2cBusPairs(
   return Array.from(pairs.values()).filter(pair => pair.devices.length > 0);
 }
 
+type I2cPullupSourceEvidence = {
+  source: ProjectPullupSource;
+  pinName?: string;
+  componentId?: string;
+  componentName?: string;
+  resistanceOhms?: number;
+  note?: string;
+};
+
+function normalizePullupPinName(pinName: string) {
+  return pinName.trim().toUpperCase();
+}
+
+function isReliableI2cPullupSource(source: ProjectPullupSource) {
+  return source === 'external' || source === 'onboard' || source === 'user-confirmed';
+}
+
+function collectTemplatePullupSources(
+  devices: Array<{ component: PlacedComponent; template: ComponentTemplate }>
+): I2cPullupSourceEvidence[] {
+  const sources: I2cPullupSourceEvidence[] = [];
+
+  for (const { component, template } of devices) {
+    for (const declaration of template.design?.pullups ?? []) {
+      for (const pinName of declaration.pins) {
+        sources.push({
+          source: declaration.source,
+          pinName: normalizePullupPinName(pinName),
+          componentId: component.instanceId,
+          componentName: component.name,
+          resistanceOhms: declaration.resistanceOhms,
+          note: declaration.note,
+        });
+      }
+    }
+  }
+
+  return sources;
+}
+
+function hasReliableDeclaredPullupForLine(sources: I2cPullupSourceEvidence[], line: 'SDA' | 'SCL') {
+  return sources.some(source =>
+    isReliableI2cPullupSource(source.source) &&
+    (source.pinName === line || source.pinName === 'SDA/SCL' || source.pinName === 'I2C')
+  );
+}
+
+function hasGenericOrLowConfidenceI2cDevice(
+  devices: Array<{ component: PlacedComponent; template: ComponentTemplate }>
+) {
+  return devices.some(({ component, template }) =>
+    !template.design?.datasheetStatus ||
+    template.design?.datasheetStatus === 'generic-module' ||
+    template.design?.datasheetStatus === 'needs-vendor-pin' ||
+    component.importedMapping?.confidence === 'low' ||
+    component.importedMapping?.confidence === 'medium'
+  );
+}
+
+function formatPullupSourceFacts(sources: I2cPullupSourceEvidence[]) {
+  if (sources.length === 0) {
+    return ['Declared pull-up sources: none'];
+  }
+
+  return sources.map(source => {
+    const pin = source.pinName ? `${source.pinName} ` : '';
+    const owner = source.componentName ? `on ${source.componentName}` : 'project-level';
+    const resistance = source.resistanceOhms ? `, ${source.resistanceOhms}Ω` : '';
+    return `Declared pull-up source: ${pin}${source.source} ${owner}${resistance}`;
+  });
+}
+
 function buildI2cBusIntegrityIssues(
   nets: CircuitNet[],
   resistors: CircuitResistorElement[],
@@ -1189,40 +1266,66 @@ function buildI2cBusIntegrityIssues(
     const names = Array.from(new Set(pair.deviceNames));
     const sdaNet = netById.get(pair.sdaNetId);
     const sclNet = netById.get(pair.sclNetId);
+    const declaredPullups = collectTemplatePullupSources(pair.devices);
+    const hasDeclaredSdaPullup = hasReliableDeclaredPullupForLine(declaredPullups, 'SDA');
+    const hasDeclaredSclPullup = hasReliableDeclaredPullupForLine(declaredPullups, 'SCL');
+    const genericOrLowConfidenceBus = hasGenericOrLowConfidenceI2cDevice(pair.devices);
 
     if (!sdaNet || !sclNet) {
       continue;
     }
 
-    if (sdaPullups.length === 0 || sclPullups.length === 0) {
+    const missingSdaExternal = sdaPullups.length === 0 && !hasDeclaredSdaPullup;
+    const missingSclExternal = sclPullups.length === 0 && !hasDeclaredSclPullup;
+
+    if (missingSdaExternal || missingSclExternal) {
+      const softBecauseModuleMayIncludePullups = genericOrLowConfidenceBus || declaredPullups.length > 0;
+      const severity = softBecauseModuleMayIncludePullups ? 'warning' : 'error';
+      const confidence = softBecauseModuleMayIncludePullups ? 'needs-review' : 'strong-inference';
+      const missingLines = [
+        missingSdaExternal ? 'SDA' : null,
+        missingSclExternal ? 'SCL' : null,
+      ].filter(Boolean).join(' / ');
+
       issues.push(createDrcIssue({
-        severity: 'error',
+        severity,
         code: 'bus.i2c-impedance-voltage.missing-pullup',
+        policyKey: 'bus.i2c-impedance-voltage.missing-pullup',
         ruleId: 'bus.i2c-impedance-voltage',
-        title: 'I2C 버스 풀업 저항 누락',
-        message: `${names.join(', ')} I2C 버스에서 ${sdaPullups.length === 0 ? 'SDA' : ''}${sdaPullups.length === 0 && sclPullups.length === 0 ? ' / ' : ''}${sclPullups.length === 0 ? 'SCL' : ''} 라인에 외부 풀업 저항이 보이지 않습니다.`,
-        recommendation: 'SDA와 SCL 각각이 전원 레일로 4.7kΩ~10kΩ 수준의 풀업을 가지도록 배치해 주세요.',
+        title: softBecauseModuleMayIncludePullups
+          ? 'I2C 버스 풀업 출처 확인 필요'
+          : 'I2C 버스 풀업 저항 누락',
+        message: `${names.join(', ')} I2C 버스에서 ${missingLines} 라인의 신뢰 가능한 풀업 출처가 확인되지 않았습니다.`,
+        recommendation: softBecauseModuleMayIncludePullups
+          ? '정확한 모듈 SKU에 온보드 풀업이 있는지 확인하고, 없으면 SDA/SCL 각각에 4.7kΩ~10kΩ 수준의 외부 풀업을 추가하세요.'
+          : 'SDA와 SCL 각각이 전원 레일로 4.7kΩ~10kΩ 수준의 외부 풀업을 가지도록 배치해 주세요.',
         visualTargets: {
           componentIds: pair.devices.map(item => item.component.instanceId),
           netIds: [pair.sdaNetId, pair.sclNetId],
         },
-        confidence: 'strong-inference',
+        confidence,
         evidence: {
-          confidence: 'strong-inference',
-          evidenceSummary: `${names.join(', ')}가 연결된 I2C 버스에서 ${sdaPullups.length === 0 ? 'SDA' : ''}${sdaPullups.length === 0 && sclPullups.length === 0 ? '와 ' : ''}${sclPullups.length === 0 ? 'SCL' : ''} 라인의 외부 풀업이 확인되지 않았습니다.`,
+          confidence,
+          evidenceSummary: `${names.join(', ')}가 연결된 I2C 버스에서 ${missingLines} 라인의 외부/온보드 풀업 근거가 부족합니다.`,
           observedFacts: [
             `Detected I2C device set: ${names.join(', ')}`,
             `SDA pull-up count: ${sdaPullups.length}`,
             `SCL pull-up count: ${sclPullups.length}`,
             `Reviewed nets: ${pair.sdaNetId}, ${pair.sclNetId}`,
+            `Generic or low-confidence module on bus: ${genericOrLowConfidenceBus ? 'yes' : 'no'}`,
+            ...formatPullupSourceFacts(declaredPullups),
           ],
           assumptions: [
-            '모듈 내부에 이미 풀업 저항이 포함된 SKU는 현재 netlist만으로 완전히 판별되지 않을 수 있습니다.',
+            softBecauseModuleMayIncludePullups
+              ? 'generic/module 부품은 온보드 풀업이 있을 수 있어 오류로 단정하지 않고 검토 경고로 낮춥니다.'
+              : '정확한 IC/부품 기준으로 netlist에서 외부 풀업 경로가 보이지 않으면 실제 누락 가능성이 높습니다.',
+            'MCU 내부 pull-up은 I2C 버스 풀업으로는 보통 약하므로 외부/온보드 풀업과 동일하게 보지 않습니다.',
           ],
+          pullupSources: declaredPullups,
           checkedBy: ['netlist'],
           affectedComponents: pair.devices.map(item => item.component.instanceId),
           affectedNets: [pair.sdaNetId, pair.sclNetId],
-          howToVerify: '센서/보드 모듈에 온보드 풀업이 있는지 SKU 기준으로 먼저 확인하고, 없으면 SDA/SCL을 전원 레일로 4.7kΩ~10kΩ 수준으로 당겨 주세요.',
+          howToVerify: 'SDA/SCL net을 따라 전원 레일로 가는 4.7kΩ~10kΩ 풀업이 있는지 확인하세요. 모듈 내장 풀업이면 정확한 SKU 문서 또는 사용자 확인 설정으로 onboard/user-confirmed 출처를 남기세요.',
         },
       }));
     }
@@ -1391,6 +1494,43 @@ type PinoutRule = {
   requiredRoles: string[];
   priority?: number;
 };
+
+function is2n2222To18Variant(component: PlacedComponent, hintText: string) {
+  const text = [
+    hintText,
+    component.importedMapping?.value,
+    component.importedMapping?.libraryId,
+    component.importedMapping?.footprint,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return /\b2n222[12]a?\b/.test(text) && /\bto[-_]?18(?:[-_]?3)?\b|\bto[-_]?206aa\b/.test(text);
+}
+
+function resolvePinoutExpectedPinMap(
+  rule: PinoutRule,
+  component: PlacedComponent,
+  hintText: string,
+  matchedTemplateId: string | undefined,
+  templateMappings: Record<string, { pinMap?: Record<string, string>; footprint?: string }>
+) {
+  if (rule.id === 'bjt' && is2n2222To18Variant(component, hintText)) {
+    // Central Semiconductor 2N2221A/2N2222A TO-18 lead code: 1=Emitter, 2=Base, 3=Collector.
+    return { E: '1', B: '2', C: '3' };
+  }
+
+  if (!matchedTemplateId) {
+    return rule.expectedPinMap;
+  }
+
+  if (['driver_array_7', 'driver_array_8', 'gate_driver', 'bridge_driver', 'stepper_driver_carrier', 'audio_amp', 'adjustable_regulator'].includes(rule.id)) {
+    return rule.expectedPinMap;
+  }
+
+  return templateMappings[matchedTemplateId]?.pinMap ?? rule.expectedPinMap;
+}
 
 const PINOUT_RULES: PinoutRule[] = [
   {
@@ -1867,18 +2007,6 @@ function inferPinoutRule(
   template: ComponentTemplate | undefined,
   templateMappings: Record<string, { pinMap?: Record<string, string>; footprint?: string }>
 ) {
-  const resolveExpectedPinMap = (rule: PinoutRule, matchedTemplateId?: string) => {
-    if (!matchedTemplateId) {
-      return rule.expectedPinMap;
-    }
-
-    if (['driver_array_7', 'driver_array_8', 'gate_driver', 'bridge_driver', 'stepper_driver_carrier', 'audio_amp', 'adjustable_regulator'].includes(rule.id)) {
-      return rule.expectedPinMap;
-    }
-
-    return templateMappings[matchedTemplateId]?.pinMap ?? rule.expectedPinMap;
-  };
-
   const effectiveTemplateIds = new Set(
     [component.templateId, component.importedMapping?.templateId]
       .map(value => value?.trim())
@@ -1945,7 +2073,7 @@ function inferPinoutRule(
 
     if (stronglyHintedTemplateRule) {
       const { rule, matchedTemplateId } = stronglyHintedTemplateRule;
-      const expectedPinMap = resolveExpectedPinMap(rule, matchedTemplateId);
+      const expectedPinMap = resolvePinoutExpectedPinMap(rule, component, hintText, matchedTemplateId, templateMappings);
       return {
         ...rule,
         expectedPinMap,
@@ -1954,7 +2082,7 @@ function inferPinoutRule(
     }
 
     for (const { rule, matchedTemplateId } of matchedTemplateRules) {
-      const expectedPinMap = resolveExpectedPinMap(rule, matchedTemplateId);
+      const expectedPinMap = resolvePinoutExpectedPinMap(rule, component, hintText, matchedTemplateId, templateMappings);
       return {
         ...rule,
         expectedPinMap,
@@ -1975,8 +2103,10 @@ function inferPinoutRule(
         continue;
       }
 
+      const expectedPinMap = resolvePinoutExpectedPinMap(rule, component, hintText, undefined, templateMappings);
       return {
         ...rule,
+        expectedPinMap,
         rolesToCheck: rule.requiredRoles,
       };
     }
@@ -2046,6 +2176,136 @@ function buildPinoutMismatchIssues(
           .map(role => actualPinTargetMap.get(role))
           .filter((pinId): pinId is string => Boolean(pinId))
           .map(pinId => `${component.instanceId}:${pinId}`),
+      },
+    }));
+  }
+
+  return issues;
+}
+
+type FootprintSanityFamily =
+  | 'antenna'
+  | 'capacitor'
+  | 'connector'
+  | 'diode'
+  | 'inductor'
+  | 'microphone'
+  | 'resistor'
+  | 'transistor'
+  | 'unknown';
+
+function getFootprintSanityText(component: PlacedComponent, template?: ComponentTemplate) {
+  return [
+    component.importedReference,
+    component.name,
+    component.value,
+    component.templateId,
+    component.importedMapping?.templateId,
+    component.importedMapping?.libraryId,
+    component.importedMapping?.value,
+    template?.id,
+    template?.name,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+function inferSymbolSanityFamily(
+  component: PlacedComponent,
+  template?: ComponentTemplate
+): FootprintSanityFamily {
+  const text = getFootprintSanityText(component, template);
+
+  if (/microphone|\bmic\b/.test(text)) return 'microphone';
+  if (/antenna|rf[-_\s]?antenna|2450at/i.test(text)) return 'antenna';
+  if (/terminal|connector|\bconn\b|pinheader/.test(text)) return 'connector';
+  if (/capacitor|\bcap\b|tpl_capacitor|device:c\b/.test(text)) return 'capacitor';
+  if (/inductor|\bcoil\b|tpl_inductor|device:l\b/.test(text)) return 'inductor';
+  if (/resistor|tpl_resistor|device:r\b/.test(text)) return 'resistor';
+  if (/diode|\bled\b|tpl_diode|device:d\b/.test(text)) return 'diode';
+  if (/transistor|bjt|mosfet|fet|2n\d+|tpl_transistor|tpl_mosfet/.test(text)) return 'transistor';
+
+  return 'unknown';
+}
+
+function inferFootprintSanityFamily(footprint?: string): FootprintSanityFamily {
+  const text = (footprint ?? '').toLowerCase();
+
+  if (!text) return 'unknown';
+  if (/antenna|2450at/.test(text)) return 'antenna';
+  if (/terminal|connector|conn_|pinheader|socket|pin_/.test(text)) return 'connector';
+  if (/capacitor|c_disc|c_rect|^c[_-]|:c[_-]/.test(text)) return 'capacitor';
+  if (/inductor|l_radial|l_axial|choke|ferrite|^l[_-]|:l[_-]/.test(text)) return 'inductor';
+  if (/resistor|r_axial|r_\d|^r[_-]|:r[_-]/.test(text)) return 'resistor';
+  if (/diode|d_do|led|sod|do[-_]\d/.test(text)) return 'diode';
+  if (/transistor|to[-_]?18|to[-_]?92|to[-_]?220|sot[-_]?23|sot[-_]?223/.test(text)) return 'transistor';
+
+  return 'unknown';
+}
+
+const COMPATIBLE_FOOTPRINT_FAMILIES: Record<FootprintSanityFamily, FootprintSanityFamily[]> = {
+  antenna: ['antenna', 'connector', 'unknown'],
+  capacitor: ['capacitor', 'unknown'],
+  connector: ['connector', 'unknown'],
+  diode: ['diode', 'unknown'],
+  inductor: ['inductor', 'unknown'],
+  microphone: ['microphone', 'connector', 'unknown'],
+  resistor: ['resistor', 'unknown'],
+  transistor: ['transistor', 'unknown'],
+  unknown: ['unknown'],
+};
+
+function buildSymbolFootprintFamilyIssues(
+  components: PlacedComponent[],
+  resolveTemplate: (templateId: string) => ComponentTemplate | undefined
+) {
+  const issues: ProjectAuditIssue[] = [];
+
+  for (const component of components) {
+    const template = resolveTemplate(component.templateId);
+    const footprint = component.importedMapping?.footprint?.trim() || template?.pcb?.footprint?.trim();
+    if (!footprint) {
+      continue;
+    }
+
+    const symbolFamily = inferSymbolSanityFamily(component, template);
+    const footprintFamily = inferFootprintSanityFamily(footprint);
+    if (
+      symbolFamily === 'unknown' ||
+      footprintFamily === 'unknown' ||
+      COMPATIBLE_FOOTPRINT_FAMILIES[symbolFamily].includes(footprintFamily)
+    ) {
+      continue;
+    }
+
+    const referenceLabel = component.importedReference ? `${component.importedReference} ` : '';
+    issues.push(createDrcIssue({
+      severity: 'error',
+      code: 'electrical.symbol-footprint-family-mismatch',
+      ruleId: 'electrical.symbol-footprint-family-mismatch',
+      title: '심볼 종류와 풋프린트 종류가 맞지 않습니다',
+      message: `${referenceLabel}${component.name} 심볼은 ${symbolFamily} 계열로 보이지만, 선택된 풋프린트는 ${footprintFamily} 계열(${footprint})로 보입니다.`,
+      componentName: component.name,
+      recommendation: 'KiCad 속성의 Footprint 값을 실제 부품 패키지에 맞게 다시 지정하세요. 심볼을 바꾸는 것이 아니라 Footprint 필드가 잘못 저장된 경우가 많습니다.',
+      visualTargets: {
+        componentIds: [component.instanceId],
+      },
+      evidence: {
+        confidence: 'strong-inference',
+        evidenceSummary: `${referenceLabel}${component.name}의 심볼 계열과 풋프린트 계열이 서로 다릅니다.`,
+        observedFacts: [
+          `Affected component: ${referenceLabel}${component.name}`.trim(),
+          `Symbol family: ${symbolFamily}`,
+          `Footprint family: ${footprintFamily}`,
+          `Footprint: ${footprint}`,
+        ],
+        assumptions: [
+          '이 판정은 KiCad 심볼명, 라이브러리 ID, Footprint 문자열의 family 패턴을 비교한 결과입니다.',
+        ],
+        checkedBy: ['netlist'],
+        affectedComponents: [component.instanceId],
+        howToVerify: 'KiCad에서 해당 부품의 Footprint 속성을 열고 실제 패키지/제조사 부품과 같은 계열인지 확인하세요.',
       },
     }));
   }
@@ -4707,24 +4967,66 @@ export function analyzeCircuitNetlist(
     groupedNodes.set(root, current);
   }
 
+  const suggestedLabelsByNodeKey = new Map<string, string[]>();
+  for (const connection of flatConnections) {
+    const label = connection.suggestedNetName?.trim();
+    if (!label) {
+      continue;
+    }
+
+    for (const endpoint of [connection.source, connection.target]) {
+      const key = getManualEndpointKey(endpoint);
+      const labels = suggestedLabelsByNodeKey.get(key) ?? [];
+      labels.push(label);
+      suggestedLabelsByNodeKey.set(key, labels);
+    }
+  }
+
+  const inferKnownVoltageFromLabel = (label: string): number | null => {
+    const normalized = label.trim().toUpperCase().replace(/\s+/g, '');
+    if (/^(?:GND|GNDPWR|PGND|AGND|DGND|0V)$/.test(normalized)) {
+      return 0;
+    }
+    if (/^\+?3V3$/.test(normalized) || /^\+?3\.3V$/.test(normalized)) {
+      return 3.3;
+    }
+    if (/^\+?5V$/.test(normalized) || normalized === 'VBUS') {
+      return 5;
+    }
+    if (/^\+?12V$/.test(normalized)) {
+      return 12;
+    }
+    return null;
+  };
+
   const nets: CircuitNet[] = Array.from(groupedNodes.values()).map((grouped, index) => {
     const boardNodes = grouped.filter(node => node.ownerType === 'board');
-    const knownVoltages = boardNodes
+    const labelNames = Array.from(new Set(grouped.flatMap(node => suggestedLabelsByNodeKey.get(node.key) ?? [])));
+    const knownVoltages = [
+      ...boardNodes
       .map(node => getBoardSignalLimits(boardId, node.pinId))
       .filter((spec): spec is NonNullable<typeof spec> => Boolean(spec))
       .map(spec => spec.isGround ? 0 : spec.isPower ? spec.nominal : null)
-      .filter((voltage): voltage is number => typeof voltage === 'number');
+      .filter((voltage): voltage is number => typeof voltage === 'number'),
+      ...labelNames
+        .map(inferKnownVoltageFromLabel)
+        .filter((voltage): voltage is number => typeof voltage === 'number'),
+    ];
 
     const uniqueVoltages = Array.from(new Set(knownVoltages));
+    const sourceLabels = Array.from(new Set([
+      ...boardNodes
+        .filter(node => node.electricalType === 'power' || node.electricalType === 'ground')
+        .map(node => node.pinId),
+      ...labelNames,
+    ]));
 
     return {
       id: `NET_${index + 1}`,
       nodes: grouped.sort((a, b) => a.label.localeCompare(b.label)),
       knownVoltage: uniqueVoltages.length === 1 ? uniqueVoltages[0] : null,
       solvedVoltage: uniqueVoltages.length === 1 ? uniqueVoltages[0] : null,
-      sourceLabels: boardNodes
-        .filter(node => node.electricalType === 'power' || node.electricalType === 'ground')
-        .map(node => node.pinId),
+      sourceLabels,
     };
   });
 
@@ -4925,6 +5227,7 @@ export function analyzeCircuitNetlist(
     ...buildResistorPowerIssues(nets, resistors),
     ...buildCapacitorVoltageIssues(nets, capacitors),
     ...buildI2cBusIntegrityIssues(nets, resistors, flatComponents, boardId, resolveTemplate, netIdByNodeKey),
+    ...buildSymbolFootprintFamilyIssues(flatComponents, resolveTemplate),
     ...buildPinoutMismatchIssues(flatComponents, resolveTemplate),
     ...buildRcFilterIssues(nets, resistors, capacitors),
     ...buildAdcSourceImpedanceIssues(nets, resistors, flatComponents, boardId, resolveTemplate, netIdByNodeKey, options.adcConfigurations),

@@ -122,13 +122,35 @@ function snapBucketIndex(value: number, toleranceMm = V3_POINT_SNAP_TOLERANCE_MM
   return Math.floor(value / toleranceMm);
 }
 
-function inferNetKind(labels: string[], members: UnifiedCircuitNet['members']): UnifiedCircuitNetKind {
-  const normalizedLabels = labels.map(label => label.trim().toUpperCase());
+function normalizeSupplyLabel(label: string) {
+  return label.trim().toUpperCase().replace(/^\+/, '');
+}
 
-  if (normalizedLabels.some(label => label === 'GND' || label.includes('GNDPWR'))) {
+function isGroundLikeName(label: string) {
+  const normalized = normalizeSupplyLabel(label);
+  return ['GND', 'AGND', 'DGND', 'PGND', 'GNDPWR', 'GNDREF', 'VSS', 'VSSA'].includes(normalized) || normalized.includes('GNDPWR');
+}
+
+function isPowerLikeName(label: string) {
+  const normalized = normalizeSupplyLabel(label);
+  return (
+    ['VCC', 'VDD', 'VDDA', 'AVCC', 'AVDD', 'VIN', 'VBUS', 'VBAT', 'VUSB', '3V3', '3.3V', '5V', '12V', '24V'].includes(normalized) ||
+    /^[+-]?\d+(?:\.\d+)?V$/.test(label.trim().toUpperCase())
+  );
+}
+
+function inferNetKind(labels: string[], members: UnifiedCircuitNet['members']): UnifiedCircuitNetKind {
+  const normalizedLabels = labels.map(normalizeSupplyLabel);
+  const hasGroundLabel = normalizedLabels.some(isGroundLikeName);
+  const hasPowerLabel = normalizedLabels.some(isPowerLikeName);
+
+  if (hasGroundLabel && hasPowerLabel) {
+    return 'unknown';
+  }
+  if (hasGroundLabel) {
     return 'ground';
   }
-  if (normalizedLabels.some(label => ['VCC', 'VDD', 'VIN', '3V3', '3.3V', '5V', 'VBAT', 'VUSB'].includes(label))) {
+  if (hasPowerLabel) {
     return 'power';
   }
   if (normalizedLabels.some(label => label.includes('SDA') || label.includes('SCL') || label.includes('MISO') || label.includes('MOSI') || label.includes('SCK'))) {
@@ -141,11 +163,16 @@ function inferNetKind(labels: string[], members: UnifiedCircuitNet['members']): 
     return 'analog';
   }
 
-  const pinNames = members.map(member => member.pinName.toUpperCase());
-  if (pinNames.some(pin => ['VCC', 'VDD', 'VIN', 'AVCC', '3V3', '3.3V', '5V'].includes(pin))) {
+  const pinNames = members.map(member => normalizeSupplyLabel(member.pinName));
+  const hasPowerPin = pinNames.some(isPowerLikeName);
+  const hasGroundPin = pinNames.some(isGroundLikeName);
+  if (hasPowerPin && hasGroundPin) {
+    return 'unknown';
+  }
+  if (hasPowerPin) {
     return 'power';
   }
-  if (pinNames.some(pin => ['GND', 'VSS', 'GNDPWR'].includes(pin))) {
+  if (hasGroundPin) {
     return 'ground';
   }
 
@@ -311,4 +338,3 @@ export function resolveSchematicNets(params: {
     rootToNetId,
   };
 }
-

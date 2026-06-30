@@ -166,19 +166,24 @@ function extractSheets(root: SExprNode[]): SchematicSheet[] {
 }
 
 function buildSymbolInstances(root: SExprNode[], symbols: Map<string, V3LibrarySymbol>): SchematicSymbol[] {
-  const { resolved } = collectUnresolvedSymbols(extractSymbolInstances(root), symbols);
+  const instances = extractSymbolInstances(root);
+  const { resolved, unresolved } = collectUnresolvedSymbols(instances, symbols);
+  const preservedIds = new Set([
+    ...resolved.map(instance => instance.instanceId),
+    ...unresolved.map(instance => instance.instanceId),
+  ]);
 
-  return resolved.flatMap(instance => {
-    const symbol = symbols.get(instance.libId);
-    if (!symbol) {
+  return instances.flatMap(instance => {
+    if (!preservedIds.has(instance.instanceId)) {
       return [];
     }
+    const symbol = symbols.get(instance.libId);
 
     const schematicSymbol: SchematicSymbol = {
       uuid: instance.instanceId,
       libId: instance.libId,
       reference: instance.reference,
-      value: instance.value ?? symbol.symbolName,
+      value: instance.value ?? symbol?.symbolName ?? (instance.libId.includes(':') ? instance.libId.split(':').at(-1) ?? instance.libId : instance.libId),
       footprint: instance.footprint,
       position: pointMmToMicron({ x: instance.at.x, y: instance.at.y }),
       rotation: instance.at.rotation,
@@ -189,7 +194,7 @@ function buildSymbolInstances(root: SExprNode[], symbols: Map<string, V3LibraryS
 
     return [{
       ...schematicSymbol,
-      pins: symbol.pins.map(pin => buildPin(pin, schematicSymbol)),
+      pins: symbol?.pins.map(pin => buildPin(pin, schematicSymbol)) ?? [],
     }];
   });
 }

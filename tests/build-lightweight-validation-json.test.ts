@@ -157,6 +157,64 @@ test('buildImportedSchematicIntegratedValidationJson preserves a reusable v3 val
   assert.equal(integrated?.nets.length >= 1, true);
 });
 
+test('buildImportedSchematicIntegratedValidationJson keeps fallback imported components that v3 marks unresolved', () => {
+  const schematic = `
+(kicad_sch
+  (version 20211123)
+  (generator "eeschema")
+  (title_block (title "Fallback integrated snapshot"))
+  (lib_symbols
+    (symbol "Device:R"
+      (property "Reference" "R" (id 0) (at 0 0 0))
+      (property "Value" "R" (id 1) (at 0 -2.54 0))
+      (symbol "R_0_1"
+        (pin passive line (at -2.54 0 0) (length 2.54)
+          (name "~" (effects (font (size 1.27 1.27))))
+          (number "1" (effects (font (size 1.27 1.27)))))
+        (pin passive line (at 2.54 0 180) (length 2.54)
+          (name "~" (effects (font (size 1.27 1.27))))
+          (number "2" (effects (font (size 1.27 1.27)))))
+      )
+    )
+  )
+  (symbol
+    (lib_id "Device:R")
+    (at 30 30 0)
+    (uuid "resistor-1")
+    (property "Reference" "R1" (id 0) (at 30 27 0))
+    (property "Value" "10k" (id 1) (at 30 33 0))
+  )
+  (symbol
+    (lib_id "Vendor:MissingSensor")
+    (at 50 30 0)
+    (uuid "missing-1")
+    (property "Reference" "U1" (id 0) (at 50 27 0))
+    (property "Value" "MissingSensor123" (id 1) (at 50 33 0))
+    (property "Footprint" "Package_QFN:QFN-16" (id 2) (at 50 35 0))
+  )
+  (wire (pts (xy 32.54 30) (xy 47.46 30)))
+  (global_label "SDA" (shape input) (at 40 30 0))
+  (sheet_instances (path "/" (page "1")))
+)`;
+
+  const imported = importKiCadSchematic(schematic, { projectName: 'Fallback integrated snapshot' });
+  const integrated = buildImportedSchematicIntegratedValidationJson({
+    document: imported.document,
+    importedSource: schematic,
+    importSummary: imported.summary,
+  });
+
+  assert.ok(integrated);
+  assert.equal(
+    integrated?.components.some(component => component.reference === 'U1' && component.value === 'MissingSensor123'),
+    true
+  );
+  assert.equal(
+    integrated?.extractionPlan.targets.some(target => target.reference === 'U1'),
+    true
+  );
+});
+
 test('resolveValidationAiInput uses the legacy integrated snapshot only when imported source is missing', () => {
   const schematic = buildKiCadSchematic({
     projectName: 'Persisted AI input',

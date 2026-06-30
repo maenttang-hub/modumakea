@@ -3047,6 +3047,120 @@ test('circuit netlist validates I2C pull-up impedance and voltage domain', () =>
   );
 });
 
+test('circuit netlist separates exact missing I2C pull-ups from module pull-up uncertainty', () => {
+  const exactI2cTemplate = makeTemplate({
+    id: 'tpl_exact_i2c_ic',
+    name: 'Exact I2C IC',
+    compatibleVoltage: '3.3V',
+    category: 'IC',
+    pins: [
+      { name: 'VCC', allowedTypes: ['POWER'] },
+      { name: 'GND', allowedTypes: ['GND'] },
+      { name: 'SDA', allowedTypes: ['ANALOG'] },
+      { name: 'SCL', allowedTypes: ['ANALOG'] },
+    ],
+    design: {
+      datasheetStatus: 'official-complete',
+      preferredInterface: 'I2C',
+    },
+  });
+  const genericModuleTemplate = makeTemplate({
+    id: 'tpl_generic_i2c_module',
+    name: 'Generic I2C Module',
+    compatibleVoltage: '3.3V',
+    category: 'SENSOR',
+    pins: [
+      { name: 'VCC', allowedTypes: ['POWER'] },
+      { name: 'GND', allowedTypes: ['GND'] },
+      { name: 'SDA', allowedTypes: ['ANALOG'] },
+      { name: 'SCL', allowedTypes: ['ANALOG'] },
+    ],
+    design: {
+      datasheetStatus: 'generic-module',
+      preferredInterface: 'I2C',
+    },
+  });
+
+  const exactResult = analyzeCircuitNetlist(
+    [
+      makeComponent({
+        instanceId: 'exact-i2c-1',
+        templateId: 'tpl_exact_i2c_ic',
+        name: 'Exact I2C IC',
+        assignedPins: { VCC: '3.3V', GND: 'GND', SDA: 'A4', SCL: 'A5' },
+      }),
+    ],
+    'uno',
+    templateId => ({ tpl_exact_i2c_ic: exactI2cTemplate })[templateId],
+    []
+  );
+  const exactIssue = exactResult.issues.find(issue => issue.code === 'bus.i2c-impedance-voltage.missing-pullup');
+
+  assert.equal(exactIssue?.severity, 'error');
+  assert.equal(exactIssue?.confidence, 'strong-inference');
+
+  const genericResult = analyzeCircuitNetlist(
+    [
+      makeComponent({
+        instanceId: 'generic-i2c-1',
+        templateId: 'tpl_generic_i2c_module',
+        name: 'Generic I2C Module',
+        assignedPins: { VCC: '3.3V', GND: 'GND', SDA: 'A4', SCL: 'A5' },
+      }),
+    ],
+    'uno',
+    templateId => ({ tpl_generic_i2c_module: genericModuleTemplate })[templateId],
+    []
+  );
+  const genericIssue = genericResult.issues.find(issue => issue.code === 'bus.i2c-impedance-voltage.missing-pullup');
+
+  assert.equal(genericIssue?.severity, 'warning');
+  assert.equal(genericIssue?.confidence, 'needs-review');
+  assert.ok(genericIssue?.evidence?.assumptions.some(line => line.includes('generic/module')));
+});
+
+test('circuit netlist accepts declared onboard I2C pull-ups when no external resistor is visible', () => {
+  const moduleTemplate = makeTemplate({
+    id: 'tpl_onboard_i2c_pullup_module',
+    name: 'I2C Module With Onboard Pullups',
+    compatibleVoltage: '3.3V',
+    category: 'SENSOR',
+    pins: [
+      { name: 'VCC', allowedTypes: ['POWER'] },
+      { name: 'GND', allowedTypes: ['GND'] },
+      { name: 'SDA', allowedTypes: ['ANALOG'] },
+      { name: 'SCL', allowedTypes: ['ANALOG'] },
+    ],
+    design: {
+      datasheetStatus: 'official-partial',
+      preferredInterface: 'I2C',
+      pullups: [
+        { pins: ['SDA'], source: 'onboard', resistanceOhms: 4_700 },
+        { pins: ['SCL'], source: 'onboard', resistanceOhms: 4_700 },
+      ],
+    },
+  });
+
+  const result = analyzeCircuitNetlist(
+    [
+      makeComponent({
+        instanceId: 'module-i2c-1',
+        templateId: 'tpl_onboard_i2c_pullup_module',
+        name: 'I2C Module',
+        assignedPins: { VCC: '3.3V', GND: 'GND', SDA: 'A4', SCL: 'A5' },
+      }),
+    ],
+    'uno',
+    templateId => ({ tpl_onboard_i2c_pullup_module: moduleTemplate })[templateId],
+    []
+  );
+
+  assert.equal(
+    result.issues.some(issue => issue.code === 'bus.i2c-impedance-voltage.missing-pullup'),
+    false
+  );
+});
+
 test('circuit netlist flags imported pinout mismatch against canonical pin mapping', () => {
   const diode = makeComponent({
     instanceId: 'd-imported',
@@ -3074,6 +3188,79 @@ test('circuit netlist flags imported pinout mismatch against canonical pin mappi
   assert.ok(issue, 'expected imported pinout mismatch issue');
   assert.match(issue?.message ?? '', /A: 심볼 1번 \/ 기대 2번/);
   assert.match(issue?.message ?? '', /K: 심볼 2번 \/ 기대 1번/);
+});
+
+test('circuit netlist accepts Central 2N2222A TO-18 lead code', () => {
+  const transistor = makeComponent({
+    instanceId: 'q-2n2222a',
+    templateId: 'tpl_transistor_npn',
+    name: '2N2222A',
+    value: '2N2222A',
+  });
+
+  transistor.importedMapping = {
+    confidence: 'medium',
+    source: 'refdes',
+    footprint: 'digikey-footprints:TO-18-3',
+    libraryId: 'dk_Transistors-Bipolar-BJT-Single:2N2222A',
+  };
+  transistor.importedGeometry = {
+    bounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
+    primitives: [],
+    pinAnchors: [
+      { pinId: 'E', label: 'E', number: '1', at: { x: 0, y: 0 }, angle: 0, lengthMm: 1.27 },
+      { pinId: 'B', label: 'B', number: '2', at: { x: 1, y: 0 }, angle: 0, lengthMm: 1.27 },
+      { pinId: 'C', label: 'C', number: '3', at: { x: 2, y: 0 }, angle: 0, lengthMm: 1.27 },
+    ],
+  };
+
+  const result = analyzeCircuitNetlist([transistor], 'kicad_generic', resolveTemplate, []);
+
+  assert.equal(
+    result.issues.some(issue => issue.ruleId === 'electrical.pinout-mismatch'),
+    false
+  );
+});
+
+test('circuit netlist flags clear symbol and footprint family mismatches', () => {
+  const terminal = makeComponent({
+    instanceId: 'j-terminal',
+    templateId: 'kicad_dk_terminal_blocks_wire_to_board_osttc020162',
+    name: 'OSTTC020162',
+  });
+  terminal.importedReference = 'J1';
+  terminal.importedMapping = {
+    confidence: 'low',
+    source: 'custom-fallback',
+    footprint: 'Capacitor_THT:C_Disc_D12.0mm_W4.4mm_P7.75mm',
+    libraryId: 'dk_Terminal-Blocks-Wire-to-Board:OSTTC020162',
+  };
+
+  const microphone = makeComponent({
+    instanceId: 'mk-mic',
+    templateId: 'kicad_microphone',
+    name: 'Microphone',
+  });
+  microphone.importedReference = 'MK1';
+  microphone.importedMapping = {
+    confidence: 'low',
+    source: 'custom-fallback',
+    footprint: 'Inductor_THT:L_Radial_D10.5mm_P5.00mm_Abacron_AISR-01',
+    libraryId: 'Device:Microphone',
+  };
+
+  const result = analyzeCircuitNetlist(
+    [terminal, microphone],
+    'kicad_generic',
+    resolveTemplate,
+    []
+  );
+  const issues = result.issues.filter(issue => issue.ruleId === 'electrical.symbol-footprint-family-mismatch');
+
+  assert.equal(issues.length, 2);
+  assert.ok(issues.some(issue => issue.componentName === 'OSTTC020162'));
+  assert.ok(issues.some(issue => issue.componentName === 'Microphone'));
+  assert.ok(issues.every(issue => (issue.evidence?.observedFacts.length ?? 0) >= 4));
 });
 
 test('circuit netlist flags imported MOSFET pinout mismatch from native pin roles', () => {

@@ -40,6 +40,63 @@ function isComponentConnected(component: PlacedComponent, manualConnections: Man
   );
 }
 
+function isImportedConnectorLike(component: PlacedComponent, template: ComponentTemplate) {
+  const libraryId = component.importedMapping?.libraryId?.toLowerCase() ?? '';
+  return template.category === 'CONNECTOR' || libraryId.startsWith('connector:');
+}
+
+function isImportedPowerHelper(component: PlacedComponent) {
+  const libraryId = component.importedMapping?.libraryId?.toLowerCase() ?? '';
+  const reference = (component.importedReference ?? '').toUpperCase();
+  return libraryId.startsWith('power:') || reference.startsWith('#PWR') || reference.startsWith('#FLG');
+}
+
+function distanceSquared(
+  left: { x: number; y: number },
+  right: { x: number; y: number }
+) {
+  const dx = left.x - right.x;
+  const dy = left.y - right.y;
+  return dx * dx + dy * dy;
+}
+
+function isComponentPinExplicitlyNoConnected(
+  component: PlacedComponent,
+  pinName: string,
+  scene?: ImportedSchematicScene | null
+) {
+  const noConnects = scene?.noConnects ?? [];
+  if (noConnects.length === 0) {
+    return false;
+  }
+
+  const symbol = (scene?.symbols ?? []).find(item => item.instanceId === component.instanceId);
+  if (!symbol) {
+    return false;
+  }
+
+  const pinAnchors = symbol.pinAnchors.filter(anchor => anchor.pinId === pinName);
+  if (pinAnchors.length === 0) {
+    return false;
+  }
+
+  const tolerancePx = 5;
+  return pinAnchors.some(anchor =>
+    noConnects.some(noConnect => distanceSquared(anchor.at, noConnect) <= tolerancePx * tolerancePx)
+  );
+}
+
+function uniquePinsByName<T extends { name: string }>(pins: T[]) {
+  const seen = new Set<string>();
+  return pins.filter(pin => {
+    if (seen.has(pin.name)) {
+      return false;
+    }
+    seen.add(pin.name);
+    return true;
+  });
+}
+
 export function buildImportedSchematicAuditIssues(params: {
   components: PlacedComponent[];
   resolveTemplate: (templateId: string) => ComponentTemplate | undefined;
@@ -49,37 +106,49 @@ export function buildImportedSchematicAuditIssues(params: {
   const issues: ProjectAuditIssue[] = [];
 
   for (const component of params.components) {
+    if (isImportedPowerHelper(component)) {
+      continue;
+    }
+
     const template = params.resolveTemplate(component.templateId);
     if (!template) {
       continue;
     }
 
-    const powerPins = template.requiredPins.filter(pin => pin.allowedTypes.includes('POWER'));
-    const groundPins = template.requiredPins.filter(pin => pin.allowedTypes.includes('GND'));
+    const powerPins = uniquePinsByName(template.requiredPins.filter(pin => pin.allowedTypes.includes('POWER')));
+    const groundPins = uniquePinsByName(template.requiredPins.filter(pin => pin.allowedTypes.includes('GND')));
+    const connectorLike = isImportedConnectorLike(component, template);
 
     for (const powerPin of powerPins) {
       if (isComponentPinConnected(component, powerPin.name, params.manualConnections)) {
         continue;
       }
+      if (isComponentPinExplicitlyNoConnected(component, powerPin.name, params.importedSchematicScene)) {
+        continue;
+      }
 
       issues.push(createDrcIssue({
-        severity: 'error',
+        severity: connectorLike ? 'warning' : 'error',
         code: 'imported.power-pin-unconnected',
         title: '전원 핀 미연결',
         message: `${component.name}의 ${powerPin.name} 전원 핀이 아직 어떤 넷에도 연결되지 않았습니다.`,
         componentName: component.name,
         ruleId: 'imported.power-pin-unconnected',
-        recommendation: '전원 심볼 또는 실제 전원 넷에 이 핀을 먼저 연결해 주세요.',
+        recommendation: connectorLike
+          ? '헤더/커넥터의 선택 전원 핀인지, 실제로 연결해야 하는 전원 입력인지 원본 의도를 확인하세요.'
+          : '전원 심볼 또는 실제 전원 넷에 이 핀을 먼저 연결해 주세요.',
         visualTargets: {
           componentIds: [component.instanceId],
           pinIds: [powerPin.name],
         },
+        confidence: connectorLike ? 'needs-review' : 'strong-inference',
         evidence: {
-          confidence: 'strong-inference',
+          confidence: connectorLike ? 'needs-review' : 'strong-inference',
           evidenceSummary: `${component.name}의 ${powerPin.name} 전원 핀이 imported schematic 기준 연결 복원 결과에서도 떠 있는 상태입니다.`,
           observedFacts: [
             `Affected component: ${component.name}`,
             `Affected power pin: ${powerPin.name}`,
+            `Connector/header-like component: ${connectorLike ? 'yes' : 'no'}`,
             `Manual connection count: ${params.manualConnections.length}`,
           ],
           assumptions: [
@@ -97,25 +166,32 @@ export function buildImportedSchematicAuditIssues(params: {
       if (isComponentPinConnected(component, groundPin.name, params.manualConnections)) {
         continue;
       }
+      if (isComponentPinExplicitlyNoConnected(component, groundPin.name, params.importedSchematicScene)) {
+        continue;
+      }
 
       issues.push(createDrcIssue({
-        severity: 'error',
+        severity: connectorLike ? 'warning' : 'error',
         code: 'imported.ground-pin-unconnected',
         title: 'GND 핀 미연결',
         message: `${component.name}의 ${groundPin.name} 그라운드 핀이 아직 연결되지 않았습니다.`,
         componentName: component.name,
         ruleId: 'imported.ground-pin-unconnected',
-        recommendation: 'GND 심볼 또는 공통 접지 넷에 이 핀을 연결해 기준점을 먼저 잡아 주세요.',
+        recommendation: connectorLike
+          ? '헤더/커넥터의 선택 GND 핀인지, 실제 기준 접지로 연결해야 하는 핀인지 원본 의도를 확인하세요.'
+          : 'GND 심볼 또는 공통 접지 넷에 이 핀을 연결해 기준점을 먼저 잡아 주세요.',
         visualTargets: {
           componentIds: [component.instanceId],
           pinIds: [groundPin.name],
         },
+        confidence: connectorLike ? 'needs-review' : 'strong-inference',
         evidence: {
-          confidence: 'strong-inference',
+          confidence: connectorLike ? 'needs-review' : 'strong-inference',
           evidenceSummary: `${component.name}의 ${groundPin.name} GND 핀이 imported schematic 기준 연결 복원 결과에서도 떠 있는 상태입니다.`,
           observedFacts: [
             `Affected component: ${component.name}`,
             `Affected ground pin: ${groundPin.name}`,
+            `Connector/header-like component: ${connectorLike ? 'yes' : 'no'}`,
             `Manual connection count: ${params.manualConnections.length}`,
           ],
           assumptions: [

@@ -92,6 +92,39 @@ const PINOUT_RULES: PinoutRule[] = [
   },
 ];
 
+function is2n2222To18Variant(component: PlacedComponent, footprint: string) {
+  const text = [
+    component.name,
+    component.value,
+    component.importedMapping?.value,
+    component.importedMapping?.libraryId,
+    component.importedMapping?.footprint,
+    footprint,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return /\b2n222[12]a?\b/.test(text) && /\bto[-_]?18(?:[-_]?3)?\b|\bto[-_]?206aa\b/.test(text);
+}
+
+function resolveExpectedPinMap(
+  rule: PinoutRule | null,
+  component: PlacedComponent,
+  footprint: string
+) {
+  if (!rule) {
+    return {};
+  }
+
+  if (rule.title === 'BJT' && is2n2222To18Variant(component, footprint)) {
+    // Central Semiconductor 2N2221A/2N2222A TO-18 lead code: 1=Emitter, 2=Base, 3=Collector.
+    return { E: '1', B: '2', C: '3' };
+  }
+
+  return rule.expectedPinMap;
+}
+
 function normalizeRole(value: string) {
   const normalized = value
     .trim()
@@ -350,7 +383,7 @@ export function buildFootprintMatcherModel(
 
   const rule = inferRule(component, template);
   const pads = buildPads(footprint || 'Unknown', pins.length);
-  const expectedPinMap = rule?.expectedPinMap ?? {};
+  const expectedPinMap = resolveExpectedPinMap(rule, component, footprint);
   const { cacheKey, cacheEntry } = resolveFootprintPinPadOverrideCacheEntry(
     component,
     template,

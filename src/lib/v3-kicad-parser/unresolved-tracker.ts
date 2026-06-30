@@ -78,6 +78,7 @@ export function collectUnresolvedSymbols(
         value: instance.value,
         reason: 'symbol_without_pins',
       });
+      resolved.push(instance);
       continue;
     }
 

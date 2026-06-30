@@ -78,12 +78,11 @@ test('auditProjectDesign resolves top-level audit issues from code + params with
       issue.recommendation?.includes('자동 배선')
     )
   );
-  assert.ok(
-    report.issues.some(issue =>
-      issue.code === 'audit.generic-sku-unfixed' &&
-      issue.message.includes('generic-module')
-    )
-  );
+  assert.equal(report.issues.some(issue => issue.code === 'audit.generic-sku-unfixed'), false);
+  const genericSummary = report.issues.find(issue => issue.code === 'audit.generic-sku-summary');
+  assert.ok(genericSummary);
+  assert.equal(genericSummary.severity, 'info');
+  assert.match(genericSummary.message, /Generic Sensor 1|generic/i);
   assert.ok(
     report.issues.some(issue =>
       issue.code === 'audit.partial-datasheet' &&
@@ -131,6 +130,124 @@ test('imported schematic components do not emit stale unrouted warnings from edi
   assert.equal(readiness.manufacturingReasons.some(reason => reason.includes('미배선 부품')), false);
 });
 
+test('auditProjectDesign does not treat shared power rails and passive parts as output collisions', () => {
+  const capacitorTemplate = makeTemplate({
+    id: 'tpl_test_capacitor',
+    name: 'Test Capacitor',
+    category: 'PASSIVE',
+    pins: [
+      { name: '1', allowedTypes: ['DIGITAL', 'ANALOG'] },
+      { name: '2', allowedTypes: ['DIGITAL', 'ANALOG'] },
+    ],
+  });
+  const resistorTemplate = makeTemplate({
+    id: 'tpl_test_resistor',
+    name: 'Test Resistor',
+    category: 'PASSIVE',
+    pins: [
+      { name: '1', allowedTypes: ['DIGITAL', 'ANALOG'] },
+      { name: '2', allowedTypes: ['DIGITAL', 'ANALOG'] },
+    ],
+  });
+  const rtcTemplate = makeTemplate({
+    id: 'tpl_test_rtc',
+    name: 'Test RTC',
+    category: 'IC',
+    pins: [
+      { name: 'VCC', allowedTypes: ['POWER'] },
+      { name: 'GND', allowedTypes: ['GND'] },
+      { name: 'INTA', allowedTypes: ['DIGITAL'] },
+    ],
+  });
+  const eepromTemplate = makeTemplate({
+    id: 'tpl_test_eeprom',
+    name: 'Test EEPROM',
+    category: 'IC',
+    pins: [
+      { name: 'VCC', allowedTypes: ['POWER'] },
+      { name: 'GND', allowedTypes: ['GND'] },
+      { name: 'A2', allowedTypes: ['DIGITAL'] },
+    ],
+  });
+
+  const report = auditProjectDesign(
+    [
+      makeComponent({
+        instanceId: 'c1',
+        templateId: capacitorTemplate.id,
+        name: 'C1 10uF',
+        assignedPins: { '1': 'VCC', '2': 'GND' },
+      }),
+      makeComponent({
+        instanceId: 'r1',
+        templateId: resistorTemplate.id,
+        name: 'R1 10K',
+        assignedPins: { '1': 'VCC', '2': 'NET_INT_PULLUP' },
+      }),
+      makeComponent({
+        instanceId: 'u1',
+        templateId: rtcTemplate.id,
+        name: 'DS1337_PDv2',
+        assignedPins: { VCC: 'VCC', GND: 'GND', INTA: 'VCC' },
+      }),
+      makeComponent({
+        instanceId: 'u2',
+        templateId: eepromTemplate.id,
+        name: '24LC1025',
+        assignedPins: { VCC: 'VCC', GND: 'GND', A2: 'VCC' },
+      }),
+    ],
+    'kicad_generic',
+    templateId => ({
+      [capacitorTemplate.id]: capacitorTemplate,
+      [resistorTemplate.id]: resistorTemplate,
+      [rtcTemplate.id]: rtcTemplate,
+      [eepromTemplate.id]: eepromTemplate,
+    })[templateId],
+  );
+
+  assert.equal(report.issues.some(issue => issue.ruleId === 'io.output-collision'), false);
+});
+
+test('auditProjectDesign still reports output collisions on non-power signal nets', () => {
+  const outputTemplate = makeTemplate({
+    id: 'tpl_test_output_driver',
+    name: 'Test Output Driver',
+    category: 'IC',
+    pins: [
+      { name: 'OUT', allowedTypes: ['DIGITAL'] },
+      { name: 'VCC', allowedTypes: ['POWER'] },
+      { name: 'GND', allowedTypes: ['GND'] },
+    ],
+  });
+
+  const report = auditProjectDesign(
+    [
+      makeComponent({
+        instanceId: 'u1',
+        templateId: outputTemplate.id,
+        name: 'Driver A',
+        assignedPins: { OUT: 'NET_SHARED_OUT', VCC: '5V', GND: 'GND' },
+      }),
+      makeComponent({
+        instanceId: 'u2',
+        templateId: outputTemplate.id,
+        name: 'Driver B',
+        assignedPins: { OUT: 'NET_SHARED_OUT', VCC: '5V', GND: 'GND' },
+      }),
+    ],
+    'kicad_generic',
+    templateId => (templateId === outputTemplate.id ? outputTemplate : undefined),
+  );
+
+  assert.ok(
+    report.issues.some(issue =>
+      issue.ruleId === 'io.output-collision' &&
+      issue.message.includes('NET_SHARED_OUT')
+    )
+  );
+});
+
 test('auditProjectDesign emits structured I2C planning and pull-up issues from datasheet rules', () => {
   const oledTemplate = getStaticTemplateById('tpl_oled');
   assert.ok(oledTemplate);
@@ -173,7 +290,45 @@ test('auditProjectDesign emits structured I2C planning and pull-up issues from d
   const i2cPullupIssue = report.issues.find(issue => issue.code === 'bus.i2c-pullup-missing');
   assert.equal(i2cPullupIssue?.confidence, 'needs-review');
   assert.ok((i2cPullupIssue?.evidence?.observedFacts.length ?? 0) >= 3);
+  assert.ok(i2cPullupIssue?.evidence?.observedFacts.some(fact => fact.includes('Reliable SDA pull-up source: no')));
   assert.ok(((i2cPullupIssue?.visualTargets?.componentIds)?.length ?? 0) >= 2);
+});
+
+test('auditProjectDesign accepts confirmed onboard I2C pull-ups without creating generic pull-up noise', () => {
+  const moduleTemplate = makeTemplate({
+    id: 'tpl_oled_with_pullups',
+    name: 'OLED module with onboard pullups',
+    category: 'DISPLAY',
+    pins: [
+      { name: 'VCC', allowedTypes: ['POWER'] },
+      { name: 'GND', allowedTypes: ['GND'] },
+      { name: 'SDA', allowedTypes: ['ANALOG'] },
+      { name: 'SCL', allowedTypes: ['ANALOG'] },
+    ],
+    design: {
+      datasheetStatus: 'official-partial',
+      preferredInterface: 'I2C',
+      pullups: [
+        { pins: ['SDA'], source: 'onboard', resistanceOhms: 4_700 },
+        { pins: ['SCL'], source: 'onboard', resistanceOhms: 4_700 },
+      ],
+    },
+  });
+
+  const report = auditProjectDesign(
+    [
+      makeComponent({
+        instanceId: 'oled-module-1',
+        templateId: 'tpl_oled_with_pullups',
+        name: 'OLED Module',
+        assignedPins: { SDA: 'A4', SCL: 'A5', VCC: '5V', GND: 'GND' },
+      }),
+    ],
+    'uno',
+    templateId => ({ tpl_oled_with_pullups: moduleTemplate })[templateId],
+  );
+
+  assert.equal(report.issues.some(issue => issue.ruleId === 'bus.i2c-pullup-missing'), false);
 });
 
 test('auditProjectDesign computes power budget usage and thermal junction risk for VIN-powered boards', () => {

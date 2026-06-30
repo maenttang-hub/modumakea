@@ -102,7 +102,9 @@ test('v3 KiCad parser keeps unresolved symbols explicit instead of silently drop
 
   const model = parseKiCadSchematicToUnifiedCircuitModel(schematic, { projectName: 'Missing Symbols' });
 
-  assert.equal(model.components.length, 0);
+  assert.equal(model.components.length, 1);
+  assert.equal(model.components[0]?.reference, 'U1');
+  assert.equal(model.components[0]?.pins.length, 0);
   assert.equal(model.unresolvedSymbols.length, 1);
   assert.deepEqual(model.unresolvedSymbols[0], {
     instanceId: 'u-missing',
@@ -153,7 +155,9 @@ test('v3 KiCad parser can accept sub-sheet style input when fragment mode is ena
   const model = parseKiCadSchematicToUnifiedCircuitModel(schematic, { allowFragmentInput: true, projectName: 'Fragment' });
 
   assert.equal(model.source.projectName, 'Fragment');
-  assert.equal(model.components.length, 0);
+  assert.equal(model.components.length, 1);
+  assert.equal(model.components[0]?.reference, 'R1');
+  assert.equal(model.components[0]?.pins.length, 0);
   assert.equal(model.unresolvedSymbols.length, 1);
   assert.equal(model.stats.wireSegmentCount, 1);
   assert.equal(model.nets.length, 0);
@@ -317,6 +321,10 @@ test('v3 KiCad parser classifies non-electrical symbols and markers separately f
 
   const model = parseKiCadSchematicToUnifiedCircuitModel(schematic, { projectName: 'Ignored Symbols' });
 
+  assert.equal(
+    model.components.some(component => component.reference === 'U1' && component.pins.length === 0),
+    true
+  );
   assert.equal(model.unresolvedSymbols.length, 1);
   assert.deepEqual(model.unresolvedSymbols[0], {
     instanceId: 'broken-1',

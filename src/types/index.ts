@@ -64,6 +64,21 @@ export type ProjectPowerInputMode =
   | 'ext-3v3';
 
 export type ProjectComponentPowerModes = Record<string, string>;
+export type ProjectPullupSource = 'external' | 'onboard' | 'internal' | 'user-confirmed' | 'unknown';
+export interface ProjectPullupDeclaration {
+  pins: string[];
+  source: Exclude<ProjectPullupSource, 'external' | 'unknown'>;
+  resistanceOhms?: number;
+  note?: string;
+}
+export type ProjectPullupSourceConfig =
+  | ProjectPullupSource
+  | {
+      source: ProjectPullupSource;
+      resistanceOhms?: number;
+      note?: string;
+    };
+export type ProjectComponentPullupSources = Record<string, Partial<Record<string, ProjectPullupSourceConfig>>>;
 export type ProjectUnusedPinBiasMode =
   | 'internal-pullup'
   | 'internal-pulldown'
@@ -337,6 +352,7 @@ export interface ImportedSchematicSceneSymbol {
 export interface ImportedSchematicScene {
   wireSegments: ImportedSchematicWireSegment[];
   junctions: ImportedSchematicPoint[];
+  noConnects?: ImportedSchematicPoint[];
   labels: ImportedSchematicLabel[];
   drawings?: ImportedSchematicPrimitive[];
   pageFrame?: ImportedSchematicPageFrame | null;
@@ -475,6 +491,248 @@ export interface PcbDocument {
   keepouts: PcbKeepoutRegion[];
 }
 
+export type ImportedPcbLayerId = string;
+export type ImportedPcbValidationSource = 'modumake-pcb' | 'kicad-cli';
+
+export interface ImportedPcbPoint {
+  x: number;
+  y: number;
+}
+
+export interface ImportedPcbBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+export interface ImportedPcbLayer {
+  id?: number;
+  name: ImportedPcbLayerId;
+  type?: string;
+}
+
+export interface ImportedPcbNet {
+  code: number;
+  name: string;
+}
+
+export interface ImportedPcbSetup {
+  traceClearance?: number;
+  traceMin?: number;
+  zoneClearance?: number;
+  edgeWidth?: number;
+  padToMaskClearance?: number;
+  solderMaskMinWidth?: number;
+  copperToEdgeClearance?: number;
+  viaSize?: number;
+  viaDrill?: number;
+  viaMinSize?: number;
+  viaMinDrill?: number;
+}
+
+export interface ImportedPcbNetClass {
+  name: string;
+  description?: string;
+  clearance?: number;
+  traceWidth?: number;
+  viaDiameter?: number;
+  viaDrill?: number;
+  diffPairWidth?: number;
+  diffPairGap?: number;
+  diffPairViaGap?: number;
+  lengthMatchTolerance?: number;
+  nets: string[];
+}
+
+export type ImportedPcbGraphic =
+  | {
+      id: string;
+      kind: 'line';
+      layer: ImportedPcbLayerId;
+      start: ImportedPcbPoint;
+      end: ImportedPcbPoint;
+      width: number;
+      source: 'board' | 'footprint';
+      footprintId?: string;
+    }
+  | {
+      id: string;
+      kind: 'polyline';
+      layer: ImportedPcbLayerId;
+      points: ImportedPcbPoint[];
+      width: number;
+      fill?: boolean;
+      source: 'board' | 'footprint';
+      footprintId?: string;
+    }
+  | {
+      id: string;
+      kind: 'circle';
+      layer: ImportedPcbLayerId;
+      center: ImportedPcbPoint;
+      radius: number;
+      width: number;
+      fill?: boolean;
+      source: 'board' | 'footprint';
+      footprintId?: string;
+    }
+  | {
+      id: string;
+      kind: 'arc';
+      layer: ImportedPcbLayerId;
+      start: ImportedPcbPoint;
+      mid: ImportedPcbPoint;
+      end: ImportedPcbPoint;
+      width: number;
+      source: 'board' | 'footprint';
+      footprintId?: string;
+    }
+  | {
+      id: string;
+      kind: 'text';
+      layer: ImportedPcbLayerId;
+      text: string;
+      at: ImportedPcbPoint;
+      angle: number;
+      size: { width: number; height: number };
+      source: 'board' | 'footprint';
+      footprintId?: string;
+    };
+
+export interface ImportedPcbPad {
+  id: string;
+  number: string;
+  type: string;
+  shape: string;
+  at: ImportedPcbPoint;
+  absoluteAt: ImportedPcbPoint;
+  angle: number;
+  size: { width: number; height: number };
+  drill?: number;
+  clearance?: number;
+  solderMaskMargin?: number;
+  layers: ImportedPcbLayerId[];
+  netCode: number;
+  netName: string;
+  footprintId: string;
+  footprintRef: string;
+}
+
+export interface ImportedPcbFootprint {
+  id: string;
+  libraryId: string;
+  reference: string;
+  value: string;
+  layer: ImportedPcbLayerId;
+  at: ImportedPcbPoint;
+  angle: number;
+  description?: string;
+  tags?: string;
+  pads: ImportedPcbPad[];
+  graphics: ImportedPcbGraphic[];
+  bounds: ImportedPcbBounds | null;
+}
+
+export interface ImportedPcbTrackSegment {
+  id: string;
+  start: ImportedPcbPoint;
+  end: ImportedPcbPoint;
+  width: number;
+  layer: ImportedPcbLayerId;
+  netCode: number;
+  netName: string;
+}
+
+export interface ImportedPcbVia {
+  id: string;
+  at: ImportedPcbPoint;
+  size: number;
+  drill: number;
+  layers: ImportedPcbLayerId[];
+  netCode: number;
+  netName: string;
+}
+
+export interface ImportedPcbZone {
+  id: string;
+  netCode: number;
+  netName: string;
+  layer: ImportedPcbLayerId;
+  polygon: ImportedPcbPoint[];
+  filledPolygons: ImportedPcbPoint[][];
+  clearance?: number;
+  minThickness?: number;
+}
+
+export interface ImportedPcbDocument {
+  schemaVersion: 1;
+  sourceFilename?: string;
+  importedAt: string;
+  kicadVersion?: string;
+  generator?: string;
+  layers: ImportedPcbLayer[];
+  nets: ImportedPcbNet[];
+  setup: ImportedPcbSetup;
+  netClasses: ImportedPcbNetClass[];
+  footprints: ImportedPcbFootprint[];
+  segments: ImportedPcbTrackSegment[];
+  vias: ImportedPcbVia[];
+  zones: ImportedPcbZone[];
+  drawings: ImportedPcbGraphic[];
+  bounds: ImportedPcbBounds | null;
+  stats: {
+    layerCount: number;
+    netCount: number;
+    footprintCount: number;
+    padCount: number;
+    segmentCount: number;
+    viaCount: number;
+    zoneCount: number;
+    drawingCount: number;
+  };
+}
+
+export interface ImportedPcbValidationIssue {
+  id: string;
+  source: ImportedPcbValidationSource;
+  severity: WarningSeverity;
+  code: string;
+  title: string;
+  message: string;
+  recommendation?: string;
+  layer?: ImportedPcbLayerId;
+  netName?: string;
+  footprintRef?: string;
+  padNumber?: string;
+  at?: ImportedPcbPoint;
+  items?: Array<{
+    description: string;
+    at?: ImportedPcbPoint;
+  }>;
+}
+
+export interface ImportedPcbValidationReport {
+  engineVersion: string;
+  generatedAt: string;
+  source: ImportedPcbValidationSource | 'mixed';
+  issueCount: number;
+  errorCount: number;
+  warningCount: number;
+  infoCount: number;
+  checks: {
+    geometry: boolean;
+    netContinuity: boolean;
+    manufacturability: boolean;
+    polygonClearance?: boolean;
+    differentialPairs?: boolean;
+    schematicParity?: boolean;
+    renderFidelity?: boolean;
+    kicadDrc: boolean;
+  };
+  issues: ImportedPcbValidationIssue[];
+}
+
 export interface CodeTemplateModel {
   arduino?: {
     includes?: string[];
@@ -523,6 +781,7 @@ export interface ComponentDesignRules {
   preferredInterface?: 'GPIO' | 'ANALOG' | 'I2C' | 'SPI' | 'UART' | 'SINGLE_BUS';
   preferredBoardPins?: Record<string, Record<string, string[]>>;
   avoidBoardPins?: Record<string, string[]>;
+  pullups?: ProjectPullupDeclaration[];
   warnings?: DesignWarning[];
   requiresExternalParts?: string[];
   tags?: string[];
@@ -672,6 +931,14 @@ export interface ProjectAuditIssueEvidence {
   observedFacts: string[];
   assumptions: string[];
   sourceQuality?: ProjectAuditIssueSourceQuality;
+  pullupSources?: Array<{
+    source: ProjectPullupSource;
+    pinName?: string;
+    componentId?: string;
+    componentName?: string;
+    resistanceOhms?: number;
+    note?: string;
+  }>;
   checkedBy: ProjectAuditIssueEvidenceChecker[];
   affectedComponents?: string[];
   affectedNets?: string[];
@@ -749,6 +1016,7 @@ export interface ProjectAuditReport {
   verifiedCount: number;
   partialCount: number;
   genericCount: number;
+  genericComponentNames?: string[];
   issueCount: number;
   issues: ProjectAuditIssue[];
   powerReport: ProjectPowerReport;
@@ -990,6 +1258,9 @@ export interface ModuMakeProjectData {
   manualConnections: ManualNetConnection[];
   importedSchematicScene?: ImportedSchematicScene | null;
   importedSchematicSource?: string | null;
+  importedPcbDocument?: ImportedPcbDocument | null;
+  importedPcbSource?: string | null;
+  importedPcbValidation?: ImportedPcbValidationReport | null;
   integratedValidationJson?: DatasheetReviewInputPayload | null;
   validationReviewDecisions?: Record<string, ValidationReviewDecision>;
   templateCache?: Record<string, ComponentTemplate>;
@@ -1359,6 +1630,9 @@ export interface ModuMakeStore {
   ghostFixPreview: GhostFixPreview | null;
   importedSchematicScene: ImportedSchematicScene | null;
   importedSchematicSource: string | null;
+  importedPcbDocument: ImportedPcbDocument | null;
+  importedPcbSource: string | null;
+  importedPcbValidation: ImportedPcbValidationReport | null;
   integratedValidationJson: DatasheetReviewInputPayload | null;
   validationReviewDecisions: Record<string, ValidationReviewDecision>;
   footprintPinPadOverrideCache: Record<string, FootprintPinPadOverrideCacheEntry>;
@@ -1409,6 +1683,13 @@ export interface ModuMakeStore {
   setWiringMode: (mode: WiringMode) => void;
   setSchematicTheme: (theme: ImportedSchematicTheme) => void;
   setImportedSchematicViewMode: (mode: ImportedSchematicViewMode) => void;
+  setImportedPcbDocument: (
+    document: ImportedPcbDocument,
+    source: string,
+    validation?: ImportedPcbValidationReport | null
+  ) => void;
+  setImportedPcbValidation: (validation: ImportedPcbValidationReport | null) => void;
+  clearImportedPcbDocument: () => void;
   undo: () => void;
   redo: () => void;
 

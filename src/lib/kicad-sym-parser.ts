@@ -170,7 +170,7 @@ export function kicadSymbolToCustomComponentPackage(
   } = {}
 ): CustomComponentPackage {
   const requiredPins: RequiredPin[] = symbol.pins.map(pin => ({
-    name: sanitizePlainText(pin.name, { maxLength: 48, fallback: pin.name }),
+    name: sanitizePlainText(pin.name || pin.number, { maxLength: 48, fallback: pin.number || '1' }),
     allowedTypes: inferAllowedTypes(pin),
     preferredSide: pin.side,
   }));

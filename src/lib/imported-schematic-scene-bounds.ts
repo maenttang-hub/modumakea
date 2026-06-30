@@ -319,6 +319,12 @@ export function getImportedSchematicDisplayJunctions(
   return scene?.junctions ?? [];
 }
 
+export function getImportedSchematicDisplayNoConnects(
+  scene: ImportedSchematicScene | null
+): NonNullable<ImportedSchematicScene['noConnects']> {
+  return scene?.noConnects ?? [];
+}
+
 export function getImportedSchematicDisplayLabels(
   scene: ImportedSchematicScene | null
 ): ImportedSchematicScene['labels'] {
@@ -335,6 +341,21 @@ export function getImportedSchematicDisplayPageFrame(
   scene: ImportedSchematicScene | null
 ): ImportedSchematicPageFrame | null {
   return scene?.pageFrame ?? null;
+}
+
+function includePageFrame(
+  bounds: MutableBounds | null,
+  pageFrame: ImportedSchematicPageFrame | null
+): MutableBounds | null {
+  if (!pageFrame) {
+    return bounds;
+  }
+
+  const x = Math.min(pageFrame.start.x, pageFrame.end.x);
+  const y = Math.min(pageFrame.start.y, pageFrame.end.y);
+  const width = Math.abs(pageFrame.end.x - pageFrame.start.x);
+  const height = Math.abs(pageFrame.end.y - pageFrame.start.y);
+  return includeRect(bounds, x, y, width, height);
 }
 
 function getImportedSchematicActiveContentBounds(
@@ -400,10 +421,14 @@ export function getImportedSchematicSceneBounds(
   if (scene) {
     const wireSegments = getImportedSchematicDisplayWireSegments(scene);
     const junctions = getImportedSchematicDisplayJunctions(scene);
+    const noConnects = getImportedSchematicDisplayNoConnects(scene);
     const labels = getImportedSchematicDisplayLabels(scene);
     const drawings = getImportedSchematicDisplayDrawings(scene);
+    const pageFrame = getImportedSchematicDisplayPageFrame(scene);
     const sheetFrames = getImportedSchematicDisplaySheetFrames(scene);
     const symbols = getImportedSchematicDisplaySymbols(scene);
+
+    sceneBounds = includePageFrame(sceneBounds, pageFrame);
 
     for (const segment of wireSegments) {
       sceneBounds = includePoint(sceneBounds, segment.start.x, segment.start.y);
@@ -412,6 +437,10 @@ export function getImportedSchematicSceneBounds(
 
     for (const junction of junctions) {
       sceneBounds = includePoint(sceneBounds, junction.x, junction.y);
+    }
+
+    for (const noConnect of noConnects) {
+      sceneBounds = includePoint(sceneBounds, noConnect.x, noConnect.y);
     }
 
     for (const label of labels) {

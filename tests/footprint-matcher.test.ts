@@ -32,6 +32,22 @@ const diodeTemplate: ComponentTemplate = {
   pcb: { footprint: 'Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal', packageType: 'THT', manufacturable: true },
 };
 
+const transistorTemplate: ComponentTemplate = {
+  id: 'tpl_transistor_npn',
+  name: 'NPN transistor',
+  category: 'PASSIVE',
+  description: 'test',
+  icon: 'Zap',
+  compatibleVoltage: 'BOTH',
+  requiredPins: [
+    { name: 'B', allowedTypes: ['DIGITAL'] },
+    { name: 'C', allowedTypes: ['DIGITAL'] },
+    { name: 'E', allowedTypes: ['DIGITAL'] },
+  ],
+  schematic: { symbol: 'Q', referencePrefix: 'Q' },
+  pcb: { footprint: 'digikey-footprints:TO-18-3', packageType: 'THT', manufacturable: true },
+};
+
 test('buildFootprintMatcherModel flags imported diode pinout mismatch', () => {
   const component = makeComponent({
     importedMapping: {
@@ -54,6 +70,36 @@ test('buildFootprintMatcherModel flags imported diode pinout mismatch', () => {
   assert.equal(model.status, 'error');
   assert.match(model.summary, /A: 심볼 1 -> 패드 2/);
   assert.match(model.summary, /K: 심볼 2 -> 패드 1/);
+});
+
+test('buildFootprintMatcherModel accepts Central 2N2222A TO-18 pin numbering', () => {
+  const component = makeComponent({
+    templateId: 'tpl_transistor_npn',
+    name: '2N2222A',
+    value: '2N2222A',
+    importedMapping: {
+      confidence: 'medium',
+      source: 'refdes',
+      footprint: 'digikey-footprints:TO-18-3',
+      libraryId: 'dk_Transistors-Bipolar-BJT-Single:2N2222A',
+    },
+    importedGeometry: {
+      bounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
+      primitives: [],
+      pinAnchors: [
+        { pinId: 'E', label: 'E', number: '1', at: { x: 0, y: 0 }, angle: 0, lengthMm: 1.27 },
+        { pinId: 'B', label: 'B', number: '2', at: { x: 1, y: 0 }, angle: 0, lengthMm: 1.27 },
+        { pinId: 'C', label: 'C', number: '3', at: { x: 2, y: 0 }, angle: 0, lengthMm: 1.27 },
+      ],
+    },
+  });
+
+  const model = buildFootprintMatcherModel(component, transistorTemplate);
+  assert.ok(model);
+  assert.equal(model.status, 'ok');
+  assert.equal(model.links.find(link => link.pinId === 'E')?.padId, '1');
+  assert.equal(model.links.find(link => link.pinId === 'B')?.padId, '2');
+  assert.equal(model.links.find(link => link.pinId === 'C')?.padId, '3');
 });
 
 test('buildFootprintMatcherModel builds connector pads from footprint family', () => {

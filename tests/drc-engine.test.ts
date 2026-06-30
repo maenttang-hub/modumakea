@@ -88,6 +88,22 @@ const regulatorTemplate = makeTemplate({
   },
 });
 
+const boostConverterTemplate = makeTemplate({
+  id: 'tpl_boost_converter',
+  name: 'FP6291 Boost Converter',
+  category: 'IC',
+  pins: [
+    { name: 'VIN', allowedTypes: ['POWER'] },
+    { name: 'EN', allowedTypes: ['DIGITAL'] },
+    { name: 'SW', allowedTypes: ['POWER'] },
+    { name: 'FB', allowedTypes: ['ANALOG'] },
+    { name: 'GND', allowedTypes: ['GND'] },
+  ],
+  design: {
+    datasheetStatus: 'official-complete',
+  },
+});
+
 const crystalTemplate = makeTemplate({
   id: 'tpl_crystal',
   name: 'Crystal',
@@ -95,6 +111,21 @@ const crystalTemplate = makeTemplate({
   pins: [
     { name: '1', allowedTypes: ['DIGITAL'] },
     { name: '2', allowedTypes: ['DIGITAL'] },
+  ],
+  design: {
+    datasheetStatus: 'official-complete',
+  },
+});
+
+const rtcTemplate = makeTemplate({
+  id: 'tpl_rtc_ds1337',
+  name: 'DS1337 RTC',
+  category: 'IC',
+  pins: [
+    { name: 'X1', allowedTypes: ['ANALOG'] },
+    { name: 'X2', allowedTypes: ['ANALOG'] },
+    { name: 'VCC', allowedTypes: ['POWER'] },
+    { name: 'GND', allowedTypes: ['GND'] },
   ],
   design: {
     datasheetStatus: 'official-complete',
@@ -190,7 +221,9 @@ function resolveTemplate(templateId: string) {
     tpl_rfid_rc522: passiveRc522Template,
     tpl_external_power: passiveExternalPowerTemplate,
     tpl_ldo_regulator: regulatorTemplate,
+    tpl_boost_converter: boostConverterTemplate,
     tpl_crystal: crystalTemplate,
+    tpl_rtc_ds1337: rtcTemplate,
     tpl_capacitor: capacitorTemplate,
     tpl_resistor: resistorTemplate,
     tpl_diode: diodeTemplate,
@@ -467,6 +500,46 @@ test('runProjectDrc flags missing crystal load capacitors on oscillator nets', (
   assert.equal(issue?.confidence, 'strong-inference');
   assert.ok((issue?.evidence?.observedFacts.length ?? 0) >= 3);
   assert.deepEqual(issue?.visualTargets?.componentIds, ['xtal-1']);
+});
+
+test('runProjectDrc does not require external load caps for RTC X1/X2 crystals', () => {
+  const components = [
+    makeComponent({
+      instanceId: 'xtal-rtc',
+      templateId: 'tpl_crystal',
+      name: 'Y1 32.768kHz',
+    }),
+    makeComponent({
+      instanceId: 'rtc-1',
+      templateId: 'tpl_rtc_ds1337',
+      name: 'DS1337_PDv2',
+    }),
+  ];
+
+  const manualConnections = [
+    makeManualConnection(
+      'rtc-x1',
+      { ownerType: 'component', ownerId: 'xtal-rtc', pinId: '1' },
+      { ownerType: 'component', ownerId: 'rtc-1', pinId: 'X1' }
+    ),
+    makeManualConnection(
+      'rtc-x2',
+      { ownerType: 'component', ownerId: 'xtal-rtc', pinId: '2' },
+      { ownerType: 'component', ownerId: 'rtc-1', pinId: 'X2' }
+    ),
+  ];
+
+  const report = runProjectDrc({
+    components,
+    manualConnections,
+    boardId: 'uno',
+    resolveTemplate,
+  });
+
+  assert.equal(
+    report.issues.some(issue => issue.ruleId === 'clock.crystal-load-cap-missing'),
+    false
+  );
 });
 
 test('runProjectDrc flags a crystal that has load caps but no real clock consumer', () => {
@@ -790,6 +863,48 @@ test('runProjectDrc flags unresolved MCU boot strap bias nets', () => {
   assert.equal(issue?.confidence, 'needs-review');
   assert.ok((issue?.evidence?.assumptions.length ?? 0) >= 1);
   assert.match(issue?.evidence?.howToVerify ?? '', /부트 상태|풀업|풀다운/);
+});
+
+test('runProjectDrc does not treat boost-converter EN pins as MCU boot straps', () => {
+  const components = [
+    makeComponent({
+      instanceId: 'boost-1',
+      templateId: 'tpl_boost_converter',
+      name: 'FP6291',
+    }),
+    makeComponent({
+      instanceId: 'battery-1',
+      templateId: 'tpl_external_power',
+      name: 'Battery',
+    }),
+  ];
+
+  const manualConnections = [
+    makeManualConnection(
+      'boost-vin',
+      { ownerType: 'component', ownerId: 'battery-1', pinId: 'V+' },
+      { ownerType: 'component', ownerId: 'boost-1', pinId: 'VIN' }
+    ),
+    makeManualConnection(
+      'boost-en',
+      { ownerType: 'component', ownerId: 'battery-1', pinId: 'V+' },
+      { ownerType: 'component', ownerId: 'boost-1', pinId: 'EN' }
+    ),
+    makeManualConnection(
+      'boost-gnd',
+      { ownerType: 'component', ownerId: 'battery-1', pinId: 'GND' },
+      { ownerType: 'component', ownerId: 'boost-1', pinId: 'GND' }
+    ),
+  ];
+
+  const report = runProjectDrc({
+    components,
+    manualConnections,
+    boardId: 'uno',
+    resolveTemplate,
+  });
+
+  assert.equal(report.issues.some(issue => issue.ruleId === 'mcu.boot-strap-audit'), false);
 });
 
 test('runProjectDrc flags reset nets that have no POR hold or supervisor path', () => {

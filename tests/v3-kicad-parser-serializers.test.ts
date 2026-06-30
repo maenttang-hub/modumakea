@@ -147,3 +147,43 @@ test('serializer outputs keep ignored symbols and marker stats aligned with unif
   assert.equal(lightweight.stats.ignored_non_electrical_symbol_count, 1);
   assert.equal(lightweight.stats.non_component_marker_count, 1);
 });
+
+test('serializer preserves no-pin custom symbols as symbol-only components while keeping unresolved evidence', () => {
+  const schematicWithNoPinCustomSymbol = `
+(kicad_sch
+  (version 20211123)
+  (generator "eeschema")
+  (lib_symbols
+    (symbol "Vendor:PanelMeter"
+      (property "Reference" "U" (id 0) (at 0 0 0))
+      (property "Value" "PanelMeter" (id 1) (at 0 -2.54 0))
+    )
+  )
+  (symbol
+    (lib_id "Vendor:PanelMeter")
+    (at 10 10 0)
+    (uuid "panel-meter-1")
+    (property "Reference" "U1" (id 0) (at 10 8 0))
+    (property "Value" "PM-128" (id 1) (at 10 12 0))
+  )
+  (sheet_instances (path "/" (page "1")))
+)`;
+
+  const unified = parseKiCadSchematicToUnifiedCircuitModel(schematicWithNoPinCustomSymbol);
+  const lightweight = parseKiCadSchematicToLightweightValidationJson(schematicWithNoPinCustomSymbol);
+
+  assert.equal(unified.components.length, 1);
+  assert.equal(unified.components[0]?.reference, 'U1');
+  assert.equal(unified.components[0]?.pins.length, 0);
+  assert.equal(unified.unresolvedSymbols.length, 1);
+  assert.equal(unified.unresolvedSymbols[0]?.reason, 'symbol_without_pins');
+  assert.equal(unified.stats.componentCount, 1);
+  assert.equal(unified.stats.unresolvedSymbolCount, 1);
+
+  assert.equal(lightweight.components.length, 1);
+  assert.equal(lightweight.components[0]?.ref, 'U1');
+  assert.equal(lightweight.components[0]?.pins.length, 0);
+  assert.equal(lightweight.unresolved.symbols.length, 1);
+  assert.equal(lightweight.stats.component_count, 1);
+  assert.equal(lightweight.stats.unresolved_symbol_count, 1);
+});

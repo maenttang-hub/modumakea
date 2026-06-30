@@ -110,6 +110,46 @@ test('schematic connectivity keeps long-wire links stable with small coordinate 
   assert.equal(longNet?.members[0]?.electricalType, 'passive');
 });
 
+test('schematic connectivity does not classify mixed power and ground labels as ground', () => {
+  const schematic = `
+(kicad_sch
+  (version 20211123)
+  (generator "eeschema")
+  (lib_symbols
+    (symbol "Device:R"
+      (property "Reference" "R" (id 0) (at 0 0 0))
+      (property "Value" "R" (id 1) (at 0 -2.54 0))
+      (symbol "R_0_1"
+        (pin passive line (at -2.54 0 0) (length 2.54)
+          (name "~" (effects (font (size 1.27 1.27))))
+          (number "1" (effects (font (size 1.27 1.27)))))
+      )
+    )
+  )
+  (symbol
+    (lib_id "Device:R")
+    (at 40 30 0)
+    (uuid "r-mixed")
+    (property "Reference" "R1" (id 0) (at 40 27 0))
+    (property "Value" "0R" (id 1) (at 40 33 0))
+  )
+  (wire (pts (xy 37.46 30) (xy 50 30)))
+  (global_label "GND" (shape input) (at 40 30 0))
+  (global_label "+12V" (shape input) (at 50 30 0))
+  (sheet_instances (path "/" (page "1")))
+)`;
+
+  const { root } = parseKiCadSchAst(schematic);
+  const model = buildSchematicDomainModel(root);
+  const nets = SchematicConnectivitySolver.resolveNets(model);
+  const mixedNet = SchematicConnectivitySolver.findNetByLabel(nets, 'GND');
+
+  assert.ok(mixedNet);
+  assert.equal(mixedNet?.kind, 'unknown');
+  assert.equal(mixedNet?.aliases.includes('GND'), true);
+  assert.equal(mixedNet?.aliases.includes('+12V'), true);
+});
+
 test('schematic domain builder preserves no-connect markers and sheet frames', () => {
   const schematic = `
 (kicad_sch

@@ -524,6 +524,17 @@ const ENGINE_ISSUE_CATALOG: Record<string, EngineIssueCatalogEntry> = {
       'This part is still treated as a generic module, so the exact breakout board or vendor document still needs to be pinned down.'
     ),
   },
+  'audit.generic-sku-summary': {
+    title: fixed('generic 부품 신뢰도 제한', 'Generic part confidence limit'),
+    message: fixed(
+      '정확한 SKU/MPN이 없는 부품 {count}개({componentNames})가 있어 일부 판정은 보수적으로 처리됩니다.',
+      '{count} parts ({componentNames}) do not have exact SKU/MPN data, so some checks are intentionally conservative.'
+    ),
+    recommendation: fixed(
+      '회로 오류가 아니라 검증 신뢰도 제한입니다. 정확한 모듈명, 제조사 링크, 데이터시트가 있으면 해당 부품부터 고정하세요.',
+      'This is a confidence limitation, not a circuit fault. Pin exact module names, vendor links, or datasheets for these parts first.'
+    ),
+  },
   'audit.vendor-pin-needed': {
     title: fixed('정확한 핀 문서 필요', 'Exact pin documentation needed'),
     message: fixed(

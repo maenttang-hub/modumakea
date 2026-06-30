@@ -111,3 +111,105 @@ test('buildIntegratedValidationJson turns unified model into provider-neutral in
   assert.equal(payload.validationFlags.length, 2);
   assert.ok(payload.extractionPlan.targets.some(target => target.reference === 'U1'));
 });
+
+test('buildIntegratedValidationJson excludes KiCad power symbols from datasheet review components', () => {
+  const powerSymbolSchematic = `
+(kicad_sch
+  (version 20211123)
+  (generator "eeschema")
+  (title_block (title "Power symbols"))
+  (lib_symbols
+    (symbol "custom:+3.3V"
+      (property "Reference" "#PWR" (id 0) (at 0 0 0))
+      (property "Value" "+3.3V" (id 1) (at 0 -2.54 0))
+      (symbol "P3V3_0_1"
+        (pin power_in line (at 0 0 270) (length 2.54)
+          (name "+3.3V" (effects (font (size 1.27 1.27))))
+          (number "1" (effects (font (size 1.27 1.27)))))
+      )
+    )
+    (symbol "Device:R"
+      (property "Reference" "R" (id 0) (at 0 0 0))
+      (property "Value" "R" (id 1) (at 0 -2.54 0))
+      (symbol "R_0_1"
+        (pin passive line (at -2.54 0 0) (length 2.54)
+          (name "~" (effects (font (size 1.27 1.27))))
+          (number "1" (effects (font (size 1.27 1.27)))))
+      )
+    )
+  )
+  (symbol
+    (lib_id "custom:+3.3V")
+    (at 20 20 0)
+    (uuid "pwr-1")
+    (property "Reference" "#PWR01" (id 0) (at 20 18 0))
+    (property "Value" "+3.3V" (id 1) (at 20 22 0))
+  )
+  (symbol
+    (lib_id "Device:R")
+    (at 20 30 0)
+    (uuid "r-1")
+    (property "Reference" "R1" (id 0) (at 20 28 0))
+    (property "Value" "10k" (id 1) (at 20 32 0))
+  )
+  (wire (pts (xy 20 22.54) (xy 20 30)))
+  (sheet_instances (path "/" (page "1")))
+)`;
+  const unifiedModel = parseKiCadSchematicToUnifiedCircuitModel(powerSymbolSchematic);
+
+  const payload = buildIntegratedValidationJson({
+    unifiedModel,
+    boardId: 'uno',
+  });
+
+  assert.equal(unifiedModel.components.some(component => component.reference === '#PWR01'), true);
+  assert.equal(payload.components.some(component => component.reference === '#PWR01'), false);
+  assert.equal(payload.components.some(component => component.reference === 'R1'), true);
+  assert.equal(payload.extractionPlan.targets.some(target => target.reference === '#PWR01'), false);
+});
+
+test('buildIntegratedValidationJson keeps no-pin custom symbols as reportable review components', () => {
+  const noPinSymbolSchematic = `
+(kicad_sch
+  (version 20211123)
+  (generator "eeschema")
+  (title_block (title "No-pin symbols"))
+  (lib_symbols
+    (symbol "Vendor:PanelMeter"
+      (property "Reference" "U" (id 0) (at 0 0 0))
+      (property "Value" "PanelMeter" (id 1) (at 0 -2.54 0))
+    )
+    (symbol "power:+5V"
+      (property "Reference" "#PWR" (id 0) (at 0 0 0))
+      (property "Value" "+5V" (id 1) (at 0 -2.54 0))
+    )
+  )
+  (symbol
+    (lib_id "Vendor:PanelMeter")
+    (at 20 20 0)
+    (uuid "meter-1")
+    (property "Reference" "U1" (id 0) (at 20 18 0))
+    (property "Value" "PM-128" (id 1) (at 20 22 0))
+  )
+  (symbol
+    (lib_id "power:+5V")
+    (at 20 10 0)
+    (uuid "pwr-1")
+    (property "Reference" "#PWR01" (id 0) (at 20 8 0))
+    (property "Value" "+5V" (id 1) (at 20 12 0))
+  )
+  (sheet_instances (path "/" (page "1")))
+)`;
+  const unifiedModel = parseKiCadSchematicToUnifiedCircuitModel(noPinSymbolSchematic);
+
+  const payload = buildIntegratedValidationJson({
+    unifiedModel,
+    boardId: 'uno',
+  });
+
+  assert.equal(unifiedModel.components.some(component => component.reference === 'U1'), true);
+  assert.equal(unifiedModel.unresolvedSymbols.some(symbol => symbol.reference === 'U1'), true);
+  assert.equal(payload.components.some(component => component.reference === 'U1' && component.pins.length === 0), true);
+  assert.equal(payload.components.some(component => component.reference === '#PWR01'), false);
+  assert.equal(payload.extractionPlan.targets.some(target => target.reference === 'U1'), true);
+});

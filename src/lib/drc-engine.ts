@@ -254,7 +254,11 @@ function getNetById(circuitAnalysis: CircuitAnalysisReport, netId: string) {
 }
 
 function isGroundNet(net: CircuitNet) {
-  return net.knownVoltage === 0 || net.sourceLabels.some(label => label.toUpperCase().includes('GND'));
+  return (
+    net.knownVoltage === 0 ||
+    net.sourceLabels.some(label => label.toUpperCase().includes('GND')) ||
+    net.nodes.some(node => node.electricalType === 'ground')
+  );
 }
 
 function isPowerNet(net: CircuitNet) {
@@ -616,6 +620,58 @@ function isCrystalLike(component: PlacedComponent) {
   }
   const text = [component.name, component.value, component.importedMapping?.libraryId].filter(Boolean).join(' ');
   return /\bxtal\b/i.test(text) || /\bcrystal\b/i.test(text) || /\bosc\b/i.test(text);
+}
+
+function isRtcOscillatorDriver(component: PlacedComponent, template?: ComponentTemplate) {
+  const text = [
+    component.name,
+    component.value,
+    component.importedMapping?.libraryId,
+    component.importedMapping?.value,
+    template?.name,
+  ].filter(Boolean).join(' ');
+
+  return /rtc|ds13(?:02|07|37)|ds323[12]|pcf85(?:63|63a)|mcp794|rv-?\d+|rx-?\d+/i.test(text);
+}
+
+function isRtcCrystalPin(pinName: string) {
+  const normalized = normalizePinRole(pinName);
+  return normalized === 'X1' || normalized === 'X2' || normalized === 'XI' || normalized === 'XO';
+}
+
+function hasRtcIntegratedLoadCapDriver(
+  crystal: PlacedComponent,
+  crystalSignalNets: CircuitNet[],
+  componentById: Map<string, PlacedComponent>,
+  resolveTemplate: (templateId: string) => ComponentTemplate | undefined
+) {
+  const rtcPinsByComponent = new Map<string, Set<string>>();
+
+  for (const net of crystalSignalNets) {
+    for (const node of net.nodes) {
+      if (node.ownerType !== 'component' || node.ownerId === crystal.instanceId) {
+        continue;
+      }
+
+      if (!isRtcCrystalPin(node.pinId)) {
+        continue;
+      }
+
+      const peer = componentById.get(node.ownerId);
+      const template = peer ? resolveTemplate(peer.templateId) : undefined;
+      if (!peer || !isRtcOscillatorDriver(peer, template)) {
+        continue;
+      }
+
+      const pins = rtcPinsByComponent.get(peer.instanceId) ?? new Set<string>();
+      pins.add(normalizePinRole(node.pinId));
+      rtcPinsByComponent.set(peer.instanceId, pins);
+    }
+  }
+
+  return Array.from(rtcPinsByComponent.values()).some(pins =>
+    (pins.has('X1') && pins.has('X2')) || (pins.has('XI') && pins.has('XO'))
+  );
 }
 
 function isOscillatorPinName(pinName: string) {
@@ -1318,6 +1374,10 @@ function buildCriticalElectricalIssues(
       continue;
     }
 
+    if (hasRtcIntegratedLoadCapDriver(component, crystalSignalNets, componentById, context.resolveTemplate)) {
+      continue;
+    }
+
     const missingLoadCap = crystalSignalNets.some(crystalNet => {
       return !((circuitAnalysis.capacitors ?? []).some(capacitor =>
         (capacitor.netA === crystalNet.id && groundNets.has(capacitor.netB)) ||
@@ -1610,6 +1670,10 @@ function buildCriticalElectricalIssues(
   for (const component of context.components) {
     const template = context.resolveTemplate(component.templateId);
     const record = template ? getPartMasterRecordForComponent(component, template) : null;
+    if (!isMcuLikeComponent(component, template, record ?? undefined)) {
+      continue;
+    }
+
     const hints = record?.specsJson.validationHints;
     const bootstrapPins = new Set<string>();
 

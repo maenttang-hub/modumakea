@@ -115,11 +115,16 @@ function expandPowerAliases(label: string) {
 
 function inferNetKind(labels: string[], members: ConnectedPinRef[]): UnifiedCircuitNetKind {
   const normalizedLabels = labels.map(normalizeSupplyLabel);
+  const hasGroundLabel = normalizedLabels.some(isGroundLikeName);
+  const hasPowerLabel = normalizedLabels.some(isPowerLikeName);
 
-  if (normalizedLabels.some(isGroundLikeName)) {
+  if (hasGroundLabel && hasPowerLabel) {
+    return 'unknown';
+  }
+  if (hasGroundLabel) {
     return 'ground';
   }
-  if (normalizedLabels.some(isPowerLikeName)) {
+  if (hasPowerLabel) {
     return 'power';
   }
   if (normalizedLabels.some(label => label.includes('SDA') || label.includes('SCL') || label.includes('MISO') || label.includes('MOSI') || label.includes('SCK'))) {
@@ -133,10 +138,15 @@ function inferNetKind(labels: string[], members: ConnectedPinRef[]): UnifiedCirc
   }
 
   const pinNames = members.map(member => normalizeSupplyLabel(member.pinName));
-  if (pinNames.some(isPowerLikeName)) {
+  const hasPowerPin = pinNames.some(isPowerLikeName);
+  const hasGroundPin = pinNames.some(isGroundLikeName);
+  if (hasPowerPin && hasGroundPin) {
+    return 'unknown';
+  }
+  if (hasPowerPin) {
     return 'power';
   }
-  if (pinNames.some(isGroundLikeName)) {
+  if (hasGroundPin) {
     return 'ground';
   }
 

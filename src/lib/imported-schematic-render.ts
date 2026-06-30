@@ -427,6 +427,87 @@ export function isPowerLikeImportedText(value?: string) {
   );
 }
 
+export type ImportedNetLabelKind = 'power' | 'ground' | 'signal';
+
+export function classifyImportedNetLabel(text: string): ImportedNetLabelKind {
+  const normalized = text.trim().toUpperCase();
+  if (['GND', 'GNDPWR', 'AGND', 'DGND', 'PGND', 'VSS'].includes(normalized)) {
+    return 'ground';
+  }
+  if (isPowerLikeImportedText(text)) {
+    return 'power';
+  }
+  return 'signal';
+}
+
+function getImportedNetLabelOffset(
+  angle: 0 | 90 | 180 | 270,
+  kind: ImportedNetLabelKind
+) {
+  if (kind !== 'signal') {
+    return { x: 0, y: 0 };
+  }
+
+  const offset = 2.8;
+
+  if (angle === 90) {
+    return { x: offset, y: 0 };
+  }
+
+  if (angle === 270) {
+    return { x: -offset, y: 0 };
+  }
+
+  if (angle === 180) {
+    return { x: -1.6, y: -offset };
+  }
+
+  return { x: 1.6, y: -offset };
+}
+
+export function getImportedNetLabelDisplay(options: {
+  text: string;
+  at: ImportedSchematicPoint;
+  angle?: 0 | 90 | 180 | 270;
+  textAnchor?: 'start' | 'middle' | 'end';
+  baseline?: 'auto' | 'middle' | 'hanging' | 'ideographic';
+  side?: 'left' | 'right';
+}) {
+  const angle = options.angle ?? 0;
+  const kind = classifyImportedNetLabel(options.text);
+  const offset = getImportedNetLabelOffset(angle, kind);
+  const x = Number((options.at.x + offset.x).toFixed(3));
+  const y = Number((options.at.y + offset.y).toFixed(3));
+
+  if (kind !== 'signal') {
+    return {
+      kind,
+      x,
+      y,
+      angle: getImportedTextDisplayAngle(angle, 'annotation', {
+        preserveNativeOrientation: true,
+        text: options.text,
+      }),
+      textAnchor: options.textAnchor ?? getImportedTextDisplayAnchor(angle, 'annotation'),
+      baseline: options.baseline ?? getImportedTextDisplayBaseline(angle, 'annotation'),
+      background: true,
+    };
+  }
+
+  return {
+    kind,
+    x,
+    y,
+    angle: getImportedTextDisplayAngle(angle, 'annotation', {
+      preserveNativeOrientation: true,
+      text: options.text,
+    }),
+    textAnchor: options.textAnchor ?? getImportedTextDisplayAnchor(angle, 'annotation'),
+    baseline: options.baseline ?? getImportedTextDisplayBaseline(angle, 'annotation'),
+    background: false,
+  };
+}
+
 export function getImportedTextOverviewOpacity(
   primitive: Extract<ImportedSchematicPrimitive, { kind: 'text' }>
 ) {
@@ -449,6 +530,16 @@ export function measureImportedTextPrimitiveBox(
   primitive: Extract<ImportedSchematicPrimitive, { kind: 'text' }>
 ) {
   const fontSizePx = getImportedTextFontSizePx(primitive);
+  const sourceAngle = primitive.originalAngle ?? primitive.angle;
+  const displayAngle = getImportedTextDisplayAngle(sourceAngle, primitive.role, {
+    preserveNativeOrientation: primitive.preserveNativeOrientation,
+    text: primitive.text,
+  });
+  const readableOffset = getImportedReadableTextOffset(primitive, fontSizePx);
+  const at = {
+    x: primitive.at.x + readableOffset.x,
+    y: primitive.at.y + readableOffset.y,
+  };
   const charWidthPx = Math.max(fontSizePx * 0.49, 3.7);
   const lines = primitive.text.split('\n');
   const longestLineLength = Math.max(...lines.map(line => line.length), 1);
@@ -457,18 +548,18 @@ export function measureImportedTextPrimitiveBox(
   const halfWidth = textWidth / 2;
   const halfHeight = textHeight / 2;
 
-  if (primitive.angle === 90 || primitive.angle === 270) {
+  if (displayAngle === 90 || displayAngle === 270) {
     return {
-      x: primitive.at.x - halfHeight,
-      y: primitive.at.y - halfWidth,
+      x: at.x - halfHeight,
+      y: at.y - halfWidth,
       width: textHeight,
       height: textWidth,
     };
   }
 
   return {
-    x: primitive.at.x - halfWidth,
-    y: primitive.at.y - halfHeight,
+    x: at.x - halfWidth,
+    y: at.y - halfHeight,
     width: textWidth,
     height: textHeight,
   };
@@ -512,7 +603,7 @@ export function getImportedTextDisplayAngle(
   role?: ImportedTextRole,
   options?: { preserveNativeOrientation?: boolean; text?: string }
 ) {
-  if (options?.preserveNativeOrientation && (role === 'pin-name' || role === 'pin-number')) {
+  if (options?.preserveNativeOrientation) {
     return angle;
   }
 
@@ -528,15 +619,18 @@ export function getImportedTextDisplayAngle(
       return 0;
     }
 
+    if (role === 'reference' || role === 'value') {
+      if (angle === 90 || angle === 180 || angle === 270) {
+        return 0;
+      }
+
+      return angle;
+    }
+
     const compactText = options?.text?.replace(/\s+/g, '') ?? '';
     if ((angle === 90 || angle === 270) && compactText.length >= 5) {
       return 0;
     }
-
-    if (options?.preserveNativeOrientation) {
-      return angle;
-    }
-
     if (angle === 180) {
       return 0;
     }
@@ -545,10 +639,6 @@ export function getImportedTextDisplayAngle(
       return 90;
     }
 
-    return angle;
-  }
-
-  if (options?.preserveNativeOrientation) {
     return angle;
   }
 

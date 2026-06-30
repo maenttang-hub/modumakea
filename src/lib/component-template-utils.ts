@@ -25,6 +25,7 @@ export function hasImportedSchematicSceneContent(
     (
       importedSchematicScene.wireSegments.length > 0 ||
       importedSchematicScene.junctions.length > 0 ||
+      (importedSchematicScene.noConnects?.length ?? 0) > 0 ||
       importedSchematicScene.labels.length > 0 ||
       (importedSchematicScene.drawings?.length ?? 0) > 0 ||
       Boolean(importedSchematicScene.pageFrame) ||

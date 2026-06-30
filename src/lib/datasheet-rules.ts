@@ -40,9 +40,12 @@ import type {
   PlacedComponent,
   ProjectAuditIssue,
   ProjectAuditReport,
+  ProjectComponentPullupSources,
   ProjectComponentPowerModes,
   ProjectCompanionReport,
   ProjectPowerInputMode,
+  ProjectPullupSource,
+  ProjectPullupSourceConfig,
   ProjectPowerRailSummary,
   ProjectRegulatorThermalScenario,
   ProjectStageReadiness,
@@ -225,6 +228,96 @@ function getPlacedCompanionInventory(components: PlacedComponent[]) {
   }
 
   return inventory;
+}
+
+type PullupEvidenceLine = 'SDA' | 'SCL' | 'RESET' | 'STRAP' | 'UNKNOWN';
+type PullupEvidenceSource = NonNullable<NonNullable<ProjectAuditIssue['evidence']>['pullupSources']>[number];
+
+function normalizePullupSourceConfig(
+  config: ProjectPullupSourceConfig | undefined
+): { source: ProjectPullupSource; resistanceOhms?: number; note?: string } | null {
+  if (!config) {
+    return null;
+  }
+
+  if (typeof config === 'string') {
+    return { source: config };
+  }
+
+  return config;
+}
+
+function normalizePullupPinName(pinName: string) {
+  return pinName.trim().toUpperCase();
+}
+
+function isReliableI2cPullupSource(source: ProjectPullupSource) {
+  return source === 'external' || source === 'onboard' || source === 'user-confirmed';
+}
+
+function collectDeclaredPullupSources(
+  entries: Array<{ component: PlacedComponent; template: ComponentTemplate }>,
+  componentPullupSources?: ProjectComponentPullupSources
+) {
+  const sources: PullupEvidenceSource[] = [];
+
+  for (const { component, template } of entries) {
+    for (const declaration of template.design?.pullups ?? []) {
+      for (const pinName of declaration.pins) {
+        sources.push({
+          source: declaration.source,
+          pinName: normalizePullupPinName(pinName),
+          componentId: component.instanceId,
+          componentName: component.name,
+          resistanceOhms: declaration.resistanceOhms,
+          note: declaration.note,
+        });
+      }
+    }
+
+    const projectSources = componentPullupSources?.[component.instanceId];
+    if (!projectSources) {
+      continue;
+    }
+
+    for (const [pinName, config] of Object.entries(projectSources)) {
+      const normalized = normalizePullupSourceConfig(config);
+      if (!normalized) {
+        continue;
+      }
+
+      sources.push({
+        source: normalized.source,
+        pinName: normalizePullupPinName(pinName),
+        componentId: component.instanceId,
+        componentName: component.name,
+        resistanceOhms: normalized.resistanceOhms,
+        note: normalized.note ?? '프로젝트 설정에서 사용자가 풀업 출처를 확인했습니다.',
+      });
+    }
+  }
+
+  return sources;
+}
+
+function hasReliablePullupForLine(sources: PullupEvidenceSource[], line: PullupEvidenceLine) {
+  return sources.some(source =>
+    isReliableI2cPullupSource(source.source) &&
+    (source.pinName === line || source.pinName === 'SDA/SCL' || source.pinName === 'I2C')
+  );
+}
+
+function formatPullupSourceFacts(sources: PullupEvidenceSource[]) {
+  if (sources.length === 0) {
+    return ['Pull-up source classification: unknown'];
+  }
+
+  return sources.map(source => {
+    const pin = source.pinName ? `${source.pinName} ` : '';
+    const owner = source.componentName ? `on ${source.componentName}` : 'project-level';
+    const resistance = source.resistanceOhms ? `, ${source.resistanceOhms}Ω` : '';
+    return `Pull-up source: ${pin}${source.source} ${owner}${resistance}`;
+  });
 }
 
 function normalizeAuditText(value?: string) {
@@ -465,6 +558,40 @@ function isGroundLikeNet(value?: string) {
   return normalized === 'gnd' || normalized.endsWith('gnd') || normalized.includes('agnd');
 }
 
+function isPowerLikeNet(value?: string) {
+  const normalized = normalizeAuditText(value).replace(/^\+/, '');
+  if (!normalized) {
+    return false;
+  }
+
+  return (
+    normalized === 'vcc' ||
+    normalized === 'vdd' ||
+    normalized === 'vdda' ||
+    normalized === 'vddd' ||
+    normalized === 'avcc' ||
+    normalized === 'avdd' ||
+    normalized === 'vin' ||
+    normalized === 'vbat' ||
+    normalized === 'vbus' ||
+    normalized === 'vusb' ||
+    normalized === 'batt' ||
+    normalized === 'vref' ||
+    normalized === 'vrefh' ||
+    normalized === 'vrefl' ||
+    normalized === 'vref+' ||
+    normalized === 'vref-' ||
+    /^\d+(?:\.\d+)?v$/.test(normalized) ||
+    /^\d+v\d+$/.test(normalized)
+  );
+}
+
+function isImportedPowerHelper(component: PlacedComponent) {
+  const libraryId = component.importedMapping?.libraryId?.toLowerCase() ?? '';
+  const reference = (component.importedReference ?? '').toUpperCase();
+  return libraryId.startsWith('power:') || reference.startsWith('#PWR') || reference.startsWith('#FLG');
+}
+
 function findFirstAssignedPin(
   component: PlacedComponent,
   template: ComponentTemplate,
@@ -547,6 +674,10 @@ function getComponentSignalPins(template: ComponentTemplate) {
   return template.requiredPins.filter(
     pin => !pin.allowedTypes.includes('POWER') && !pin.allowedTypes.includes('GND')
   );
+}
+
+function canTemplateDriveOutputCollision(template: ComponentTemplate) {
+  return template.category !== 'PASSIVE' && template.category !== 'CONNECTOR';
 }
 
 function getSignalProfileForPin(templateId: string, pinName: string) {
@@ -1944,6 +2075,10 @@ function buildPowerShortCircuitIssues(
   template: ComponentTemplate
 ) {
   const issues: ProjectAuditIssue[] = [];
+  if (isImportedPowerHelper(component)) {
+    return issues;
+  }
+
   const source = getPrimarySource(template);
   const powerPins = template.requiredPins.filter(pin => pin.allowedTypes.includes('POWER'));
   const groundPins = template.requiredPins.filter(pin => pin.allowedTypes.includes('GND'));
@@ -2559,11 +2694,14 @@ function buildBusAuditIssues(
 
 function buildI2cPullupAuditIssues(
   components: PlacedComponent[],
-  resolveTemplate: (templateId: string) => ComponentTemplate | undefined
+  resolveTemplate: (templateId: string) => ComponentTemplate | undefined,
+  componentPullupSources?: ProjectComponentPullupSources
 ): ProjectAuditIssue[] {
   const i2cDevices = components
     .map(component => ({ component, template: resolveTemplate(component.templateId) }))
-    .filter(item => item.template && getBusProfile(item.template.id)?.protocol === 'I2C');
+    .filter((item): item is { component: PlacedComponent; template: ComponentTemplate } =>
+      Boolean(item.template && getBusProfile(item.template.id)?.protocol === 'I2C')
+    );
 
   if (i2cDevices.length === 0) {
     return [];
@@ -2574,8 +2712,20 @@ function buildI2cPullupAuditIssues(
     return [];
   }
 
+  const declaredPullups = collectDeclaredPullupSources(i2cDevices, componentPullupSources);
+  const hasSdaPullup = hasReliablePullupForLine(declaredPullups, 'SDA');
+  const hasSclPullup = hasReliablePullupForLine(declaredPullups, 'SCL');
+  if (hasSdaPullup && hasSclPullup) {
+    return [];
+  }
+
   const names = i2cDevices.map(item => item.component.name);
   const componentIds = i2cDevices.map(item => item.component.instanceId);
+  const pullupFacts = formatPullupSourceFacts(declaredPullups);
+  const missingLines = [
+    hasSdaPullup ? null : 'SDA',
+    hasSclPullup ? null : 'SCL',
+  ].filter(Boolean).join('/');
   return [
     createDrcIssue({
       severity: 'warning',
@@ -2589,18 +2739,22 @@ function buildI2cPullupAuditIssues(
       },
       evidence: {
         confidence: 'needs-review',
-        evidenceSummary: `I2C 장치 ${names.join(', ')} 가 배치돼 있지만 프로젝트 내 풀업 저항 수가 SDA/SCL 두 라인을 만족하기에 부족합니다.`,
+        evidenceSummary: `I2C 장치 ${names.join(', ')} 가 배치돼 있지만 ${missingLines || 'SDA/SCL'} 라인 풀업 출처가 충분히 확인되지 않았습니다.`,
         observedFacts: [
           `I2C devices: ${names.join(', ')}`,
-          `Detected pull-up resistor candidates: ${resistorCount}`,
-          `Expected pull-up resistor candidates: at least 2`,
+          `External pull-up resistor candidates: ${resistorCount}`,
+          `Reliable SDA pull-up source: ${hasSdaPullup ? 'yes' : 'no'}`,
+          `Reliable SCL pull-up source: ${hasSclPullup ? 'yes' : 'no'}`,
+          ...pullupFacts,
         ],
         assumptions: [
-          '현재 검사는 저항이 실제 SDA/SCL net에 연결됐는지까지는 추적하지 않고, 프로젝트 내 저항 존재 수를 먼저 봅니다.',
+          'MCU 내부 pull-up은 I2C 버스 풀업으로는 보통 약하므로 외부/온보드/사용자 확인 풀업과 동일하게 보지 않습니다.',
+          '모듈 내부 풀업은 정확한 SKU 또는 프로젝트 설정으로 확인된 경우에만 신뢰 가능한 출처로 처리합니다.',
         ],
+        pullupSources: declaredPullups,
         checkedBy: ['datasheet-rule'],
         affectedComponents: componentIds,
-        howToVerify: 'SDA와 SCL 각각에 적절한 풀업 저항이 실제로 연결돼 있는지 확인하고, 모듈 내부 풀업이 이미 있는 SKU라면 그 근거를 데이터시트나 보드 문서로 다시 확인하세요.',
+        howToVerify: 'SDA와 SCL 각각에 4.7kΩ~10kΩ 수준의 외부 풀업이 실제로 연결됐는지 확인하세요. 모듈 내부 풀업이 이미 있는 SKU라면 해당 핀을 onboard 또는 user-confirmed pull-up으로 표시하세요.',
       },
     }),
   ];
@@ -2899,6 +3053,10 @@ function buildOutputCollisionIssues(
       continue;
     }
 
+    if (!canTemplateDriveOutputCollision(template)) {
+      continue;
+    }
+
     const busProfile = getBusProfile(template.id);
     for (const signalPin of getComponentSignalPins(template)) {
       const boardPinId = component.assignedPins[signalPin.name];
@@ -2915,6 +3073,10 @@ function buildOutputCollisionIssues(
   }
 
   for (const [boardPinId, entries] of owners.entries()) {
+    if (isGroundLikeNet(boardPinId) || isPowerLikeNet(boardPinId)) {
+      continue;
+    }
+
     if (entries.length <= 1) {
       continue;
     }
@@ -3536,11 +3698,13 @@ export function auditProjectDesign(
   boardId: string,
   resolveTemplate: (templateId: string) => ComponentTemplate | undefined,
   powerInputMode: ProjectPowerInputMode = 'usb-5v',
-  componentPowerModes?: ProjectComponentPowerModes
+  componentPowerModes?: ProjectComponentPowerModes,
+  componentPullupSources?: ProjectComponentPullupSources
 ): ProjectAuditReport {
   let verifiedCount = 0;
   let partialCount = 0;
   let genericCount = 0;
+  const genericComponentNames: string[] = [];
   const issues: ProjectAuditIssue[] = [];
 
   for (const component of components) {
@@ -3561,7 +3725,12 @@ export function auditProjectDesign(
     if (shouldTrackDatasheetStatus) {
       if (analysis.datasheetStatus === 'official-complete') verifiedCount++;
       else if (analysis.datasheetStatus === 'official-partial') partialCount++;
-      else genericCount++;
+      else {
+        genericCount++;
+        if (analysis.datasheetStatus === 'generic-module') {
+          genericComponentNames.push(component.name);
+        }
+      }
     }
 
     if (shouldReportUnroutedComponent(component, boardId)) {
@@ -3570,14 +3739,6 @@ export function auditProjectDesign(
         componentName: component.name,
         code: 'routing.unrouted-component',
         ruleId: 'routing.unrouted-component',
-      });
-    }
-
-    if (shouldTrackDatasheetStatus && analysis.datasheetStatus === 'generic-module') {
-      pushAuditIssue(issues, {
-        severity: 'warning',
-        code: 'audit.generic-sku-unfixed',
-        componentName: component.name,
       });
     }
 
@@ -3623,11 +3784,41 @@ export function auditProjectDesign(
     }
   }
 
+  if (genericComponentNames.length > 0) {
+    pushAuditIssue(issues, {
+      severity: 'info',
+      code: 'audit.generic-sku-summary',
+      ruleId: 'audit.generic-sku-summary',
+      params: {
+        count: genericComponentNames.length,
+        componentNames: genericComponentNames.join(', '),
+      },
+      confidence: 'informational',
+      evidence: {
+        confidence: 'informational',
+        evidenceSummary: `${genericComponentNames.length}개 부품은 정확한 제조사 SKU가 없어 일부 판정이 보수적으로 처리됩니다.`,
+        observedFacts: [
+          `Generic components: ${genericComponentNames.join(', ')}`,
+          `Generic component count: ${genericComponentNames.length}`,
+        ],
+        assumptions: [
+          '이 항목은 회로 오류가 아니라 검증 신뢰도 제한을 나타내는 요약입니다.',
+        ],
+        sourceQuality: 'generic-module',
+        checkedBy: ['datasheet-rule'],
+        affectedComponents: components
+          .filter(component => genericComponentNames.includes(component.name))
+          .map(component => component.instanceId),
+        howToVerify: '정확한 MPN/SKU 또는 모듈 제조사 링크를 입력하면 해당 부품의 전압, 내장 풀업, 권장 외부부품 판정 정확도가 올라갑니다.',
+      },
+    });
+  }
+
   for (const issue of buildBusAuditIssues(components, resolveTemplate)) {
     pushAuditIssue(issues, issue);
   }
 
-  for (const issue of buildI2cPullupAuditIssues(components, resolveTemplate)) {
+  for (const issue of buildI2cPullupAuditIssues(components, resolveTemplate, componentPullupSources)) {
     pushAuditIssue(issues, issue);
   }
 
@@ -3715,6 +3906,7 @@ export function auditProjectDesign(
     verifiedCount,
     partialCount,
     genericCount,
+    genericComponentNames,
     issueCount: deduplicatedIssues.length,
     issues: deduplicatedIssues,
     powerReport,

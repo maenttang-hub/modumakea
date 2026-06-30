@@ -3,9 +3,11 @@ import assert from 'node:assert/strict';
 
 import {
   classifyImportedSymbolFamily,
+  classifyImportedNetLabel,
   getImportedTextDisplayAnchor,
   getImportedTextDisplayAngle,
   getImportedTextDisplayBaseline,
+  getImportedNetLabelDisplay,
   getImportedPinLabelDisplay,
   getImportedReadableTextOffset,
   getImportedTextOverviewOpacity,
@@ -564,7 +566,7 @@ test('scene bounds include imported symbol primitives even when there are no wir
   });
 });
 
-test('scene bounds ignore the page frame when tighter active content exists', () => {
+test('scene bounds include the page frame so original KiCad view can fit the full sheet', () => {
   const bounds = getImportedSchematicSceneBounds(
     [],
     {
@@ -587,10 +589,10 @@ test('scene bounds ignore the page frame when tighter active content exists', ()
   );
 
   assert.deepEqual(bounds, {
-    x: 500,
-    y: 300,
-    width: 120,
-    height: 1,
+    x: 0,
+    y: 0,
+    width: 2000,
+    height: 1400,
   });
 });
 
@@ -643,6 +645,13 @@ test('imported text display keeps labels upright while pin text stays readable',
     getImportedTextDisplayAngle(270, 'reference', { preserveNativeOrientation: true }),
     270
   );
+  assert.equal(
+    getImportedTextDisplayAngle(90, 'value', {
+      preserveNativeOrientation: true,
+      text: '0.1uF',
+    }),
+    90
+  );
 });
 
 test('imported text display flattens long vertical labels while preserving short pin context', () => {
@@ -676,6 +685,18 @@ test('imported text display flattens long vertical labels while preserving short
       role: 'value',
     }),
     true
+  );
+  assert.equal(
+    shouldFlattenImportedTextForReadability({
+      kind: 'text',
+      at: { x: 0, y: 0 },
+      text: '0.1uF',
+      angle: 90,
+      preserveNativeOrientation: true,
+      sizeMm: 1.27,
+      role: 'value',
+    }),
+    false
   );
   const readableOffset = getImportedReadableTextOffset({
       kind: 'text',
@@ -1360,6 +1381,59 @@ test('imported text display preserves sensible anchors and baselines for source 
   assert.equal(getImportedTextDisplayBaseline(90, 'pin-name'), 'ideographic');
   assert.equal(getImportedTextDisplayBaseline(180, 'value'), 'middle');
   assert.equal(getImportedTextDisplayBaseline(90, 'value'), 'ideographic');
+});
+
+test('imported net labels preserve KiCad VCC and GND source anchors', () => {
+  assert.equal(classifyImportedNetLabel('VCC'), 'power');
+  assert.equal(classifyImportedNetLabel('VDD'), 'power');
+  assert.equal(classifyImportedNetLabel('PWR_FLAG'), 'power');
+  assert.equal(classifyImportedNetLabel('GND'), 'ground');
+  assert.equal(classifyImportedNetLabel('DATA'), 'signal');
+
+  const verticalVcc = getImportedNetLabelDisplay({
+    text: 'VCC',
+    at: { x: 100, y: 200 },
+    angle: 90,
+    textAnchor: 'start',
+    baseline: 'ideographic',
+  });
+  assert.equal(verticalVcc.angle, 90);
+  assert.equal(verticalVcc.textAnchor, 'start');
+  assert.equal(verticalVcc.baseline, 'ideographic');
+  assert.equal(verticalVcc.background, true);
+  assert.equal(verticalVcc.x, 100);
+  assert.equal(verticalVcc.y, 200);
+
+  const crowdedLeftVcc = getImportedNetLabelDisplay({
+    text: 'VCC',
+    at: { x: 100, y: 200 },
+    angle: 90,
+    side: 'left',
+  });
+  assert.equal(crowdedLeftVcc.textAnchor, 'start');
+  assert.equal(crowdedLeftVcc.x, 100);
+
+  const horizontalGnd = getImportedNetLabelDisplay({
+    text: 'GND',
+    at: { x: 120, y: 240 },
+    angle: 0,
+  });
+  assert.equal(horizontalGnd.angle, 0);
+  assert.equal(horizontalGnd.textAnchor, 'start');
+  assert.equal(horizontalGnd.baseline, 'middle');
+  assert.equal(horizontalGnd.y, 240);
+
+  const verticalSignal = getImportedNetLabelDisplay({
+    text: 'SDA',
+    at: { x: 10, y: 20 },
+    angle: 90,
+    textAnchor: 'start',
+    baseline: 'ideographic',
+  });
+  assert.equal(verticalSignal.angle, 90);
+  assert.equal(verticalSignal.textAnchor, 'start');
+  assert.equal(verticalSignal.baseline, 'ideographic');
+  assert.equal(verticalSignal.background, false);
 });
 
 test('imported review suppresses noisy annotation and pin-number text for reviewed primitives', () => {

@@ -1341,6 +1341,13 @@ function extractJunctionPoints(root: SExprNode[]) {
   });
 }
 
+function extractNoConnectPoints(root: SExprNode[]) {
+  return childForms(root, 'no_connect').map(node => {
+    const at = parseAtNode(childForms(node, 'at')[0]);
+    return { x: at.x, y: at.y };
+  });
+}
+
 function extractLabels(root: SExprNode[]): Array<{
   kind: 'local' | 'global' | 'hierarchical';
   name: string;
@@ -1479,6 +1486,9 @@ function extractPageFrame(root: SExprNode[]): ParsedPageFrame | undefined {
 }
 
 function buildCustomPackageFromLibrarySymbol(symbol: ParsedLibrarySymbol) {
+  const resolvePinDisplayName = (pin: ParsedLibrarySymbol['pins'][number]) =>
+    pin.name.trim() && pin.name.trim() !== '~' ? pin.name : pin.number;
+
   const parsedSymbol: ParsedKiCadSymbol = {
     name: symbol.displayName,
     displayName: symbol.displayName,
@@ -1487,7 +1497,7 @@ function buildCustomPackageFromLibrarySymbol(symbol: ParsedLibrarySymbol) {
     description: `${symbol.displayName} imported from KiCad schematic`,
     pins: symbol.pins.map(pin => ({
       number: pin.number,
-      name: pin.name,
+      name: resolvePinDisplayName(pin),
       electricalType: pin.electricalType,
       side: pin.at.x <= 0 ? 'left' : 'right',
     })),
@@ -1495,6 +1505,7 @@ function buildCustomPackageFromLibrarySymbol(symbol: ParsedLibrarySymbol) {
 
   return kicadSymbolToCustomComponentPackage(parsedSymbol, {
     templateIdPrefix: 'kicad',
+    category: symbol.isPowerSymbol || symbol.libraryId.toLowerCase().startsWith('power:') ? 'PASSIVE' : undefined,
   });
 }
 
@@ -1523,14 +1534,7 @@ function resolveKnownCustomLibraryMapping(
 ): ImportedKiCadMapping | null {
   const libraryId = normalizeImportedFallbackToken(symbol.libraryId);
 
-  if (
-    libraryId === 'power:gnd' ||
-    libraryId === 'power:+12v' ||
-    libraryId === 'power:+5v' ||
-    libraryId === 'power:+3.3v' ||
-    libraryId === 'power:vcc' ||
-    libraryId === 'power:vdd'
-  ) {
+  if (libraryId.startsWith('power:')) {
     return buildKnownLibraryCustomMapping(symbol, instance, generatedTemplateId, 'high');
   }
 
@@ -1695,6 +1699,18 @@ function transformPinForInstance(
       y: Number(mirroredAt.y.toFixed(3)),
       angle,
     },
+  };
+}
+
+function getSchematicPinPointForInstance(
+  pin: ParsedLibraryPin,
+  instance: ParsedSchematicInstance
+): Point {
+  const rotatedPoint = rotatePoint(pin.at, toCanvasRotation(instance.at.rotation));
+
+  return {
+    x: Number((instance.at.x + rotatedPoint.x).toFixed(3)),
+    y: Number((instance.at.y + rotatedPoint.y).toFixed(3)),
   };
 }
 
@@ -2860,7 +2876,7 @@ function buildImportedGeometry(
   };
   const derivedKind = inferImportedFallbackKind(fallbackTemplateId, transformedSymbol, instance);
   const pinAnchors = transformedSymbol.pins.flatMap(pin => {
-    const pinId = pinNumberToId.get(pin.number);
+    const pinId = resolveImportedPinId(pinNumberToId, pin);
     if (!pinId) {
       return [];
     }
@@ -3046,6 +3062,23 @@ function buildImportedGeometry(
   };
 }
 
+function resolveImportedPinId(
+  pinNumberToId: Map<string, string>,
+  pin: Pick<ParsedLibraryPin, 'name' | 'number'>
+) {
+  const mapped = pinNumberToId.get(pin.number)?.trim();
+  if (mapped && mapped !== '~') {
+    return mapped;
+  }
+
+  const name = pin.name.trim();
+  if (name && name !== '~') {
+    return name;
+  }
+
+  return pin.number;
+}
+
 function resolveSymbol(
   instance: ParsedSchematicInstance,
   symbol: ParsedLibrarySymbol,
@@ -3143,7 +3176,7 @@ function resolveSymbol(
     template,
     customPackage: generated,
     librarySymbol: symbol,
-    pinNumberToId: new Map(symbol.pins.map(pin => [pin.number, pin.name])),
+    pinNumberToId: new Map(symbol.pins.map(pin => [pin.number, resolveImportedPinId(new Map(), pin)])),
     importedMapping: knownLibraryMapping ?? {
       templateId: generated.templateId,
       confidence: 'low',
@@ -3286,16 +3319,12 @@ function buildInstanceEndpoints(instance: ParsedSchematicInstance, resolution: S
 
   for (const rawPin of resolution.librarySymbol.pins) {
     const pin = transformPinForInstance(rawPin, instance);
-    const pinId = resolution.pinNumberToId.get(pin.number);
+    const pinId = resolveImportedPinId(resolution.pinNumberToId, pin);
     if (!pinId) {
       continue;
     }
 
-    const rotated = rotatePoint({ x: pin.at.x, y: pin.at.y }, instance.at.rotation);
-    const absolute = {
-      x: Number((instance.at.x + rotated.x).toFixed(3)),
-      y: Number((instance.at.y + rotated.y).toFixed(3)),
-    };
+    const absolute = getSchematicPinPointForInstance(pin, instance);
     const endpoint =
       resolution.kind === 'board'
         ? { ownerType: 'board' as const, ownerId: resolution.boardId, pinId }
@@ -3587,7 +3616,10 @@ function transformPrimitiveToAbsolute(
       };
     case 'text': {
       const sourceAngle = (((primitive.angle + rotation) % 360) + 360) % 360 as 0 | 90 | 180 | 270;
-      const finalAngle = getImportedTextDisplayAngle(sourceAngle, primitive.role);
+      const finalAngle = getImportedTextDisplayAngle(sourceAngle, primitive.role, {
+        preserveNativeOrientation: primitive.preserveNativeOrientation,
+        text: primitive.text,
+      });
       const isFlipped180 = Math.abs(sourceAngle - finalAngle) === 180;
 
       let textAnchor = primitive.textAnchor;
@@ -3659,6 +3691,7 @@ function transformPinAnchorToAbsolute(
 function buildImportedSchematicScene(
   wireSegments: Array<{ start: Point; end: Point }>,
   junctions: Point[],
+  noConnects: Point[],
   labels: Array<{
     name: string;
     point: Point;
@@ -3682,6 +3715,7 @@ function buildImportedSchematicScene(
   if (
     wireSegments.length === 0 &&
     junctions.length === 0 &&
+    noConnects.length === 0 &&
     labels.length === 0 &&
     drawings.length === 0 &&
     !pageFrame &&
@@ -3762,6 +3796,7 @@ function buildImportedSchematicScene(
       end: toCanvasPoint(segment.end),
     })),
     junctions: junctions.map(toCanvasPoint),
+    noConnects: noConnects.map(toCanvasPoint),
     labels: labels.map(label => ({
       text: label.name,
       at: toCanvasPoint(label.point),
@@ -3897,7 +3932,7 @@ function createPlacedComponent(
     fallback: resolution.template.name,
   });
   const maybeValue = sanitizePlainText(instance.value, { maxLength: 64, fallback: '' });
-  const normalizedValue = maybeValue && maybeValue !== nameCandidate ? maybeValue : undefined;
+  const normalizedValue = maybeValue || undefined;
   const position = options?.preferTemplateCanvasLayout
     ? {
         x: Math.round(instance.at.x * MM_TO_CANVAS - templateBody.width / 2),
@@ -4291,6 +4326,7 @@ export function importKiCadSchematic(source: string, options?: { projectName?: s
   const instances = extractInstances(root);
   const wireSegments = extractWireSegments(root);
   const junctions = extractJunctionPoints(root);
+  const noConnects = extractNoConnectPoints(root);
   const labels: ReturnType<typeof extractLabels> = extractLabels(root);
   const drawings = extractRootDrawingPrimitives(root);
   const pageFrame = extractPageFrame(root);
@@ -4377,6 +4413,7 @@ export function importKiCadSchematic(source: string, options?: { projectName?: s
   const importedSchematicScene = buildImportedSchematicScene(
     wireSegments,
     junctions,
+    noConnects,
     labels,
     drawings,
     pageFrame,
@@ -4444,7 +4481,7 @@ export function importKiCadSchematic(source: string, options?: { projectName?: s
     generatedCode: '',
     codeError: null,
     lastCodeGenerationMeta: null,
-  }, { projectFileVersion: PROJECT_FILE_VERSION });
+  }, { projectFileVersion: PROJECT_FILE_VERSION, includePcbDocument: false });
 
   return {
     document,

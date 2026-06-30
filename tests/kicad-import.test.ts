@@ -1145,8 +1145,8 @@ test('importKiCadSchematic keeps component pins connected on long wires even wit
   assert.equal(result.document.manualConnections.length, 1);
   assert.deepEqual(result.document.manualConnections[0], {
     id: 'kicad-import-1',
-    source: { ownerType: 'component', ownerId: 'r-1', pinId: '1' },
-    target: { ownerType: 'component', ownerId: 'r-2', pinId: '1' },
+    source: { ownerType: 'component', ownerId: 'r-1', pinId: '2' },
+    target: { ownerType: 'component', ownerId: 'r-2', pinId: '2' },
     suggestedNetName: undefined,
   });
 });

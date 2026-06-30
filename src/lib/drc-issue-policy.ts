@@ -349,6 +349,19 @@ export const RULE_CONFIDENCE_POLICIES: Record<string, RuleConfidencePolicy> = {
       requireHowToVerify: true,
     },
   },
+  'electrical.symbol-footprint-family-mismatch': {
+    ruleId: 'electrical.symbol-footprint-family-mismatch',
+    defaultSeverity: 'error',
+    defaultConfidence: 'strong-inference',
+    falsePositiveRisk: 'medium',
+    suppressible: true,
+    evidenceRequirements: {
+      observedFactsMin: 4,
+      requireVisualTargets: true,
+      requireAssumptions: true,
+      requireHowToVerify: true,
+    },
+  },
   'mcu.boot-strap-audit': {
     ruleId: 'mcu.boot-strap-audit',
     defaultSeverity: 'warning',
