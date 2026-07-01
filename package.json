@@ -36,6 +36,7 @@
     "test:e2e": "playwright test",
     "test:validation:baseline": "bash ./scripts/ci-validation-baseline.sh",
     "test:validation:extended": "bash ./scripts/ci-validation-extended.sh",
+    "product:preflight": "node --experimental-strip-types --import ./tests/register-alias-loader.mjs ./scripts/product-release-preflight.ts",
     "test:launch-desk": "node --test --experimental-strip-types --import ./tests/register-alias-loader.mjs ./tests/launch-desk-tools.test.ts",
     "test:coverage": "node --test --experimental-strip-types --experimental-test-coverage --import ./tests/register-alias-loader.mjs ./tests/*.test.ts",
     "verify:launch-desk-stream": "node ./scripts/verify-launch-desk-stream.mjs",

@@ -30,6 +30,18 @@ cp .env.example .env.local
 
 Then set `OPENAI_API_KEY` in `.env.local`. The server-side Launch Desk route uses that key with the OpenAI Agents SDK. `LAUNCH_DESK_MODEL` defaults to `gpt-5.5`.
 
+The default beta product surface is `review-mvp`. Keep these values closed unless you are doing internal verification:
+
+- `NEXT_PUBLIC_MODUMAKE_SURFACE=review-mvp`
+- `NEXT_PUBLIC_MODUMAKE_ENABLE_FULL_SURFACE=false`
+- `NEXT_PUBLIC_MODUMAKE_ALLOW_FULL_SURFACE_OVERRIDE=false`
+- `NEXT_PUBLIC_MODUMAKE_ENABLE_WEB_SERIAL=false`
+- `MODUMAKE_ENABLE_LAUNCH_DESK=false`
+- `NEXT_PUBLIC_MODUMAKE_ENABLE_BETA_TELEMETRY=false` unless beta event collection is explicitly approved
+- `MODUMAKE_ENABLE_BETA_EVENTS=false` unless the server-side collection route is explicitly approved
+- `MODUMAKE_PRODUCT_ENV=development` for local/dev; set `production` only after the product preflight is green
+- `NEXT_PUBLIC_MODUMAKE_FEEDBACK_URL` or `NEXT_PUBLIC_MODUMAKE_SUPPORT_EMAIL` must be set before product deployment
+
 Cloud compile is disabled by default for the public MVP. For internal development only, you must explicitly opt in with:
 
 - `MODUMAKE_ENABLE_UNSANDBOXED_COMPILE=true`
@@ -97,9 +109,20 @@ npm test
 npm run test:e2e
 npm run test:validation:baseline
 npm run test:validation:extended
+npm run product:preflight
 ```
 
 The current public MVP scope is documented in [Review MVP Scope](/Users/gimdong-il/Desktop/프로그램/modumake/docs/review-mvp-scope.md). Keep PCB manufacturing, public cloud compile, and broad CAD replacement claims out of the default product surface unless that scope document is updated first.
+
+Beta operating docs:
+
+- [Beta Test Runbook](/Users/gimdong-il/Desktop/프로그램/modumake/docs/beta-test-runbook.md)
+- [Beta Risk Register](/Users/gimdong-il/Desktop/프로그램/modumake/docs/beta-risk-register.md)
+- [Beta Data and Security](/Users/gimdong-il/Desktop/프로그램/modumake/docs/beta-data-and-security.md)
+- [Beta Golden Corpus Protocol](/Users/gimdong-il/Desktop/프로그램/modumake/docs/beta-golden-corpus-protocol.md)
+- [Beta Release Checklist](/Users/gimdong-il/Desktop/프로그램/modumake/docs/beta-release-checklist.md)
+- [Beta Sample Projects](/Users/gimdong-il/Desktop/프로그램/modumake/docs/beta-sample-projects.md)
+- [Productization Readiness](/Users/gimdong-il/Desktop/프로그램/modumake/docs/productization-readiness.md)
 
 Large KiCad stress fixtures are intentionally not committed. Keep local real-project samples under `tests/kicad_samples/` or the existing absolute fixture paths, and run them only when needed:
 

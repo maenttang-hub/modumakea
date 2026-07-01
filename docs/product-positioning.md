@@ -2,19 +2,23 @@
 
 ## One-line description
 
-ModuMake is an AI hardware reviewer that helps find circuit risks before build handoff.
+ModuMake is a review-first hardware tool that imports simple KiCad circuits and turns power, wiring, pin, and component risks into an explainable report.
 
 ## What we are
 
 - Datasheet-grounded validation tool for Arduino, ESP32, and Raspberry Pi projects
 - Hardware safety reviewer for beginners, makers, educators, and prototype teams
 - Design-time assistant that explains why a sensor/board/pin combination is risky
+- Beta product surface for KiCad/simple-circuit review, not a general CAD workspace
 
 ## What we are not
 
 - Full replacement for professional EDA suites
 - Advanced PCB router
 - High-precision SPICE simulator
+- Manufacturing release authority
+- Public cloud compile service
+- Automatic verifier for every component datasheet
 
 ## Product difference
 

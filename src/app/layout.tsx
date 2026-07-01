@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import './globals.css';
 import { Toaster } from '@/components/ui/sonner';
 import { DevWarningSuppressor } from '@/components/dev-warning-suppressor';
+import { assertProductRuntimeEnvironment } from '@/lib/product-environment';
 import { APP_LANGUAGE_COOKIE, resolveAppLanguage } from '@/lib/ui-language';
 
 export const metadata: Metadata = {
@@ -17,6 +18,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  assertProductRuntimeEnvironment();
   const cookieStore = await cookies();
   const appLanguage = resolveAppLanguage(cookieStore.get(APP_LANGUAGE_COOKIE)?.value);
 

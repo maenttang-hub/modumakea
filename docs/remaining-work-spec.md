@@ -17,6 +17,8 @@
 - `ProjectAuditIssue`에는 `confidence` / `evidence` 구조가 추가되었다.
 - AI review / lightweight payload / datasheet payload 쪽에도 기본 근거 필드가 전달된다.
 - `kicad-import`, `kicad-reference-fixtures`, `kicad-real-projects`의 타입 정리는 완료되었다.
+- 사용자 이슈 피드백 상태 모델은 `src/lib/issue-feedback.ts`, `src/store/project-document.ts`, `src/components/dashboard/validation-panel.tsx`에 구현되어 있다.
+- 베타 import 실패 리포트와 익명 이벤트 수집 스캐폴드는 추가되었고, 기본값은 비활성이다.
 
 ## 범위 밖
 
@@ -26,6 +28,16 @@
 - 새 검증 규칙 대량 추가
 - PCB 레이아웃 DRC 연동
 - 센서/부품 카탈로그 대량 확장
+
+## 변경 규칙
+
+대형 핵심 파일은 지금 분해하지 않는다. 대신 변경 품질 기준을 먼저 고정한다.
+
+- 새 validation rule은 안정적인 `rule id`를 가진다.
+- 사용자에게 노출되는 rule은 `confidence`, `evidenceSummary`, `observedFacts`, `howToVerify`를 함께 제공한다.
+- 새 rule 또는 기존 rule 판정 변경은 regression test를 같이 추가한다.
+- parser/connectivity 변경은 최소 fixture 하나 또는 focused unit test 하나로 실제 입력/출력 차이를 고정한다.
+- `circuit-netlist.ts`, `kicad-sch-parser.ts`, `datasheet-rules.ts`의 분해는 베타 후 작업으로 유지한다. 베타 전에는 새 도메인 경계가 명확할 때만 작은 모듈을 추가한다.
 
 ## 우선순위
 
@@ -156,6 +168,8 @@
 
 #### 6. 사용자 피드백 상태값 설계
 
+상태: 완료.
+
 배경:
 오탐을 줄이는 가장 빠른 방법은 엔진 수정만이 아니라 사용자 확인 상태를 저장하는 것이다.
 
@@ -167,16 +181,18 @@
 - `verified-by-datasheet`
 - `false-positive`
 
-해야 할 일:
+구현 위치:
 
-- 상태 모델 정의
-- issue별 feedback 저장 위치 정의
-- 같은 프로젝트에서 재검증 시 톤 다운 규칙 정의
+- `src/types/index.ts`: `ValidationReviewDecision`
+- `src/lib/issue-feedback.ts`: legacy 값 정규화, 숨김/톤 다운 규칙, badge 순서
+- `src/store/project-document.ts`: 프로젝트 저장/복원 시 feedback sanitize
+- `src/store/slices/board-slice.ts`: issue별 decision 저장
+- `src/components/dashboard/validation-panel.tsx`: fixed / already-handled / included-in-module / verified-by-datasheet / false-positive 조작
 
 완료 조건:
 
-- 타입 또는 store 레벨에서 feedback 구조가 먼저 정의된다.
-- UI 구현 전이라도 데이터 모델이 고정된다.
+- 타입, store, UI 조작이 연결되어 있다.
+- 같은 프로젝트 재검증 시 `fixed`/`false-positive`는 숨기고, `already-handled`/flag 상태는 톤 다운한다.
 
 ### P2. 후속 고도화
 
