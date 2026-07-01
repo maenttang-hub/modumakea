@@ -16,6 +16,7 @@ function buildPermissionsPolicy() {
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  output: 'standalone',
   async headers() {
     return [
       {

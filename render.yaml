@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: modumake-beta
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: false
+    envVars:
+      - key: MODUMAKE_PRODUCT_ENV
+        value: production
+      - key: NEXT_PUBLIC_MODUMAKE_SURFACE
+        value: review-mvp
+      - key: NEXT_PUBLIC_MODUMAKE_SUPPORT_EMAIL
+        value: maenttang@gmail.com
+      - key: NEXT_PUBLIC_MODUMAKE_ENABLE_FULL_SURFACE
+        value: "false"
+      - key: NEXT_PUBLIC_MODUMAKE_ALLOW_FULL_SURFACE_OVERRIDE
+        value: "false"
+      - key: NEXT_PUBLIC_MODUMAKE_ENABLE_WEB_SERIAL
+        value: "false"
+      - key: NEXT_PUBLIC_MODUMAKE_ENABLE_BETA_TELEMETRY
+        value: "false"
+      - key: MODUMAKE_ENABLE_BETA_EVENTS
+        value: "false"
+      - key: MODUMAKE_ENABLE_LAUNCH_DESK
+        value: "false"
+      - key: MODUMAKE_ENABLE_UNSANDBOXED_COMPILE
+        value: "false"
+      - key: MODUMAKE_COMPILE_PUBLIC_ENABLED
+        value: "false"
+      - key: MODUMAKE_COMPILE_REQUIRE_AUTH
+        value: "true"
+      - key: KICAD_CLI_PATH
+        value: /usr/bin/kicad-cli
+      - key: MODUMAKE_BETA_ACCESS_USER
+        value: beta
+      - key: MODUMAKE_BETA_ACCESS_PASSWORD
+        sync: false
