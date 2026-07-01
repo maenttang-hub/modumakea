@@ -12,8 +12,11 @@
 - `tests/kicad-public-fixtures.test.ts`: 공개 KiCad fixture 일부
 - `tests/kicad-real-projects.test.ts`: 로컬 real fixture 묶음
 - `config/golden-corpus/clean-kicad-golden-corpus-v1.json`: parser/render/report anomaly 50건, human label은 의도적으로 pending
+- `config/golden-corpus/beta-validation-golden-corpus-v1.json`: 베타 validation precision용 합성 회로 5건, human-reviewed seed
+- `tests/beta-validation-golden-corpus.test.ts`: 위 합성 회로의 expected / non-expected rule을 CI에서 검증
 
 주의: 기존 clean corpus는 import/render 품질용이다. 베타 precision 측정용 expected issue set과 동일하지 않다.
+베타 validation corpus는 작게 시작하며, 실제 사용자 허가 샘플을 추가하기 전까지 엔진 기준선이 흔들리는지 보는 seed 역할만 한다.
 
 ## 베타 validation corpus 구성
 

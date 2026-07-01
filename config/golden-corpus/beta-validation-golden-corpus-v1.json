@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "corpusId": "beta-validation-golden-corpus-v1",
+  "purpose": "Small human-reviewed seed corpus for beta validation precision checks.",
+  "labelStatus": "human-reviewed",
+  "entries": [
+    {
+      "sampleId": "healthy-i2c-with-explicit-pullups-01",
+      "title": "Healthy 3.3V I2C sensor with explicit 4.7k pull-ups",
+      "boardId": "uno",
+      "fixtureKind": "synthetic-circuit",
+      "expectedIssues": [],
+      "expectedNonIssues": [
+        {
+          "ruleId": "bus.i2c-impedance-voltage",
+          "code": "bus.i2c-impedance-voltage.missing-pullup",
+          "notes": "SDA and SCL both have visible 4.7k pull-ups to 3.3V."
+        },
+        {
+          "ruleId": "netlist.power-short.direct",
+          "notes": "Power and ground rails are not shorted."
+        }
+      ]
+    },
+    {
+      "sampleId": "exact-i2c-missing-pullups-01",
+      "title": "Official I2C IC without visible pull-ups",
+      "boardId": "uno",
+      "fixtureKind": "synthetic-circuit",
+      "expectedIssues": [
+        {
+          "ruleId": "bus.i2c-impedance-voltage",
+          "code": "bus.i2c-impedance-voltage.missing-pullup",
+          "severity": "error",
+          "confidence": "strong-inference",
+          "notes": "Official-complete I2C part exposes SDA/SCL but no pull-up path exists."
+        }
+      ],
+      "expectedNonIssues": [
+        {
+          "ruleId": "netlist.power-short.direct",
+          "notes": "Missing I2C pull-ups must not be confused with a rail short."
+        }
+      ]
+    },
+    {
+      "sampleId": "direct-power-ground-short-01",
+      "title": "Direct 5V to GND short through a synthetic link",
+      "boardId": "uno",
+      "fixtureKind": "synthetic-circuit",
+      "expectedIssues": [
+        {
+          "ruleId": "netlist.power-short.direct",
+          "code": "netlist.power-short.direct",
+          "severity": "error",
+          "confidence": "confirmed",
+          "notes": "The same component explicitly ties a 5V rail pin to GND."
+        }
+      ],
+      "expectedNonIssues": [
+        {
+          "ruleId": "bus.i2c-impedance-voltage",
+          "code": "bus.i2c-impedance-voltage.missing-pullup",
+          "notes": "This sample has no I2C bus."
+        }
+      ]
+    },
+    {
+      "sampleId": "generic-i2c-module-pullup-unknown-01",
+      "title": "Generic I2C module where onboard pull-ups are unknown",
+      "boardId": "uno",
+      "fixtureKind": "synthetic-circuit",
+      "expectedIssues": [
+        {
+          "ruleId": "bus.i2c-impedance-voltage",
+          "code": "bus.i2c-impedance-voltage.missing-pullup",
+          "severity": "warning",
+          "confidence": "needs-review",
+          "notes": "Generic module status should keep this as a conservative review warning, not a hard error."
+        }
+      ],
+      "expectedNonIssues": [
+        {
+          "ruleId": "netlist.power-short.direct",
+          "notes": "Unknown module pull-ups are not a power short."
+        }
+      ]
+    },
+    {
+      "sampleId": "opamp-adc-overrange-01",
+      "title": "5V op-amp gain stage driving a 3.3V ESP32 ADC pin",
+      "boardId": "esp32",
+      "fixtureKind": "synthetic-circuit",
+      "expectedIssues": [
+        {
+          "ruleId": "netlist.opamp-output-adc-range-review",
+          "code": "netlist.opamp-output-adc-range-review",
+          "severity": "warning",
+          "confidence": "needs-review",
+          "notes": "The gain stage can drive the ADC above its reference range."
+        }
+      ],
+      "expectedNonIssues": [
+        {
+          "ruleId": "netlist.power-short.direct",
+          "notes": "The op-amp sample is an analog range issue, not a rail short."
+        }
+      ]
+    }
+  ]
+}

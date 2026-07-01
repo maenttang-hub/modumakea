@@ -198,6 +198,8 @@
 
 #### 7. precision 측정용 golden corpus 도입
 
+상태: 5개 합성 회로 seed 추가. 실제 사용자/공개 샘플 20~30개 human label은 후속.
+
 배경:
 신뢰도는 감으로 운영하면 안 되고, 최소한 대표 회로 세트 기준 precision을 봐야 한다.
 
