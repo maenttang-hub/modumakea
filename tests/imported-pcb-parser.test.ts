@@ -11,6 +11,7 @@ import { DEFAULT_BOARD_ID, DEFAULT_PROJECT_NAME, POWER_INPUT_MODES, PROJECT_FILE
 
 const FAIL_PROJECT = '/Users/gimdong-il/Desktop/프로그램/modumake/pydrc/test-projects/fail-project/fail-project.kicad_pcb';
 const GOOD_PROJECT = '/Users/gimdong-il/Desktop/프로그램/modumake/pydrc/test-projects/good-project/good-project.kicad_pcb';
+const WIDEBAND_PCB = '/Users/gimdong-il/Desktop/프로그램/modumake/tests/kicad_samples/rusefi/wideband-F103/wideband_controller.kicad_pcb';
 
 const ADVANCED_RULE_PROJECT = `
 (kicad_pcb
@@ -304,4 +305,27 @@ test('PCB track-pad clearance groups repeated candidates around the same pad', (
   assert.equal(trackPadIssues.length, 1);
   assert.match(trackPadIssues[0]?.message ?? '', /3건을 대표 이슈 1건/);
   assert.ok((trackPadIssues[0]?.items?.length ?? 0) >= 3);
+});
+
+test('real PCB pre-check keeps repeated ModuMake candidates representative', async () => {
+  const source = await readFile(WIDEBAND_PCB, 'utf8');
+  const document = parseKiCadPcb(source);
+  const report = validateImportedPcbDocument(document);
+  const repeatedCodes = [
+    'PCB_ANNULAR_RING_TOO_SMALL',
+    'PCB_CLEARANCE_PAD_PAD',
+    'PCB_CLEARANCE_TRACK_PAD',
+    'PCB_CLEARANCE_TRACK_TRACK',
+    'PCB_NET_DISCONNECTED',
+    'PCB_SOLDER_MASK_SLIVER_TOO_SMALL',
+    'PCB_ZONE_CLEARANCE_PAD',
+  ];
+
+  assert.equal(report.errorCount, 0);
+  assert.ok(report.issueCount < 80);
+  assert.ok(report.issues.some(issue => issue.code === 'PCB_CLEARANCE_TRACK_TRACK_REPRESENTATIVE_LIMIT'));
+
+  for (const code of repeatedCodes) {
+    assert.ok(report.issues.filter(issue => issue.code === code).length <= 6, `${code} should be capped`);
+  }
 });

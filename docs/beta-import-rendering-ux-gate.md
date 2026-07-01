@@ -29,6 +29,7 @@ The first beta smoke set must include:
 - Initial schematic viewport must keep at least 92% of the imported overlay width and height inside the canvas.
 - PCB upload must keep `F.Fab`, `B.Fab`, and `Dwgs.User` disabled by default when those layers exist.
 - PCB layer controls must not overlap rendered board graphics on first open.
+- ModuMake PCB pre-checks must show representative candidates instead of every repeated geometry candidate. Official KiCad DRC may show exact DRC counts; local pre-checks should keep repeated candidates capped and summarized.
 - PCB upload must show `ModuMake 사전점검` / `KiCad 공식 DRC 미실행` until official DRC is run.
 - Visible buttons in imported schematic and PCB states must not be unnamed.
 
@@ -88,6 +89,12 @@ Audit environment:
 - Script: `scripts/audit-import-rendering.mjs`.
 
 Result: 50/50 samples passed the gate with zero DOM issues. The audit checked schematic clipping, visible unnamed buttons, page horizontal overflow, PCB default layer state for `F.Fab`, `B.Fab`, and `Dwgs.User`, and whether PCB layer controls overlapped board graphics.
+
+Follow-up PCB pre-check adjustment:
+
+- Repeated ModuMake pre-check candidates are capped to representative entries and summarized.
+- Official KiCad DRC remains the source for exhaustive board-rule counts.
+- Large real PCB samples that previously showed hundreds of local pre-check entries now show representative counts instead of full candidate counts.
 
 ## Non-Goals
 

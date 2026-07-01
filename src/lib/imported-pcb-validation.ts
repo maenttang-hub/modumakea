@@ -27,6 +27,39 @@ const DEFAULT_DIFF_PAIR_GAP_TOLERANCE_MM = 0.08;
 const DEFAULT_DIFF_PAIR_WIDTH_TOLERANCE_MM = 0.03;
 const MAX_TRACK_PAD_CLEARANCE_GROUPS = 120;
 const MAX_TRACK_PAD_CLEARANCE_ITEMS = 6;
+const MAX_VISIBLE_MODUMAKE_PRECHECKS_PER_CODE = 6;
+
+const MODUMAKE_PRECHECK_ERROR_CODES = new Set([
+  'PCB_EMPTY_GEOMETRY',
+  'PCB_NO_EDGE_CUTS',
+  'PCB_DUPLICATE_REFERENCE',
+  'PCB_STRAY_COPPER',
+  'PCB_TRACK_TOO_NARROW',
+  'PCB_ZONE_WITHOUT_POLYGON',
+]);
+
+const REPRESENTATIVE_LIMITED_PRECHECK_CODES = new Set([
+  'PCB_ANNULAR_RING_TOO_SMALL',
+  'PCB_CLEARANCE_PAD_PAD',
+  'PCB_CLEARANCE_TRACK_PAD',
+  'PCB_CLEARANCE_TRACK_TRACK',
+  'PCB_COPPER_TO_EDGE_CLEARANCE',
+  'PCB_FOOTPRINT_WITHOUT_PADS',
+  'PCB_NET_DISCONNECTED',
+  'PCB_NET_HAS_NO_COPPER_PATH',
+  'PCB_SOLDER_MASK_SLIVER_TOO_SMALL',
+  'PCB_VIA_ANNULAR_RING_TOO_SMALL',
+  'PCB_VIA_DRILL_TOO_SMALL',
+  'PCB_VIA_TOO_SMALL',
+  'PCB_ZONE_CLEARANCE_PAD',
+  'PCB_ZONE_CLEARANCE_TRACK',
+  'PCB_ZONE_CLEARANCE_VIA',
+  'PCB_ZONE_CLEARANCE_ZONE',
+]);
+
+const REDUNDANT_PRECHECK_SUMMARY_CODES = new Set([
+  'PCB_CLEARANCE_TRACK_PAD_GROUP_LIMIT',
+]);
 
 export type ImportedPcbManufacturingProfile = {
   name: string;
@@ -105,6 +138,78 @@ function buildReport(
     checks,
     issues,
   };
+}
+
+function normalizeModuMakePrecheckSeverity(issue: ImportedPcbValidationIssue): ImportedPcbValidationIssue {
+  if (issue.source === 'kicad-cli' || issue.severity !== 'error' || MODUMAKE_PRECHECK_ERROR_CODES.has(issue.code)) {
+    return issue;
+  }
+
+  return {
+    ...issue,
+    severity: 'warning',
+  };
+}
+
+function buildRepresentativeLimitIssue(
+  issue: ImportedPcbValidationIssue,
+  totalCount: number,
+  visibleCount: number,
+  index: number
+) {
+  return makeIssue({
+    severity: 'info',
+    code: `${issue.code}_REPRESENTATIVE_LIMIT`,
+    title: `${issue.title} 대표 항목만 표시`,
+    message: `${issue.title} 후보 ${totalCount}건 중 대표 ${visibleCount}건만 표시했습니다. 반복 후보는 KiCad 공식 DRC와 제조사 DFM에서 일괄 확인해 주세요.`,
+    recommendation: 'ModuMake PCB 사전점검은 반복 후보를 압축해 보여줍니다. 전체 판정은 KiCad DRC 리포트와 제조사 규칙으로 확인해 주세요.',
+    layer: issue.layer,
+    netName: issue.netName,
+    footprintRef: issue.footprintRef,
+    padNumber: issue.padNumber,
+    at: issue.at,
+    items: [{ description: `숨긴 반복 후보 ${Math.max(0, totalCount - visibleCount)}건` }],
+  }, index);
+}
+
+function normalizeModuMakePrecheckIssues(issues: ImportedPcbValidationIssue[]) {
+  const normalizedIssues = issues
+    .filter(issue => !REDUNDANT_PRECHECK_SUMMARY_CODES.has(issue.code))
+    .map(normalizeModuMakePrecheckSeverity);
+  const countsByCode = new Map<string, number>();
+  normalizedIssues.forEach(issue => {
+    countsByCode.set(issue.code, (countsByCode.get(issue.code) ?? 0) + 1);
+  });
+
+  const visibleByCode = new Map<string, number>();
+  const output: ImportedPcbValidationIssue[] = [];
+  const representativeLimitIssues: ImportedPcbValidationIssue[] = [];
+  for (const issue of normalizedIssues) {
+    if (!REPRESENTATIVE_LIMITED_PRECHECK_CODES.has(issue.code)) {
+      output.push(issue);
+      continue;
+    }
+
+    const visibleCount = visibleByCode.get(issue.code) ?? 0;
+    if (visibleCount < MAX_VISIBLE_MODUMAKE_PRECHECKS_PER_CODE) {
+      output.push(issue);
+      visibleByCode.set(issue.code, visibleCount + 1);
+      continue;
+    }
+
+    if (visibleCount === MAX_VISIBLE_MODUMAKE_PRECHECKS_PER_CODE) {
+      const totalCount = countsByCode.get(issue.code) ?? visibleCount + 1;
+      representativeLimitIssues.push(buildRepresentativeLimitIssue(
+        issue,
+        totalCount,
+        MAX_VISIBLE_MODUMAKE_PRECHECKS_PER_CODE,
+        issues.length + representativeLimitIssues.length
+      ));
+      visibleByCode.set(issue.code, visibleCount + 1);
+    }
+  }
+
+  return [...output, ...representativeLimitIssues];
 }
 
 function makeIssue(
@@ -1627,7 +1732,9 @@ export function validateImportedPcbDocument(
   validateDifferentialPairs(document, issues, profile);
   validateSchematicParity(document, issues, options.schematicParity);
 
-  return buildReport('modumake-pcb', issues, {
+  const normalizedIssues = normalizeModuMakePrecheckIssues(issues);
+
+  return buildReport('modumake-pcb', normalizedIssues, {
     geometry: true,
     netContinuity: true,
     manufacturability: true,

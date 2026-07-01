@@ -48,8 +48,8 @@ function summarizeImportedPcbFindings(
   if (!hasKiCadDrc) {
     return {
       label: language === 'ko'
-        ? `사전점검 ${report.issueCount} · 검토 필요`
-        : `${report.issueCount} pre-checks · review`,
+        ? `대표 사전점검 ${report.issueCount} · 검토 필요`
+        : `${report.issueCount} representative pre-checks`,
       toneClass: report.issueCount > 0
         ? 'border-[#ece0c5] bg-[#fffdf7]/92 text-[#94641b]'
         : 'border-[#d7e6d9] bg-[#f8fff9]/92 text-[#34764a]',
@@ -336,8 +336,8 @@ export function PcbWorkspace() {
       setLastKiCadDrcError(null);
       toast.success(t('KiCad PCB 파일을 불러왔습니다.', 'KiCad PCB loaded.'), {
         description: appLanguage === 'ko'
-          ? `${document.stats.footprintCount}개 풋프린트 · ${document.stats.segmentCount}개 트랙 · 이슈 ${validation.issueCount}개`
-          : `${document.stats.footprintCount} footprints · ${document.stats.segmentCount} tracks · ${validation.issueCount} findings`,
+          ? `${document.stats.footprintCount}개 풋프린트 · ${document.stats.segmentCount}개 트랙 · 대표 사전점검 ${validation.issueCount}개`
+          : `${document.stats.footprintCount} footprints · ${document.stats.segmentCount} tracks · ${validation.issueCount} representative pre-checks`,
       });
     } catch (error) {
       toast.error(t('PCB 파일을 읽지 못했습니다.', 'Could not read the PCB file.'), {

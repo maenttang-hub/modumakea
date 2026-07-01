@@ -740,8 +740,8 @@ export function ImportedPcbViewer({
                 ? `KiCad DRC ${kicadDrcIssueCount}개 · 사전점검 ${modumakePrecheckIssueCount}개`
                 : `${kicadDrcIssueCount} KiCad DRC · ${modumakePrecheckIssueCount} pre-checks`
               : language === 'ko'
-                ? `ModuMake 사전점검 ${validation.issueCount}개 · 검토 필요`
-                : `${validation.issueCount} ModuMake pre-checks · review needed`}
+                ? `ModuMake 대표 사전점검 ${validation.issueCount}개 · 검토 필요`
+                : `${validation.issueCount} representative ModuMake pre-checks`}
           </div>
           {!hasKiCadDrc ? (
             <div className="mt-0.5 text-[10px] text-[#8d8074]">

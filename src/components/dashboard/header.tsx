@@ -641,7 +641,9 @@ export function Header() {
           router.replace('/', { scroll: false });
         }
         toast.success(t('KiCad PCB 파일을 불러왔습니다.', 'Loaded KiCad PCB file.'), {
-          description: `${pcbDocument.stats.footprintCount} footprints · ${pcbDocument.stats.segmentCount} tracks · ${validation.issueCount} findings`,
+          description: appLanguage === 'ko'
+            ? `${pcbDocument.stats.footprintCount}개 풋프린트 · ${pcbDocument.stats.segmentCount}개 트랙 · 대표 사전점검 ${validation.issueCount}개`
+            : `${pcbDocument.stats.footprintCount} footprints · ${pcbDocument.stats.segmentCount} tracks · ${validation.issueCount} representative pre-checks`,
         });
         return;
       }
