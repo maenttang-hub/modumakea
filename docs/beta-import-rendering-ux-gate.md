@@ -28,8 +28,19 @@ The first beta smoke set must include:
 - Imported schematic overlay must render in the canvas.
 - Initial schematic viewport must keep at least 92% of the imported overlay width and height inside the canvas.
 - PCB upload must keep `F.Fab`, `B.Fab`, and `Dwgs.User` disabled by default when those layers exist.
+- PCB layer controls must not overlap rendered board graphics on first open.
 - PCB upload must show `ModuMake 사전점검` / `KiCad 공식 DRC 미실행` until official DRC is run.
 - Visible buttons in imported schematic and PCB states must not be unnamed.
+
+## Expanded Audit Command
+
+Run the 50-file browser rendering gate against a running local editor:
+
+```bash
+npm run test:import-render -- --output=tmp/chrome-render-audit/expanded-50-final
+```
+
+The script manifest covers 25 schematic files and 25 PCB files from the real KiCad sample set. It uploads each file through the browser file input, captures a screenshot, and writes DOM metrics to `report.json`.
 
 ## 2026-07-01 Chrome DOM Audit
 
@@ -66,6 +77,17 @@ PCB samples:
 - `tests/kicad_samples/rusefi/GDI-6ch/GDI-6ch.kicad_pcb`
 
 Result: 20/20 samples passed the gate with zero DOM issues. The audit checked schematic clipping, visible unnamed buttons, page horizontal overflow, and PCB default layer state for `F.Fab`, `B.Fab`, and `Dwgs.User`.
+
+## 2026-07-01 Expanded Chrome DOM Audit
+
+Audit environment:
+
+- Browser: Google Chrome through Playwright, 1440x900 viewport.
+- Flow: `/editor` file input upload, screenshot capture, DOM metrics after render settle.
+- Generated report: `tmp/chrome-render-audit/expanded-50-final/report.json`.
+- Script: `scripts/audit-import-rendering.mjs`.
+
+Result: 50/50 samples passed the gate with zero DOM issues. The audit checked schematic clipping, visible unnamed buttons, page horizontal overflow, PCB default layer state for `F.Fab`, `B.Fab`, and `Dwgs.User`, and whether PCB layer controls overlapped board graphics.
 
 ## Non-Goals
 

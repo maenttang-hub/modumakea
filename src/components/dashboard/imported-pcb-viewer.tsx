@@ -45,6 +45,8 @@ const BOARD_OUTLINE_STROKE = '#1f2937';
 const BOARD_OUTLINE_HALO = '#fffdf9';
 const MIN_PCB_ZOOM = 0.5;
 const MAX_PCB_ZOOM = 8;
+const PCB_TOP_CONTROL_SAFE_PADDING_RATIO = 1.6;
+const PCB_TOP_CONTROL_SAFE_HEIGHT_RATIO = 0.24;
 
 function layerColor(layer: ImportedPcbLayerId) {
   return LAYER_COLORS[layer] ?? '#94a3b8';
@@ -484,15 +486,21 @@ export function ImportedPcbViewer({
   });
 
   const bounds = document.bounds ?? { minX: 0, minY: 0, maxX: 100, maxY: 70 };
-  const padding = Math.max(4, Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY) * 0.08);
+  const boardWidth = bounds.maxX - bounds.minX;
+  const boardHeight = bounds.maxY - bounds.minY;
+  const padding = Math.max(4, Math.max(boardWidth, boardHeight) * 0.08);
+  const topPadding = Math.max(
+    padding * PCB_TOP_CONTROL_SAFE_PADDING_RATIO,
+    boardHeight * PCB_TOP_CONTROL_SAFE_HEIGHT_RATIO
+  );
   const baseViewBox = useMemo(
     () => ({
       x: bounds.minX - padding,
-      y: bounds.minY - padding,
-      width: Math.max(20, bounds.maxX - bounds.minX + padding * 2),
-      height: Math.max(20, bounds.maxY - bounds.minY + padding * 2),
+      y: bounds.minY - topPadding,
+      width: Math.max(20, boardWidth + padding * 2),
+      height: Math.max(20, boardHeight + topPadding + padding),
     }),
-    [bounds.maxX, bounds.maxY, bounds.minX, bounds.minY, padding]
+    [boardHeight, boardWidth, bounds.minX, bounds.minY, padding, topPadding]
   );
   const baseViewBoxKey = `${baseViewBox.x}:${baseViewBox.y}:${baseViewBox.width}:${baseViewBox.height}`;
   const [activeViewBoxState, setActiveViewBoxState] = useState<PcbViewBoxState>(() => ({
@@ -596,7 +604,7 @@ export function ImportedPcbViewer({
         aria-label="Imported KiCad PCB"
         onWheel={handleWheel}
       >
-        <rect x={bounds.minX - padding} y={bounds.minY - padding} width={bounds.maxX - bounds.minX + padding * 2} height={bounds.maxY - bounds.minY + padding * 2} fill="#fffdf9" />
+        <rect x={baseViewBox.x} y={baseViewBox.y} width={baseViewBox.width} height={baseViewBox.height} fill="#fffdf9" />
         {document.zones.filter(zone => visibleLayers.has(zone.layer)).map(zone => (
           <ZoneShape key={zone.id} zone={zone} />
         ))}
