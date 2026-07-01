@@ -15,12 +15,57 @@ import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
 import { buildPcbDocument } from '@/lib/pcb-document';
 import { pickLanguage } from '@/lib/ui-language';
 import { useBoardStore } from '@/store/use-board-store';
-import type { AppLanguage, PcbDocument, PcbPoint } from '@/types';
+import type { AppLanguage, ImportedPcbValidationReport, PcbDocument, PcbPoint } from '@/types';
 import { Box, CircuitBoard, Factory, Layers3, RefreshCw, ShieldAlert, Upload, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 function formatCount(value: number, koUnit: string, enUnit: string, language: AppLanguage) {
   return pickLanguage(language, { ko: `${value}${koUnit}`, en: `${value} ${enUnit}` });
+}
+
+function countImportedPcbIssuesBySource(
+  report: ImportedPcbValidationReport | null | undefined,
+  source: 'kicad-cli' | 'modumake-pcb'
+) {
+  return report?.issues.filter(issue => issue.source === source).length ?? 0;
+}
+
+function summarizeImportedPcbFindings(
+  report: ImportedPcbValidationReport | null | undefined,
+  language: AppLanguage
+) {
+  if (!report) {
+    return {
+      label: pickLanguage(language, { ko: '검증 대기', en: 'Awaiting checks' }),
+      toneClass: 'border-[#d8cbbb] bg-[#fffdf9]/92 text-[#5b4e42]',
+    };
+  }
+
+  const kicadCount = countImportedPcbIssuesBySource(report, 'kicad-cli');
+  const modumakeCount = countImportedPcbIssuesBySource(report, 'modumake-pcb');
+  const hasKiCadDrc = report.checks.kicadDrc || kicadCount > 0;
+
+  if (!hasKiCadDrc) {
+    return {
+      label: language === 'ko'
+        ? `사전점검 ${report.issueCount} · 검토 필요`
+        : `${report.issueCount} pre-checks · review`,
+      toneClass: report.issueCount > 0
+        ? 'border-[#ece0c5] bg-[#fffdf7]/92 text-[#94641b]'
+        : 'border-[#d7e6d9] bg-[#f8fff9]/92 text-[#34764a]',
+    };
+  }
+
+  return {
+    label: language === 'ko'
+      ? `KiCad DRC ${kicadCount} · 사전점검 ${modumakeCount}`
+      : `${kicadCount} KiCad DRC · ${modumakeCount} pre-checks`,
+    toneClass: report.errorCount > 0
+      ? 'border-[#efd3d3] bg-[#fff8f8]/92 text-[#b24f4f]'
+      : report.warningCount > 0
+        ? 'border-[#ece0c5] bg-[#fffdf7]/92 text-[#94641b]'
+        : 'border-[#d7e6d9] bg-[#f8fff9]/92 text-[#34764a]',
+  };
 }
 
 type KiCadPcbDrcResponse = {
@@ -258,11 +303,10 @@ export function PcbWorkspace() {
   const activeStageReady = isManufacturing ? readiness.canEnterManufacturing : readiness.canEnterPcb;
   const activeStageReasons = isManufacturing ? readiness.manufacturingReasons : readiness.pcbReasons;
   const routedComponents = components.filter(component => component.isFullyRouted).length;
-  const importedFindingLabel = effectiveImportedPcbValidation
-    ? appLanguage === 'ko'
-      ? `오류 ${effectiveImportedPcbValidation.errorCount} · 경고 ${effectiveImportedPcbValidation.warningCount}`
-      : `${effectiveImportedPcbValidation.errorCount} errors · ${effectiveImportedPcbValidation.warningCount} warnings`
-    : t('검증 대기', 'Awaiting checks');
+  const importedFindingSummary = useMemo(
+    () => summarizeImportedPcbFindings(effectiveImportedPcbValidation, appLanguage),
+    [appLanguage, effectiveImportedPcbValidation]
+  );
 
   useEffect(() => {
     const handleIssueFocus = (event: Event) => {
@@ -418,15 +462,13 @@ export function PcbWorkspace() {
         <div
           className={`pointer-events-auto flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border px-3 text-[11px] font-semibold shadow-sm backdrop-blur ${
             importedPcbDocument
-              ? effectiveImportedPcbValidation && effectiveImportedPcbValidation.errorCount > 0
-                ? 'border-[#efd3d3] bg-[#fff8f8]/92 text-[#b24f4f]'
-                : 'border-[#d7e6d9] bg-[#f8fff9]/92 text-[#34764a]'
+              ? importedFindingSummary.toneClass
               : activeStageReady
                 ? 'border-[#d7e6d9] bg-[#f8fff9]/92 text-[#34764a]'
                 : 'border-[#efd3d3] bg-[#fff8f8]/92 text-[#b24f4f]'
           }`}
         >
-          {importedPcbDocument ? importedFindingLabel : activeStageReady ? t('단계 진입 가능', 'Stage ready') : t('점검 필요', 'Needs review')}
+          {importedPcbDocument ? importedFindingSummary.label : activeStageReady ? t('단계 진입 가능', 'Stage ready') : t('점검 필요', 'Needs review')}
         </div>
 
         <button

@@ -28,7 +28,18 @@ function confidenceForPcbIssue(issue: ImportedPcbValidationIssue): ProjectAuditI
 }
 
 function sourceLabelForPcbIssue(issue: ImportedPcbValidationIssue) {
-  return issue.source === 'kicad-cli' ? 'KiCad PCB DRC' : 'ModuMake PCB DRC';
+  return issue.source === 'kicad-cli' ? 'KiCad PCB DRC' : 'ModuMake PCB 사전점검';
+}
+
+function projectSeverityForPcbIssue(
+  issue: ImportedPcbValidationIssue,
+  confidence: ProjectAuditIssueConfidence
+): ProjectAuditIssue['severity'] {
+  if (issue.source !== 'kicad-cli' && confidence === 'needs-review' && issue.severity === 'error') {
+    return 'warning';
+  }
+
+  return issue.severity;
 }
 
 function formatPcbPoint(point: { x: number; y: number }) {
@@ -81,7 +92,7 @@ export function mapImportedPcbValidationIssuesToProjectAuditIssues(
     const assumptions = buildAssumptions(issue);
 
     return {
-      severity: issue.severity,
+      severity: projectSeverityForPcbIssue(issue, confidence),
       title: issue.title,
       message: issue.message,
       code: `pcb.${issue.code}`,

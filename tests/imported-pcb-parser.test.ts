@@ -283,7 +283,8 @@ test('ModuMake PCB findings map as pre-check evidence instead of official DRC', 
   const auditIssue = mapImportedPcbValidationIssuesToProjectAuditIssues(report)
     .find(issue => issue.params?.pcbIssueId === clearanceIssue.id);
 
-  assert.equal(auditIssue?.sourceLabel, 'ModuMake PCB DRC');
+  assert.equal(auditIssue?.sourceLabel, 'ModuMake PCB 사전점검');
+  assert.equal(auditIssue?.severity, 'warning');
   assert.equal(auditIssue?.confidence, 'needs-review');
   assert.match(auditIssue?.evidence?.assumptions.join('\n') ?? '', /KiCad 공식 DRC/);
 });

@@ -82,6 +82,14 @@ function getPadColor(pad: ImportedPcbPad, visibleLayers: Set<string>) {
   return layerColor(preferred ?? 'F.Cu');
 }
 
+function issueToneSeverity(issue: ImportedPcbValidationIssue): ImportedPcbValidationIssue['severity'] {
+  if (issue.source !== 'kicad-cli' && issue.severity === 'error') {
+    return 'warning';
+  }
+
+  return issue.severity;
+}
+
 function severityColor(severity: ImportedPcbValidationIssue['severity']) {
   if (severity === 'error') {
     return '#b24f4f';
@@ -113,6 +121,25 @@ function severityLabel(severity: ImportedPcbValidationIssue['severity'], languag
     return '경고';
   }
   return '정보';
+}
+
+function issueToneLabel(issue: ImportedPcbValidationIssue, language: AppLanguage) {
+  if (issue.source !== 'kicad-cli' && issue.severity === 'error') {
+    return language === 'ko' ? '검토' : 'Review';
+  }
+
+  return severityLabel(issue.severity, language);
+}
+
+function issueToneColor(issue: ImportedPcbValidationIssue) {
+  return severityColor(issueToneSeverity(issue));
+}
+
+function countIssuesBySource(
+  validation: ImportedPcbValidationReport | null | undefined,
+  source: 'kicad-cli' | 'modumake-pcb'
+) {
+  return validation?.issues.filter(issue => issue.source === source).length ?? 0;
 }
 
 function pathForArc(graphic: Extract<ImportedPcbGraphic, { kind: 'arc' }>) {
@@ -407,6 +434,8 @@ function LayerToggle({
         color: active ? '#3f342c' : '#8d8074',
       }}
       title={layer}
+      aria-label={`${layer} ${active ? '레이어 숨기기' : '레이어 보이기'}`}
+      aria-pressed={active}
     >
       {active ? <Eye size={11} /> : <EyeOff size={11} />}
       <span className="truncate max-w-20">{layer}</span>
@@ -477,6 +506,9 @@ export function ImportedPcbViewer({
   const viewBox = viewBoxToString(activeViewBox);
   const zoomLabel = `${Math.round((baseViewBox.width / activeViewBox.width) * 100)}%`;
   const selectedIssue = validation?.issues.find(issue => issue.id === selectedIssueId) ?? null;
+  const kicadDrcIssueCount = countIssuesBySource(validation, 'kicad-cli');
+  const modumakePrecheckIssueCount = countIssuesBySource(validation, 'modumake-pcb');
+  const hasKiCadDrc = Boolean(validation?.checks.kicadDrc || kicadDrcIssueCount > 0);
   const issueMarkerState = useMemo(() => {
     const issues = validation?.issues.filter(issue => issue.at) ?? [];
     const selectedMarker = selectedIssueId
@@ -611,7 +643,14 @@ export function ImportedPcbViewer({
             key={issue.id}
             role="button"
             aria-label={issue.title}
+            tabIndex={0}
             onClick={() => onSelectIssue?.(issue.id)}
+            onKeyDown={event => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onSelectIssue?.(issue.id);
+              }
+            }}
             style={{ cursor: 'pointer' }}
           >
             <circle
@@ -619,11 +658,11 @@ export function ImportedPcbViewer({
               cy={issue.at!.y}
               r={selectedIssueId === issue.id ? 1.7 : 1.15}
               fill="none"
-              stroke={severityColor(issue.severity)}
+              stroke={issueToneColor(issue)}
               strokeWidth={selectedIssueId === issue.id ? 0.26 : 0.18}
               vectorEffect="non-scaling-stroke"
             />
-            <circle cx={issue.at!.x} cy={issue.at!.y} r={0.25} fill={severityColor(issue.severity)} />
+            <circle cx={issue.at!.x} cy={issue.at!.y} r={0.25} fill={issueToneColor(issue)} />
           </g>
         ))}
       </svg>
@@ -691,10 +730,21 @@ export function ImportedPcbViewer({
           }`}
         >
           <div className="font-semibold text-[#3f342c]">
-            {language === 'ko'
-              ? `이슈 ${validation.issueCount}개 · 오류 ${validation.errorCount} · 경고 ${validation.warningCount}`
-              : `${validation.issueCount} findings · ${validation.errorCount} errors · ${validation.warningCount} warnings`}
+            {hasKiCadDrc
+              ? language === 'ko'
+                ? `KiCad DRC ${kicadDrcIssueCount}개 · 사전점검 ${modumakePrecheckIssueCount}개`
+                : `${kicadDrcIssueCount} KiCad DRC · ${modumakePrecheckIssueCount} pre-checks`
+              : language === 'ko'
+                ? `ModuMake 사전점검 ${validation.issueCount}개 · 검토 필요`
+                : `${validation.issueCount} ModuMake pre-checks · review needed`}
           </div>
+          {!hasKiCadDrc ? (
+            <div className="mt-0.5 text-[10px] text-[#8d8074]">
+              {language === 'ko'
+                ? 'KiCad 공식 DRC는 아직 실행되지 않았습니다.'
+                : 'KiCad official DRC has not been run yet.'}
+            </div>
+          ) : null}
           {issueMarkerState.hidden > 0 ? (
             <div className="mt-0.5 text-[10px] text-[#8d8074]">
               {language === 'ko'
@@ -709,11 +759,11 @@ export function ImportedPcbViewer({
         <div
           data-testid="imported-pcb-selected-issue"
           className="absolute bottom-14 left-3 z-10 max-w-[min(520px,calc(100%-24px))] rounded-[10px] border bg-[#fffdfa]/94 px-3 py-2 text-[11px] leading-5 text-[#4e4238] shadow-sm backdrop-blur"
-          style={{ borderColor: `${severityColor(selectedIssue.severity)}66` }}
+          style={{ borderColor: `${issueToneColor(selectedIssue)}66` }}
         >
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: `${severityColor(selectedIssue.severity)}16`, color: severityColor(selectedIssue.severity) }}>
-              {severityLabel(selectedIssue.severity, language)}
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: `${issueToneColor(selectedIssue)}16`, color: issueToneColor(selectedIssue) }}>
+              {issueToneLabel(selectedIssue, language)}
             </span>
             <span className="font-semibold text-[#3f342c]">{selectedIssue.title}</span>
           </div>

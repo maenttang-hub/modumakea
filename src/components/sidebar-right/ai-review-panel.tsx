@@ -87,7 +87,12 @@ function sectionTitleTone(severity: ProjectAuditIssue['severity']) {
   return 'text-[#3d7a52]';
 }
 
-function decisionLabel(errorCount: number, warningCount: number, hasReviewTarget: boolean) {
+function decisionLabel(
+  errorCount: number,
+  warningCount: number,
+  hasReviewTarget: boolean,
+  issues: ReviewPanelIssue[]
+) {
   if (!hasReviewTarget) {
     return {
       label: '검토 대기',
@@ -96,10 +101,24 @@ function decisionLabel(errorCount: number, warningCount: number, hasReviewTarget
     };
   }
 
+  const confirmedErrorCount = issues.filter(issue =>
+    issue.severity === 'error' &&
+    (issue.confidence === 'confirmed' || issue.confidence === 'strong-inference' || !issue.confidence)
+  ).length;
+  const reviewOnlyErrorCount = Math.max(errorCount - confirmedErrorCount, 0);
+
   if (errorCount > 0) {
+    if (confirmedErrorCount === 0 && reviewOnlyErrorCount > 0) {
+      return {
+        label: '검토 필요',
+        description: '사전 점검 항목을 확인하세요.',
+        className: 'border-[#ece0c5] bg-[#fffdf7] text-[#94641b]',
+      };
+    }
+
     return {
       label: '수정 필요',
-      description: '확정 오류를 먼저 처리하세요.',
+      description: '강한 근거 항목을 먼저 확인하세요.',
       className: 'border-[#efd3d3] bg-[#fff8f8] text-[#a94f4f]',
     };
   }
@@ -206,7 +225,7 @@ export function AiReviewPanel({
   const warningCount = severityCounts.warning;
   const infoCount = severityCounts.info;
   const lead = issues[0];
-  const decision = decisionLabel(errorCount, warningCount, hasReviewTarget);
+  const decision = decisionLabel(errorCount, warningCount, hasReviewTarget, issues);
   const actionLine = nextActionLine(lead, hasReviewTarget);
   const augmentationCandidates = hasReviewTarget ? buildSchematicPcbAugmentationCandidates(issues) : [];
   const visibleItems: ReviewItem[] =
