@@ -89,6 +89,45 @@ async function expectNoVisibleUnnamedButtons(page: Page) {
   expect(unnamedButtons).toEqual([]);
 }
 
+async function readImportedSchematicVisibility(page: Page) {
+  return page.evaluate(() => {
+    const canvas = document.querySelector('[data-mm-export="schematic-canvas"]');
+    const overlay = document.querySelector('[data-mm-imported-schematic-overlay="true"]');
+    if (!canvas || !overlay) {
+      return null;
+    }
+
+    const canvasRect = canvas.getBoundingClientRect();
+    const overlayRect = overlay.getBoundingClientRect();
+    const intersectionWidth = Math.max(
+      0,
+      Math.min(overlayRect.right, canvasRect.right) - Math.max(overlayRect.left, canvasRect.left)
+    );
+    const intersectionHeight = Math.max(
+      0,
+      Math.min(overlayRect.bottom, canvasRect.bottom) - Math.max(overlayRect.top, canvasRect.top)
+    );
+
+    return {
+      heightVisibleRatio: intersectionHeight / Math.max(overlayRect.height, 1),
+      widthVisibleRatio: intersectionWidth / Math.max(overlayRect.width, 1),
+    };
+  });
+}
+
+async function readImportedPcbLayerStates(page: Page) {
+  return page.getByTestId('imported-pcb-layer-controls').evaluate((container) => {
+    const states: Record<string, string | null> = {};
+    container.querySelectorAll('button').forEach((button) => {
+      const layer = button.textContent?.trim();
+      if (layer) {
+        states[layer] = button.getAttribute('aria-pressed');
+      }
+    });
+    return states;
+  });
+}
+
 test('editor loads without browser console errors', async ({ page }) => {
   const errors = collectPageErrors(page);
 
@@ -174,9 +213,9 @@ test('editor imports a real KiCad schematic file through the file input', async 
   await expect.poll(async () => (await readStoredImport())?.componentCount ?? 0).toBeGreaterThan(0);
   await expect.poll(async () => (await readStoredImport())?.sourceLength ?? 0).toBeGreaterThan(10000);
   await expect.poll(async () => {
-    const label = await page.getByTestId('schematic-zoom-label').innerText();
-    return Number(label.replace('%', '').trim());
-  }).toBeGreaterThanOrEqual(50);
+    const visibility = await readImportedSchematicVisibility(page);
+    return Math.min(visibility?.widthVisibleRatio ?? 0, visibility?.heightVisibleRatio ?? 0);
+  }).toBeGreaterThanOrEqual(0.92);
   await expectNoVisibleUnnamedButtons(page);
   expect(errors).toEqual([]);
 });
@@ -196,6 +235,10 @@ test('editor shows imported PCB zoom controls and changes the board view', async
   await expect(page.getByTestId('imported-pcb-issue-summary')).toContainText('KiCad 공식 DRC는 아직 실행되지 않았습니다.');
   await expect(page.getByTestId('imported-pcb-zoom-controls')).toBeVisible();
   await expect(zoomLabel).toHaveText('100%');
+  await expect.poll(() => readImportedPcbLayerStates(page)).toMatchObject({
+    'F.Fab': 'false',
+    'B.Fab': 'false',
+  });
 
   const initialViewBox = await pcbSvg.getAttribute('viewBox');
   await page.getByTitle('축소').click();

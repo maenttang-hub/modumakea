@@ -20,9 +20,6 @@ const DEFAULT_VISIBLE_LAYERS = new Set([
   'B.Cu',
   'F.SilkS',
   'B.SilkS',
-  'F.Fab',
-  'B.Fab',
-  'Dwgs.User',
 ]);
 
 const LAYER_COLORS: Record<string, string> = {

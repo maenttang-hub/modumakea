@@ -151,6 +151,40 @@ function getImportedReviewMinimumZoom(viewMode: 'original' | 'structured') {
   return viewMode === 'original' ? 0.55 : 0.45;
 }
 
+function getImportedReviewMaxReadableZoom(
+  bounds: { width: number; height: number }
+) {
+  if (typeof document === 'undefined' || bounds.width <= 0 || bounds.height <= 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const canvasElement =
+    document.querySelector('[data-mm-export="schematic-canvas"]') ??
+    document.querySelector('.react-flow');
+  const rect = canvasElement?.getBoundingClientRect();
+  if (!rect || rect.width <= 0 || rect.height <= 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return Math.min(
+    (rect.width * 0.92) / bounds.width,
+    (rect.height * 0.86) / bounds.height
+  );
+}
+
+function clampImportedReviewZoom(
+  currentZoom: number,
+  bounds: { width: number; height: number },
+  viewMode: 'original' | 'structured'
+) {
+  const maxReadableZoom = getImportedReviewMaxReadableZoom(bounds);
+  const minimumZoom = getImportedReviewMinimumZoom(viewMode);
+  const biasedZoom = currentZoom * getImportedReviewZoomBias(viewMode);
+  const targetZoom = Math.max(biasedZoom, Math.min(minimumZoom, maxReadableZoom));
+  const nextZoom = Math.min(targetZoom, maxReadableZoom);
+  return Number((Number.isFinite(nextZoom) ? nextZoom : targetZoom).toFixed(4));
+}
+
 function getImportedReviewFocusBounds(
   bounds: { x: number; y: number; width: number; height: number }
 ) {
@@ -326,17 +360,17 @@ export function useComponentCanvasController() {
       if (typeof window !== 'undefined') {
         const centerX = focusBounds.x + focusBounds.width / 2;
         const centerY = focusBounds.y + focusBounds.height / 2;
-        const zoomBias = getImportedReviewZoomBias(importedSchematicViewMode);
         if (importedReviewBoostTimeoutRef.current !== null) {
           window.clearTimeout(importedReviewBoostTimeoutRef.current);
           importedReviewBoostTimeoutRef.current = null;
         }
         const applyBoost = () => {
           const viewport = rfInstance.getViewport();
-          const nextZoom = Number(Math.max(
-            viewport.zoom * zoomBias,
-            getImportedReviewMinimumZoom(importedSchematicViewMode)
-          ).toFixed(4));
+          const nextZoom = clampImportedReviewZoom(
+            viewport.zoom,
+            focusBounds,
+            importedSchematicViewMode
+          );
           rfInstance.setCenter(centerX, centerY, {
             zoom: nextZoom,
             duration: 0,
@@ -470,20 +504,17 @@ export function useComponentCanvasController() {
           : getImportedSchematicReviewViewportBounds(components, importedSchematicScene);
       }
 
-      const readableBounds = getImportedSchematicReviewViewportBounds(components, importedSchematicScene);
-      if (readableBounds) {
-        return readableBounds;
+      const sourceFaithfulBounds = getImportedSchematicSceneBounds([], importedSchematicScene);
+      if (sourceFaithfulBounds) {
+        return {
+          x: 0,
+          y: 0,
+          width: sourceFaithfulBounds.width,
+          height: sourceFaithfulBounds.height,
+        };
       }
 
-      const sourceFaithfulBounds = getImportedSchematicSceneBounds([], importedSchematicScene);
-      return sourceFaithfulBounds
-        ? {
-            x: 0,
-            y: 0,
-            width: sourceFaithfulBounds.width,
-            height: sourceFaithfulBounds.height,
-          }
-        : null;
+      return getImportedSchematicReviewViewportBounds(components, importedSchematicScene);
     },
     [components, importedSchematicScene, importedSchematicViewMode, manualConnections]
   );
@@ -680,7 +711,6 @@ export function useComponentCanvasController() {
 
     const focusBounds = getImportedReviewFocusBounds(importedReviewViewportBounds);
     const padding = getImportedReviewFitPadding(importedReviewViewportBounds, importedSchematicViewMode);
-    const zoomBias = getImportedReviewZoomBias(importedSchematicViewMode);
 
     cameraModeRef.current = 'imported-review';
     rfInstance.fitBounds(focusBounds, {
@@ -694,10 +724,11 @@ export function useComponentCanvasController() {
       const centerY = focusBounds.y + focusBounds.height / 2;
       window.setTimeout(() => {
         const viewport = rfInstance.getViewport();
-        const nextZoom = Number(Math.max(
-          viewport.zoom * zoomBias,
-          getImportedReviewMinimumZoom(importedSchematicViewMode)
-        ).toFixed(4));
+        const nextZoom = clampImportedReviewZoom(
+          viewport.zoom,
+          focusBounds,
+          importedSchematicViewMode
+        );
         rfInstance.setCenter(centerX, centerY, {
           zoom: nextZoom,
           duration: 0,
