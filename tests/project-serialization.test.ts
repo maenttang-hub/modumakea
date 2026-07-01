@@ -1619,13 +1619,14 @@ test('createCloudProject also persists the imported validation snapshot through 
   assert.equal(hydrated.success, true);
 
   const originalFetch = globalThis.fetch;
-  const fetchCalls: Array<{ url: string; body: unknown }> = [];
+  const fetchCalls: Array<{ url: string; body: unknown; headers: Record<string, string> }> = [];
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
     const url = String(request?.url ?? input);
     const rawBody = request ? await request.text() : init?.body ? String(init.body) : '';
     const body = rawBody ? JSON.parse(rawBody) : null;
-    fetchCalls.push({ url, body });
+    const headers = Object.fromEntries((request?.headers ?? new Headers(init?.headers)).entries());
+    fetchCalls.push({ url, body, headers });
 
     if (url.endsWith('/api/projects')) {
       return new Response(JSON.stringify({
@@ -1638,6 +1639,7 @@ test('createCloudProject also persists the imported validation snapshot through 
           updatedAt: '2026-06-19T00:00:00.000Z',
           isOwner: true,
         },
+        editToken: 'token-create-1',
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
@@ -1682,6 +1684,7 @@ test('createCloudProject also persists the imported validation snapshot through 
   assert.equal(validationBody.metadata.sourceKind, 'kicad_import');
   assert.equal(validationBody.validationInput.source.project_name, 'cloud create validation snapshot');
   assert.equal(validationBody.validationInput.stats.component_count, 1);
+  assert.equal(validationCall.headers['x-modumake-edit-token'], 'token-create-1');
   assert.equal(useBoardStore.getState().cloudLastValidationJobId, 'job-create-1');
   assert.equal(useBoardStore.getState().cloudValidationPersistStatus, 'saved');
   assert.equal(useBoardStore.getState().cloudValidationPersistError, null);
@@ -1747,13 +1750,14 @@ test('saveProjectToCloud persists the imported validation snapshot through valid
   }));
 
   const originalFetch = globalThis.fetch;
-  const fetchCalls: Array<{ url: string; body: unknown }> = [];
+  const fetchCalls: Array<{ url: string; body: unknown; headers: Record<string, string> }> = [];
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
     const url = String(request?.url ?? input);
     const rawBody = request ? await request.text() : init?.body ? String(init.body) : '';
     const body = rawBody ? JSON.parse(rawBody) : null;
-    fetchCalls.push({ url, body });
+    const headers = Object.fromEntries((request?.headers ?? new Headers(init?.headers)).entries());
+    fetchCalls.push({ url, body, headers });
 
     if (url.endsWith('/api/projects/cloud-save-project')) {
       return new Response(JSON.stringify({
@@ -1810,6 +1814,7 @@ test('saveProjectToCloud persists the imported validation snapshot through valid
   assert.equal(validationBody.metadata.sourceKind, 'kicad_import');
   assert.equal(validationBody.validationInput.source.project_name, 'cloud save validation snapshot');
   assert.equal(validationBody.validationInput.stats.component_count, 1);
+  assert.equal(validationCall.headers['x-modumake-edit-token'], 'token-1');
   assert.equal(useBoardStore.getState().cloudLastValidationJobId, 'job-save-1');
   assert.equal(useBoardStore.getState().cloudValidationPersistStatus, 'saved');
   assert.equal(useBoardStore.getState().cloudValidationPersistError, null);

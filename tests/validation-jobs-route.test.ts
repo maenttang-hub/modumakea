@@ -110,6 +110,39 @@ test('validation jobs route rejects missing metadata requirements', async () => 
   assert.match(String(payload.error), /projectId|sourceKind/i);
 });
 
+test('validation jobs route requires project owner authorization before ingest', async () => {
+  const { handleValidationJobsPost } = await import('@/app/api/validation-jobs/route-handler');
+  let ingestCalled = false;
+
+  const response = await handleValidationJobsPost(
+    new Request('http://localhost/api/validation-jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        validationInput: createValidationInput(),
+        metadata: {
+          projectId: 'private-project',
+          sourceKind: 'kicad_import',
+        },
+      }),
+    }),
+    {
+      authorizeWrite: async () => {
+        throw new Error('이 프로젝트의 validation snapshot을 저장할 권한이 없습니다.');
+      },
+      ingest: async () => {
+        ingestCalled = true;
+        throw new Error('ingest should not be called');
+      },
+    }
+  );
+
+  assert.equal(response.status, 403);
+  assert.equal(ingestCalled, false);
+  const payload = await response.json();
+  assert.match(String(payload.error), /권한/);
+});
+
 test('validation jobs route returns normalized counts after ingest succeeds', async () => {
   const { handleValidationJobsPost } = await import('@/app/api/validation-jobs/route-handler');
 
@@ -117,11 +150,15 @@ test('validation jobs route returns normalized counts after ingest succeeds', as
     validationInput: LightweightValidationJson;
     metadata: { projectId: string; sourceKind: string };
   }> = [];
+  const authCalls: Array<{ projectId: string; editToken: string | undefined }> = [];
 
   const response = await handleValidationJobsPost(
     new Request('http://localhost/api/validation-jobs', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-modumake-edit-token': 'edit-token-1',
+      },
       body: JSON.stringify({
         validationInput: createValidationInput(),
         metadata: {
@@ -131,6 +168,9 @@ test('validation jobs route returns normalized counts after ingest succeeds', as
       }),
     }),
     {
+      authorizeWrite: async (projectId, editToken) => {
+        authCalls.push({ projectId, editToken });
+      },
       ingest: async (validationInput, metadata) => {
         calls.push({
           validationInput,
@@ -309,6 +349,7 @@ test('validation jobs route returns normalized counts after ingest succeeds', as
   );
 
   assert.equal(response.status, 200);
+  assert.deepEqual(authCalls, [{ projectId: 'project-1', editToken: 'edit-token-1' }]);
   assert.equal(calls.length, 1);
   assert.equal(calls[0]?.metadata.projectId, 'project-1');
   assert.equal(calls[0]?.metadata.sourceKind, 'kicad_import');
@@ -345,6 +386,7 @@ test('validation jobs route returns 503 when ingest reports missing admin client
       }),
     }),
     {
+      authorizeWrite: async () => {},
       ingest: async () => {
         throw new Error('Supabase admin client is not configured.');
       },
@@ -354,4 +396,79 @@ test('validation jobs route returns 503 when ingest reports missing admin client
   assert.equal(response.status, 503);
   const payload = await response.json();
   assert.match(String(payload.error), /Supabase admin client/i);
+});
+
+test('validation job detail route rejects private project without read authorization', async () => {
+  const { handleValidationJobDetailGet } = await import('@/app/api/validation-jobs/[id]/route');
+  let detailRead = false;
+
+  const response = await handleValidationJobDetailGet(
+    new Request('http://localhost/api/validation-jobs/job-1'),
+    { params: Promise.resolve({ id: 'job-1' }) },
+    {
+      getJobProjectId: async () => 'private-project',
+      authorizeRead: async () => {
+        throw new Error('이 프로젝트를 볼 권한이 없습니다.');
+      },
+      getJob: async () => {
+        detailRead = true;
+        return null;
+      },
+    }
+  );
+
+  assert.equal(response.status, 403);
+  assert.equal(detailRead, false);
+  const payload = await response.json();
+  assert.match(String(payload.error), /권한/);
+});
+
+test('validation job diff route rejects private project without read authorization', async () => {
+  const { handleValidationJobDiffGet } = await import('@/app/api/validation-jobs/[id]/diff/route');
+  let diffRead = false;
+
+  const response = await handleValidationJobDiffGet(
+    new Request('http://localhost/api/validation-jobs/job-1/diff?baseline=latest'),
+    { params: Promise.resolve({ id: 'job-1' }) },
+    {
+      getJobProjectId: async () => 'private-project',
+      authorizeRead: async () => {
+        throw new Error('이 프로젝트를 볼 권한이 없습니다.');
+      },
+      getDiff: async () => {
+        diffRead = true;
+        return null;
+      },
+    }
+  );
+
+  assert.equal(response.status, 403);
+  assert.equal(diffRead, false);
+  const payload = await response.json();
+  assert.match(String(payload.error), /권한/);
+});
+
+test('project validation jobs route rejects private project without read authorization', async () => {
+  const { handleProjectValidationJobsGet } = await import('@/app/api/projects/[id]/validation-jobs/route');
+  let listRead = false;
+
+  const response = await handleProjectValidationJobsGet(
+    new Request('http://localhost/api/projects/private-project/validation-jobs'),
+    { params: Promise.resolve({ id: 'private-project' }) },
+    {
+      authorizeRead: async () => {
+        throw new Error('이 프로젝트를 볼 권한이 없습니다.');
+      },
+      listJobs: async () => {
+        listRead = true;
+        return [];
+      },
+      getSummary: async () => null,
+    }
+  );
+
+  assert.equal(response.status, 403);
+  assert.equal(listRead, false);
+  const payload = await response.json();
+  assert.match(String(payload.error), /권한/);
 });

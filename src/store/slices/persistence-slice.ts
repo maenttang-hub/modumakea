@@ -292,7 +292,11 @@ export const createPersistenceSlice: StateCreator<BoardStoreState, [], [], Parti
         cloudValidationPersistStatus: 'saving',
         cloudValidationPersistError: null,
       });
-      const validationPersistResult = await persistImportedValidationJob(result.project.id, document);
+      const validationPersistResult = await persistImportedValidationJob(
+        result.project.id,
+        document,
+        result.editToken
+      );
       if (!validationPersistResult.success) {
         set({
           cloudValidationPersistStatus: 'failed',
@@ -375,7 +379,11 @@ export const createPersistenceSlice: StateCreator<BoardStoreState, [], [], Parti
         cloudValidationPersistStatus: 'saving',
         cloudValidationPersistError: null,
       });
-      const validationPersistResult = await persistImportedValidationJob(state.cloudProjectId, document);
+      const validationPersistResult = await persistImportedValidationJob(
+        state.cloudProjectId,
+        document,
+        editToken
+      );
       if (!validationPersistResult.success) {
         set({
           cloudValidationPersistStatus: 'failed',

@@ -67,7 +67,8 @@ export function buildValidationJobRouteBody(
 
 export async function persistImportedValidationJob(
   projectId: string,
-  document: ModuMakeProjectData
+  document: ModuMakeProjectData,
+  editToken?: string
 ): Promise<PersistValidationJobResult> {
   const body = buildValidationJobRouteBody(projectId, document);
   if (!body) {
@@ -75,12 +76,17 @@ export async function persistImportedValidationJob(
   }
 
   const requestId = globalThis.crypto?.randomUUID?.() ?? `validation-${Date.now()}`;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-request-id': requestId,
+  };
+  if (editToken) {
+    headers['x-modumake-edit-token'] = editToken;
+  }
+
   const response = await fetchWithRetry('/api/validation-jobs', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-request-id': requestId,
-    },
+    headers,
     body: JSON.stringify(body),
   }, {
     requestId,

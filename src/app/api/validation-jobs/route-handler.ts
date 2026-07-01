@@ -10,6 +10,11 @@ import {
   type ValidationJobIngestMetadata,
   type ValidationJobIngestPlan,
 } from '@/lib/validation-job-ingest';
+import {
+  authorizeProjectValidationWrite,
+  getValidationAuthErrorStatus,
+  getValidationEditToken,
+} from '@/lib/validation-jobs-auth';
 import type { LightweightValidationJson } from '@/types';
 
 interface ValidationJobsRouteBody {
@@ -22,10 +27,16 @@ export interface ValidationJobsRouteDeps {
     validationInput: LightweightValidationJson,
     metadata: ValidationJobIngestMetadata
   ) => Promise<ValidationJobIngestPlan>;
+  authorizeWrite?: (
+    projectId: string,
+    editToken: string | undefined,
+    request: Request
+  ) => Promise<void>;
 }
 
 const defaultDeps: ValidationJobsRouteDeps = {
   ingest: ingestLightweightValidationJson,
+  authorizeWrite: authorizeProjectValidationWrite,
 };
 
 function isLightweightValidationInput(value: unknown): value is LightweightValidationJson {
@@ -130,6 +141,12 @@ export async function handleValidationJobsPost(
       );
     }
 
+    await deps.authorizeWrite?.(
+      payload.metadata.projectId,
+      getValidationEditToken(request),
+      request
+    );
+
     const plan = await deps.ingest(payload.validationInput, {
       ...payload.metadata,
       requestId: api.requestId,
@@ -146,7 +163,7 @@ export async function handleValidationJobsPost(
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Validation job 저장에 실패했습니다.';
-    const status = /not configured/i.test(message) ? 503 : 500;
+    const status = getValidationAuthErrorStatus(message);
     auditApiRequest(api, 'error', { status, message });
     return NextResponse.json(
       { error: message, requestId: api.requestId },

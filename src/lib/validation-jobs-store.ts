@@ -130,6 +130,20 @@ export async function getValidationJobDetail(jobId: string): Promise<ValidationJ
   };
 }
 
+export async function getValidationJobProjectId(jobId: string): Promise<string | null> {
+  const { data, error } = await getSupabase()
+    .from('validation_jobs')
+    .select('project_id')
+    .eq('id', jobId)
+    .maybeSingle<{ project_id: string }>();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data?.project_id ?? null;
+}
+
 export async function listProjectValidationJobs(projectId: string, limit = 10) {
   const { data, error } = await getSupabase()
     .from('validation_jobs')
@@ -224,6 +238,9 @@ export async function getValidationJobDiff(
 
   const baselineJobId = await resolveBaselineJobId(current.projectId, current.id, baseline);
   const baselineJob = baselineJobId ? await getValidationJobDetail(baselineJobId) : null;
+  if (baselineJob && baselineJob.projectId !== current.projectId) {
+    return null;
+  }
 
   return diffValidationSnapshots({
     baselineJobId: baselineJob?.id ?? null,
