@@ -1,6 +1,6 @@
 'use client';
 
-import { Grid2X2, Hand, Layers3, Minus, MousePointer2, Scan, Plus } from 'lucide-react';
+import { BookOpen, Grid2X2, Hand, Layers3, Minus, MousePointer2, Scan, Plus } from 'lucide-react';
 import type { ImportedSchematicViewMode } from '@/types';
 
 type Mode = 'select' | 'pan';
@@ -63,6 +63,7 @@ export function CanvasToolbar({
   onZoomIn,
   onZoomOut,
   onFitView,
+  onReadView,
   onToggleGrid,
   onToggleMinimap,
   onImportedSchematicViewModeChange,
@@ -77,6 +78,7 @@ export function CanvasToolbar({
   onZoomIn: () => void;
   onZoomOut: () => void;
   onFitView: () => void;
+  onReadView?: () => void;
   onToggleGrid: () => void;
   onToggleMinimap: () => void;
   onImportedSchematicViewModeChange?: (mode: ImportedSchematicViewMode) => void;
@@ -100,6 +102,11 @@ export function CanvasToolbar({
         <ToolButton onClick={onFitView} title="화면 맞춤">
           <Scan size={14} />
         </ToolButton>
+        {importedSchematicMode && onReadView ? (
+          <ToolButton onClick={onReadView} title="읽기 보기">
+            <BookOpen size={14} />
+          </ToolButton>
+        ) : null}
         <span data-testid="schematic-zoom-label" className="ml-1.5 min-w-[42px] shrink-0 font-mono text-[10px] text-[#8b7d70]">{zoomLabel}</span>
         <Divider />
         <ToolButton active={showMinimap} toggle onClick={onToggleMinimap} title="레이어/미니맵 토글">

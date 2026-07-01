@@ -151,6 +151,23 @@ function getImportedReviewMinimumZoom(viewMode: 'original' | 'structured') {
   return viewMode === 'original' ? 0.55 : 0.45;
 }
 
+function getImportedReviewReadZoom(
+  bounds: { width: number; height: number },
+  viewMode: 'original' | 'structured'
+) {
+  const maxReadableZoom = getImportedReviewMaxReadableZoom(bounds);
+  const minimumReadableZoom = viewMode === 'original' ? 0.72 : 0.64;
+  const boostedFitZoom = Number.isFinite(maxReadableZoom)
+    ? maxReadableZoom * (viewMode === 'original' ? 2.05 : 1.75)
+    : minimumReadableZoom;
+  const cappedZoom = Math.min(
+    Math.max(minimumReadableZoom, boostedFitZoom),
+    viewMode === 'original' ? 1.15 : 1
+  );
+
+  return Number(cappedZoom.toFixed(4));
+}
+
 function getImportedReviewMaxReadableZoom(
   bounds: { width: number; height: number }
 ) {
@@ -304,6 +321,12 @@ export function useComponentCanvasController() {
   });
   const exportRef = useRef<HTMLDivElement | null>(null);
   const importedReviewViewportBoundsRef = useRef<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const importedReadViewportBoundsRef = useRef<{
     x: number;
     y: number;
     width: number;
@@ -518,10 +541,21 @@ export function useComponentCanvasController() {
     },
     [components, importedSchematicScene, importedSchematicViewMode, manualConnections]
   );
+  const importedReadViewportBounds = useMemo(() => {
+    if (importedSchematicViewMode === 'structured') {
+      return importedReviewViewportBounds;
+    }
+
+    return getImportedSchematicReviewViewportBounds(components, importedSchematicScene) ?? importedReviewViewportBounds;
+  }, [components, importedReviewViewportBounds, importedSchematicScene, importedSchematicViewMode]);
 
   useEffect(() => {
     importedReviewViewportBoundsRef.current = importedReviewViewportBounds;
   }, [importedReviewViewportBounds]);
+
+  useEffect(() => {
+    importedReadViewportBoundsRef.current = importedReadViewportBounds;
+  }, [importedReadViewportBounds]);
 
   const importedViewportKey = useMemo(() => {
     if (!importedSchematicMode || !importedViewportBounds) {
@@ -577,7 +611,49 @@ export function useComponentCanvasController() {
     rfInstance,
   ]);
 
+  const readImportedCanvasViewport = useCallback(() => {
+    if (!rfInstance || !importedSchematicMode) {
+      return;
+    }
+
+    const bounds = importedReadViewportBoundsRef.current ?? importedReviewViewportBoundsRef.current;
+    if (!bounds) {
+      return;
+    }
+
+    const focusBounds = getImportedReviewFocusBounds(bounds);
+    const centerX = focusBounds.x + focusBounds.width / 2;
+    const centerY = focusBounds.y + focusBounds.height / 2;
+    const nextZoom = getImportedReviewReadZoom(focusBounds, importedSchematicViewMode);
+
+    if (importedReviewBoostTimeoutRef.current !== null && typeof window !== 'undefined') {
+      window.clearTimeout(importedReviewBoostTimeoutRef.current);
+      importedReviewBoostTimeoutRef.current = null;
+    }
+
+    initialImportedFitDoneRef.current = true;
+    cameraLockUntilRef.current = 0;
+    cameraModeRef.current = 'interactive-review';
+    rfInstance.setCenter(centerX, centerY, {
+      zoom: nextZoom,
+      duration: 180,
+    });
+    publishCanvasViewportZoom(nextZoom);
+    appendViewportDebugAction(`policy:read-view:z=${nextZoom.toFixed(3)}`);
+  }, [appendViewportDebugAction, importedSchematicMode, importedSchematicViewMode, rfInstance]);
+
   useCanvasViewportShortcuts(rfInstance, fitCanvasViewport);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.addEventListener('modumake:read-view', readImportedCanvasViewport);
+    return () => {
+      window.removeEventListener('modumake:read-view', readImportedCanvasViewport);
+    };
+  }, [readImportedCanvasViewport]);
 
   useEffect(() => {
     if (!importedSchematicMode) {

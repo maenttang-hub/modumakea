@@ -20,9 +20,12 @@
 - [ ] WebSerial 비활성 또는 내부 검증 승인 확인
 - [ ] beta event collection을 켤 경우 데이터 정책과 retention 확인
 - [ ] `NEXT_PUBLIC_MODUMAKE_FEEDBACK_URL` 또는 `NEXT_PUBLIC_MODUMAKE_SUPPORT_EMAIL` 설정
+- [ ] `docs/beta-feedback-form-template.md` 기준으로 실제 피드백 폼 생성
 - [ ] `/product-scope`, `/privacy`, `/support` 페이지 확인
 - [ ] 베타 초대/테스트 안내에 공식 KiCad DRC 임시 업로드 문구 포함
 - [ ] 공유 허가가 있는 외부 사용자 KiCad 파일 10개 이상 확보
+- [ ] 큰 회로도에서 `읽기 보기` 버튼으로 글자가 읽히는지 확인
+- [ ] PCB 화면에서 검토 묶음이 기본 요약 상태로 보이고, 펼쳤을 때 공식 DRC/보조 검토가 분리되는지 확인
 
 ## 릴리즈 기록 양식
 
@@ -47,6 +50,7 @@ Top issue feedback:
 Official KiCad DRC:
 External file count:
 Feedback channel:
+Feedback form:
 Rollback trigger:
 ```
 

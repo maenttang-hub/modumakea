@@ -763,6 +763,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
           },
         });
         toast.success(t('KiCad PCB 파일을 불러왔습니다.', 'KiCad PCB loaded.'), {
+          duration: 900,
           description: appLanguage === 'ko'
             ? `${file.name}을 PCB 검증 화면으로 가져왔습니다.`
             : `Imported ${file.name} into the PCB review workspace.`,
@@ -845,6 +846,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
         },
       });
       toast.success(t('KiCad 회로도를 불러왔습니다.', 'KiCad schematic loaded.'), {
+        duration: 900,
         description: appLanguage === 'ko'
           ? `${file.name}을 리뷰 캔버스로 가져왔습니다.${result.notice ? ` ${result.notice}` : ''}`
           : `Imported ${file.name} into the review canvas.${result.notice ? ` ${result.notice}` : ''}`,
@@ -1166,6 +1168,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
                     onZoomIn={() => window.dispatchEvent(new CustomEvent('modumake:zoom-in'))}
                     onZoomOut={() => window.dispatchEvent(new CustomEvent('modumake:zoom-out'))}
                     onFitView={() => window.dispatchEvent(new CustomEvent('modumake:fit-view'))}
+                    onReadView={() => window.dispatchEvent(new CustomEvent('modumake:read-view'))}
                     onToggleGrid={toggleGrid}
                     onToggleMinimap={toggleMinimap}
                     onImportedSchematicViewModeChange={setImportedSchematicViewMode}

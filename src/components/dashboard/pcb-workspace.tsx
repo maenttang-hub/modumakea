@@ -335,6 +335,7 @@ export function PcbWorkspace() {
       setSelectedPcbIssueId(validation.issues[0]?.id ?? null);
       setLastKiCadDrcError(null);
       toast.success(t('KiCad PCB 파일을 불러왔습니다.', 'KiCad PCB loaded.'), {
+        duration: 900,
         description: appLanguage === 'ko'
           ? `${document.stats.footprintCount}개 풋프린트 · ${document.stats.segmentCount}개 트랙 · 대표 사전점검 ${validation.issueCount}개`
           : `${document.stats.footprintCount} footprints · ${document.stats.segmentCount} tracks · ${validation.issueCount} representative pre-checks`,

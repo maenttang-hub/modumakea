@@ -17,7 +17,7 @@ import type {
   ImportedPcbValidationReport,
   ImportedPcbZone,
 } from '@/types';
-import { Eye, EyeOff, Layers3, Minus, Plus, Scan } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye, EyeOff, Layers3, Minus, Plus, Scan } from 'lucide-react';
 
 const DEFAULT_VISIBLE_LAYERS = new Set([
   'Edge.Cuts',
@@ -46,7 +46,8 @@ const LAYER_COLORS: Record<string, string> = {
 };
 
 const MAX_VISIBLE_ISSUE_MARKERS = 240;
-const MAX_VISIBLE_REVIEW_GROUPS = 3;
+const MAX_VISIBLE_REVIEW_GROUPS = 2;
+const COMPACT_LAYER_ORDER = ['Edge.Cuts', 'F.Cu', 'B.Cu', 'F.SilkS', 'B.SilkS', 'F.Fab', 'B.Fab'];
 const BOARD_OUTLINE_STROKE = '#1f2937';
 const BOARD_OUTLINE_HALO = '#fffdf9';
 const MIN_PCB_ZOOM = 0.5;
@@ -185,6 +186,18 @@ function modumakeReviewHelpText(language: AppLanguage) {
   return language === 'ko'
     ? '반복 항목을 묶어 먼저 볼 원인으로 정리합니다.'
     : 'Repeated items grouped into causes to inspect first.';
+}
+
+function reviewDetailsToggleLabel(showReviewDetails: boolean, hasKiCadDrc: boolean, language: AppLanguage) {
+  if (showReviewDetails) {
+    return language === 'ko' ? '묶음 접기' : 'Hide groups';
+  }
+
+  if (hasKiCadDrc) {
+    return language === 'ko' ? '공식/보조 묶음 보기' : 'Show official/support groups';
+  }
+
+  return language === 'ko' ? '상위 묶음 보기' : 'Show top groups';
 }
 
 function ReviewGroupButton({
@@ -609,6 +622,16 @@ export function ImportedPcbViewer({
     });
     return initial;
   });
+  const [showAllLayers, setShowAllLayers] = useState(false);
+  const [showReviewDetails, setShowReviewDetails] = useState(false);
+  const compactLayers = useMemo(() => {
+    const ordered = COMPACT_LAYER_ORDER.filter(layer => availableLayers.includes(layer));
+    const remainingCopper = availableLayers.filter(layer => layer.endsWith('.Cu') && !ordered.includes(layer));
+    const fallback = availableLayers.filter(layer => !ordered.includes(layer) && !remainingCopper.includes(layer));
+    return [...ordered, ...remainingCopper, ...fallback].slice(0, Math.min(7, availableLayers.length));
+  }, [availableLayers]);
+  const displayedLayers = showAllLayers ? availableLayers : compactLayers;
+  const hiddenLayerCount = Math.max(0, availableLayers.length - displayedLayers.length);
 
   const bounds = document.bounds ?? { minX: 0, minY: 0, maxX: 100, maxY: 70 };
   const boardWidth = bounds.maxX - bounds.minX;
@@ -641,6 +664,7 @@ export function ImportedPcbViewer({
   const hasKiCadDrc = Boolean(validation?.checks.kicadDrc || kicadDrcIssueCount > 0);
   const reviewGroups = useMemo(() => buildImportedPcbReviewGroups(validation), [validation]);
   const reviewComparison = useMemo(() => buildImportedPcbReviewComparison(validation), [validation]);
+  const hasReviewDetailContent = reviewComparison.hasOfficialDrc || reviewGroups.length > 0;
   const issueMarkerState = useMemo(() => {
     const issues = validation?.issues.filter(issue => issue.at) ?? [];
     const selectedMarker = selectedIssueId
@@ -844,7 +868,7 @@ export function ImportedPcbViewer({
           <Layers3 size={11} />
           {availableLayers.length}
         </div>
-        {availableLayers.map(layer => (
+        {displayedLayers.map(layer => (
           <LayerToggle
             key={layer}
             layer={layer}
@@ -852,6 +876,19 @@ export function ImportedPcbViewer({
             onToggle={() => toggleLayer(layer)}
           />
         ))}
+        {hiddenLayerCount > 0 || showAllLayers ? (
+          <button
+            type="button"
+            onClick={() => setShowAllLayers(current => !current)}
+            className="pointer-events-auto flex h-7 shrink-0 items-center gap-1 rounded-full border border-[#e6dfd4] bg-[#fffdfa] px-2 text-[10px] font-semibold text-[#6b5d51] transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4e79ac]"
+            aria-label={showAllLayers ? t('레이어 목록 접기', 'Collapse layer list') : t('나머지 레이어 보기', 'Show remaining layers')}
+            aria-expanded={showAllLayers}
+            title={showAllLayers ? t('레이어 접기', 'Collapse layers') : t('나머지 레이어 보기', 'Show remaining layers')}
+          >
+            {showAllLayers ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+            <span>{showAllLayers ? t('접기', 'Less') : `+${hiddenLayerCount}`}</span>
+          </button>
+        ) : null}
       </div>
 
       {validation && validation.issueCount > 0 ? (
@@ -859,8 +896,8 @@ export function ImportedPcbViewer({
           data-testid="imported-pcb-issue-summary"
           className={`absolute right-3 z-10 rounded-[10px] border border-[#e6dfd4] bg-[#fffdfa]/94 px-3 py-2 text-[11px] leading-5 text-[#4e4238] shadow-sm backdrop-blur ${
             selectedIssue
-              ? 'max-w-[min(230px,calc(40%-12px))]'
-              : 'max-w-[min(360px,calc(100%-24px))]'
+              ? 'max-w-[min(220px,calc(38%-12px))]'
+              : 'max-w-[min(310px,calc(100%-24px))]'
           } ${
             selectedIssue ? 'bottom-[118px] md:bottom-3' : 'bottom-3'
           }`}
@@ -888,7 +925,21 @@ export function ImportedPcbViewer({
                 : `${issueMarkerState.visible.length} markers shown · ${issueMarkerState.hidden} in the list`}
             </div>
           ) : null}
-          {reviewComparison.hasOfficialDrc ? (
+          {hasReviewDetailContent ? (
+            <button
+              type="button"
+              onClick={() => setShowReviewDetails(current => !current)}
+              className="mt-1.5 flex h-7 w-full items-center justify-between rounded-[7px] border border-[#eadfcb] bg-white/70 px-2 text-[10px] font-semibold text-[#6b5d51] transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#4e79ac]"
+              aria-expanded={showReviewDetails}
+              data-testid="imported-pcb-toggle-review-details"
+            >
+              <span>
+                {reviewDetailsToggleLabel(showReviewDetails, hasKiCadDrc, language)}
+              </span>
+              {showReviewDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            </button>
+          ) : null}
+          {showReviewDetails && reviewComparison.hasOfficialDrc ? (
             <div data-testid="imported-pcb-drc-comparison" className="mt-2">
               <div className="mb-1.5 text-[10px] leading-4 text-[#8d8074]" data-testid="imported-pcb-source-help">
                 {officialDrcHelpText(language)} {modumakeReviewHelpText(language)}
@@ -899,7 +950,7 @@ export function ImportedPcbViewer({
                   emptyLabel={language === 'ko' ? '공식 항목 없음' : 'No official items'}
                   groups={reviewComparison.officialGroups}
                   language={language}
-                  limit={selectedIssue ? 1 : 2}
+                  limit={1}
                   onSelectIssue={onSelectIssue}
                 />
                 <ReviewComparisonColumn
@@ -907,12 +958,12 @@ export function ImportedPcbViewer({
                   emptyLabel={language === 'ko' ? '보조 항목 없음' : 'No support items'}
                   groups={reviewComparison.precheckGroups}
                   language={language}
-                  limit={selectedIssue ? 1 : 2}
+                  limit={1}
                   onSelectIssue={onSelectIssue}
                 />
               </div>
             </div>
-          ) : reviewGroups.length > 0 ? (
+          ) : showReviewDetails && reviewGroups.length > 0 ? (
             <div data-testid="imported-pcb-review-groups" className="mt-2 space-y-1">
               <div className="text-[10px] font-semibold text-[#6b5d51]">
                 {language === 'ko' ? '상위 검토 묶음' : 'Top review groups'}

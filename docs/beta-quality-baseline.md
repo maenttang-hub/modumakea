@@ -95,6 +95,25 @@ Remaining before public beta:
 - Run the same comparison with external beta user files, not only the fixed rusefi sample set.
 - Decide whether official DRC should run automatically after PCB import or remain an explicit button.
 
+## 2026-07-01 UX Density and Readability Follow-Up
+
+The editor now keeps imported schematic full-page fit as the default confirmation view, and adds a separate `읽기 보기` control for large schematics. On the A4988 schematic sample, the toolbar read view moved the canvas from `54%` to `115%` in browser verification.
+
+The imported PCB viewer now defaults to compact layer controls and a compact review summary:
+
+- Layer controls show the primary layers first and keep extra layers behind a `+N` expander.
+- PCB review groups are collapsed by default behind `상위 묶음 보기` or `공식/보조 묶음 보기`.
+- KiCad official DRC and ModuMake review grouping remain separated after expansion.
+- KiCad import success toasts are shortened so they do not cover the PCB review summary during normal inspection.
+
+Verification:
+
+- `npm run lint -- src/hooks/use-component-canvas-controller.ts src/components/canvas/canvas-toolbar.tsx src/components/app/home-shell.tsx src/components/dashboard/imported-pcb-viewer.tsx src/components/dashboard/pcb-workspace.tsx tests/e2e/editor-report-smoke.spec.ts`: passed
+- `npm run test:e2e -- tests/e2e/editor-report-smoke.spec.ts`: 10/10 passed
+- `npm run build`: passed
+- `npm run test:import-render -- --schematics=5 --pcbs=5 --output=tmp/chrome-render-audit/ux-density-read-view-10-final`: 10/10 passed, DOM issues 0
+- `npm run product:preflight`: passed with the expected non-production strict-mode reminder
+
 Do not do yet:
 
 - Do not split `circuit-netlist.ts`, `kicad-sch-parser.ts`, or `datasheet-rules.ts`.

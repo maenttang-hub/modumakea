@@ -245,6 +245,10 @@ test('editor imports a real KiCad schematic file through the file input', async 
     const visibility = await readImportedSchematicVisibility(page);
     return Math.min(visibility?.widthVisibleRatio ?? 0, visibility?.heightVisibleRatio ?? 0);
   }).toBeGreaterThanOrEqual(0.92);
+  const initialZoom = Number((await page.getByTestId('schematic-zoom-label').innerText()).replace('%', ''));
+  await page.getByRole('button', { name: '읽기 보기' }).click();
+  await expect.poll(async () => Number((await page.getByTestId('schematic-zoom-label').innerText()).replace('%', '')))
+    .toBeGreaterThan(initialZoom + 5);
   await expectNoVisibleUnnamedButtons(page);
   expect(errors).toEqual([]);
 });
@@ -297,6 +301,7 @@ test('editor and report show matching imported PCB validation counts', async ({ 
     .locator('input[type="file"][accept=".kicad_sch,.kicad_pcb,.pcb,text/plain"]')
     .setInputFiles(importedPcbFixturePath);
   await expect(page.getByTestId('imported-pcb-svg')).toBeVisible({ timeout: 15000 });
+  await page.getByTestId('imported-pcb-toggle-review-details').click();
   await expect(page.getByTestId('imported-pcb-review-groups')).toBeVisible();
   await expect(page.getByTestId('imported-pcb-review-group').first()).toBeVisible();
 
@@ -342,7 +347,10 @@ test('editor and report separate official KiCad DRC from ModuMake PCB review gro
   await expect(page.getByTestId('imported-pcb-svg')).toBeVisible({ timeout: 15000 });
 
   await page.getByRole('button', { name: 'KiCad DRC' }).click();
-  await expect(page.getByTestId('imported-pcb-drc-comparison')).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId('imported-pcb-issue-summary')).toContainText('KiCad DRC', { timeout: 15000 });
+  await expect(page.getByTestId('imported-pcb-toggle-review-details')).toBeVisible();
+  await page.getByTestId('imported-pcb-toggle-review-details').click();
+  await expect(page.getByTestId('imported-pcb-drc-comparison')).toBeVisible();
   await expect(page.getByTestId('imported-pcb-drc-comparison')).toContainText('공식 DRC');
   await expect(page.getByTestId('imported-pcb-drc-comparison')).toContainText('ModuMake 검토');
   await expect(page.getByTestId('imported-pcb-source-help')).toContainText('KiCad가 직접 계산한 판정');
