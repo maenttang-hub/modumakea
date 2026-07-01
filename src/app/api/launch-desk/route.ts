@@ -2,6 +2,7 @@ import { run, withTrace } from '@openai/agents'
 
 import { buildLaunchDeskAgentInput, launchDeskAgent } from '@/lib/launch-desk/agent'
 import { launchDeskInputSchema } from '@/lib/launch-desk/types'
+import { isLaunchDeskEnabled } from '@/lib/beta-feature-gates'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -57,6 +58,15 @@ function getTextDelta(data: unknown) {
 }
 
 export async function POST(request: Request) {
+  if (!isLaunchDeskEnabled()) {
+    return Response.json(
+      {
+        error: 'Launch Desk is not enabled for this ModuMake beta surface.',
+      },
+      { status: 404 },
+    )
+  }
+
   if (!process.env.OPENAI_API_KEY?.trim()) {
     return Response.json(
       {
