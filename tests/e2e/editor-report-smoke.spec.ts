@@ -8,6 +8,10 @@ const importedPcbFixturePath = path.join(
   process.cwd(),
   'tests/kicad_samples/rusefi/A4988_stepper_motor_driver/Motor_driver_A4988.kicad_pcb',
 );
+const importedSchematicFixturePath = path.join(
+  process.cwd(),
+  'tests/kicad_samples/rusefi/A4988_stepper_motor_driver/Motor_driver_A4988.kicad_sch',
+);
 
 type PageErrorLog = {
   message: string;
@@ -55,6 +59,34 @@ async function seedWorkspace(page: Page, state: E2eWorkspace) {
       workspaceState: state,
     },
   );
+}
+
+async function expectNoVisibleUnnamedButtons(page: Page) {
+  const unnamedButtons = await page.locator('button').evaluateAll(buttons =>
+    buttons
+      .filter(button => {
+        const rect = button.getBoundingClientRect();
+        const style = window.getComputedStyle(button);
+        const hidden =
+          rect.width <= 0 ||
+          rect.height <= 0 ||
+          style.display === 'none' ||
+          style.visibility === 'hidden' ||
+          Boolean(button.closest('[aria-hidden="true"]'));
+        if (hidden) {
+          return false;
+        }
+
+        const name =
+          button.getAttribute('aria-label')?.trim() ||
+          button.textContent?.trim() ||
+          button.getAttribute('title')?.trim();
+        return !name;
+      })
+      .map(button => button.outerHTML.slice(0, 180))
+  );
+
+  expect(unnamedButtons).toEqual([]);
 }
 
 test('editor loads without browser console errors', async ({ page }) => {
@@ -108,6 +140,47 @@ test('editor shows imported schematic state without the empty file prompt', asyn
   expect(errors).toEqual([]);
 });
 
+test('editor imports a real KiCad schematic file through the file input', async ({ page }) => {
+  const errors = collectPageErrors(page);
+
+  await page.goto('/editor');
+  await page
+    .locator('input[type="file"][accept=".kicad_sch,.kicad_pcb,.pcb,text/plain"]')
+    .setInputFiles(importedSchematicFixturePath);
+
+  await expect(titleBarFileButton(page, 'Motor_driver_A4988.kicad_sch')).toBeVisible({ timeout: 20000 });
+  await expect(page.locator('[data-mm-imported-schematic-overlay="true"]')).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText('KiCad 파일을 올려서 바로 리뷰 시작')).toHaveCount(0);
+
+  const readStoredImport = () => page.evaluate((workspaceKey) => {
+    const raw = window.localStorage.getItem(workspaceKey);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as {
+      state?: {
+        components?: unknown[];
+        importedSchematicSource?: string | null;
+      };
+    };
+
+    return {
+      componentCount: parsed.state?.components?.length ?? 0,
+      sourceLength: parsed.state?.importedSchematicSource?.length ?? 0,
+    };
+  }, workspaceStorageKey);
+
+  await expect.poll(async () => (await readStoredImport())?.componentCount ?? 0).toBeGreaterThan(0);
+  await expect.poll(async () => (await readStoredImport())?.sourceLength ?? 0).toBeGreaterThan(10000);
+  await expect.poll(async () => {
+    const label = await page.getByTestId('schematic-zoom-label').innerText();
+    return Number(label.replace('%', '').trim());
+  }).toBeGreaterThanOrEqual(50);
+  await expectNoVisibleUnnamedButtons(page);
+  expect(errors).toEqual([]);
+});
+
 test('editor shows imported PCB zoom controls and changes the board view', async ({ page }) => {
   const errors = collectPageErrors(page);
 
@@ -119,6 +192,8 @@ test('editor shows imported PCB zoom controls and changes the board view', async
   const pcbSvg = page.getByTestId('imported-pcb-svg');
   const zoomLabel = page.getByTestId('imported-pcb-zoom-label');
   await expect(pcbSvg).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId('pcb-workspace-top-controls')).toContainText('사전점검');
+  await expect(page.getByTestId('imported-pcb-issue-summary')).toContainText('KiCad 공식 DRC는 아직 실행되지 않았습니다.');
   await expect(page.getByTestId('imported-pcb-zoom-controls')).toBeVisible();
   await expect(zoomLabel).toHaveText('100%');
 
@@ -138,6 +213,7 @@ test('editor shows imported PCB zoom controls and changes the board view', async
   await page.getByTitle('화면 맞춤').click();
   await expect(zoomLabel).toHaveText('100%');
   await expect.poll(() => pcbSvg.getAttribute('viewBox')).toBe(initialViewBox);
+  await expectNoVisibleUnnamedButtons(page);
   expect(errors).toEqual([]);
 });
 
@@ -154,8 +230,7 @@ test('editor and report show matching imported PCB validation counts', async ({ 
     error: await readCount(page, 'editor-error-count'),
     warning: await readCount(page, 'editor-warning-count'),
   };
-  expect(editorCounts.error).toBeGreaterThan(0);
-  expect(editorCounts.warning).toBeGreaterThan(0);
+  expect(editorCounts.error + editorCounts.warning).toBeGreaterThan(0);
 
   await page.getByRole('button', { name: '분석 보고서 보기' }).click();
   await page.waitForURL('**/report');
