@@ -9,6 +9,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Terminal, Cpu, Radio, Trash2, ChevronRight, PlugZap, Send, Unplug } from 'lucide-react';
 import { useBoardStore } from '@/store/use-board-store';
 import { getBoardById } from '@/constants/boards';
+import { getSurfaceFlags } from '@/constants/product-surface';
 import { deriveRuntimeComponentStates } from '@/lib/runtime-code-bridge';
 import { useWebSerial } from '@/hooks/use-web-serial';
 import type { ComponentRuntimeState, CompilerManifest, CompileJobRequest, CompileJobResponse } from '@/types';
@@ -82,6 +83,13 @@ export function TerminalPanel() {
   } = useBoardStore();
   const board                         = getBoardById(activeBoardId);
   const webSerial                     = useWebSerial();
+  const surfaceFlags                  = getSurfaceFlags();
+  const showSerialActions             = surfaceFlags.showSerialActions;
+  const runtimeOutputTab: TabId       = showSerialActions ? 'serial' : 'log';
+  const visibleTabs                   = showSerialActions
+    ? TABS
+    : TABS.filter(tab => tab.id !== 'serial');
+  const effectiveActiveTab: TabId     = showSerialActions || activeTab !== 'serial' ? activeTab : 'log';
 
   // 새 로그 추가 시 자동 스크롤
   useEffect(() => {
@@ -215,7 +223,7 @@ export function TerminalPanel() {
         if (step === 3) {
           addLog('system', 'MicroPython 인터프리터 구동 시작. 시리얼 스트리밍을 연결합니다.');
           clearInterval(compileInterval);
-          setActiveTab('serial');
+          setActiveTab(runtimeOutputTab);
           startSimulationLoop('python', code);
         }
       } else {
@@ -226,14 +234,14 @@ export function TerminalPanel() {
           addLog('system', '빌드 성공! 바이너리 크기: 24.5 KB (Flash 5%), 1.4 KB (SRAM 7%)');
           addLog('system', '가상 하드웨어 실행을 위해 시리얼 포트를 Open합니다.');
           clearInterval(compileInterval);
-          setActiveTab('serial');
+          setActiveTab(runtimeOutputTab);
           startSimulationLoop('cpp', code);
         }
       }
     }, 500);
 
     return () => clearInterval(compileInterval);
-  }, [addLog, startSimulationLoop]);
+  }, [addLog, runtimeOutputTab, startSimulationLoop]);
 
   const runCloudCompile = useCallback(async (code: string) => {
     const requiredLibraries = lastCompilerManifest?.arduinoDependencies ?? [];
@@ -285,9 +293,9 @@ export function TerminalPanel() {
     }
 
     addLog('system', '실제 arduino-cli 컴파일 성공. 이어서 가상 런타임 피드백을 시작합니다.');
-    setActiveTab('serial');
+    setActiveTab(runtimeOutputTab);
     startSimulationLoop('cpp', code);
-  }, [activeBoardId, addLog, board.name, lastCompilerManifest?.arduinoDependencies, runVirtualCompilation, startSimulationLoop]);
+  }, [activeBoardId, addLog, board.name, lastCompilerManifest?.arduinoDependencies, runVirtualCompilation, runtimeOutputTab, startSimulationLoop]);
 
   // 실행 커맨드 이벤트 수신
   useEffect(() => {
@@ -452,9 +460,9 @@ export function TerminalPanel() {
         className="flex items-center flex-shrink-0"
         style={{ borderBottom: '1px solid #21262d', background: '#161b22' }}
       >
-        {TABS.map(tab => {
+        {visibleTabs.map(tab => {
           const Icon    = tab.icon;
-          const isActive = activeTab === tab.id;
+          const isActive = effectiveActiveTab === tab.id;
           return (
             <button
               key={tab.id}
@@ -479,7 +487,7 @@ export function TerminalPanel() {
         })}
 
         {/* 시리얼 탭 추가 설정 */}
-        {activeTab === 'serial' && (
+        {effectiveActiveTab === 'serial' && showSerialActions && (
           <div className="ml-auto flex items-center gap-2 px-3">
             <span style={{ color: '#64748b' }}>Baud:</span>
             <select
@@ -607,7 +615,7 @@ export function TerminalPanel() {
             </div>
           ))
         )}
-        {activeTab === 'serial' && !webSerial.isSupported && (
+        {effectiveActiveTab === 'serial' && showSerialActions && !webSerial.isSupported && (
           <div className="mt-3 rounded-md border px-3 py-2 text-[11px]" style={{ borderColor: 'rgba(248, 113, 113, 0.28)', color: '#fca5a5' }}>
             <div>이 브라우저는 WebSerial을 지원하지 않습니다. Chrome 계열 브라우저에서 시리얼 연결 버튼을 사용해 주세요.</div>
             <button
@@ -619,7 +627,7 @@ export function TerminalPanel() {
             </button>
           </div>
         )}
-        {activeTab === 'serial' && webSerial.error && (
+        {effectiveActiveTab === 'serial' && showSerialActions && webSerial.error && (
           <div className="mt-3 rounded-md border px-3 py-2 text-[11px]" style={{ borderColor: 'rgba(248, 113, 113, 0.28)', color: '#fca5a5' }}>
             <div>{webSerial.error}</div>
             <button

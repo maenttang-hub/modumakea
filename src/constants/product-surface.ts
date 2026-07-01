@@ -5,8 +5,13 @@ export type ProductSurface = 'review-mvp' | 'full';
 const REVIEW_MVP_WORKSPACE_MODES: readonly WorkspaceMode[] = ['schematic', 'simulation'];
 const FULL_WORKSPACE_MODES: readonly WorkspaceMode[] = ['simulation', 'schematic', 'pcb', 'manufacturing'];
 
+export const FULL_PRODUCT_SURFACE_ENABLED = process.env.NEXT_PUBLIC_MODUMAKE_ENABLE_FULL_SURFACE === 'true';
+export const FULL_SURFACE_QUERY_OVERRIDE_ALLOWED =
+  FULL_PRODUCT_SURFACE_ENABLED && process.env.NEXT_PUBLIC_MODUMAKE_ALLOW_FULL_SURFACE_OVERRIDE === 'true';
+
 export const PRODUCT_SURFACE: ProductSurface =
-  process.env.NEXT_PUBLIC_MODUMAKE_SURFACE === 'full' ? 'full' : 'review-mvp';
+  FULL_PRODUCT_SURFACE_ENABLED && process.env.NEXT_PUBLIC_MODUMAKE_SURFACE === 'full' ? 'full' : 'review-mvp';
+export const WEB_SERIAL_ENABLED = process.env.NEXT_PUBLIC_MODUMAKE_ENABLE_WEB_SERIAL === 'true';
 
 function hasFullSurfaceOverride(search: string) {
   try {
@@ -28,7 +33,7 @@ export function getProductSurface(search?: string): ProductSurface {
         ? window.location.search
         : '';
 
-  return hasFullSurfaceOverride(nextSearch) ? 'full' : PRODUCT_SURFACE;
+  return FULL_SURFACE_QUERY_OVERRIDE_ALLOWED && hasFullSurfaceOverride(nextSearch) ? 'full' : PRODUCT_SURFACE;
 }
 
 export function getSurfaceFlags(surface = getProductSurface()) {
@@ -39,6 +44,7 @@ export function getSurfaceFlags(surface = getProductSurface()) {
     showCompileActions: surface === 'full',
     showKiCadExport: surface === 'full',
     showConceptWizard: surface === 'full',
+    showSerialActions: surface === 'full' && WEB_SERIAL_ENABLED,
     showTerminalPanel: true,
     showSimulationPanel: true,
   } as const;
