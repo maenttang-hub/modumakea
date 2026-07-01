@@ -65,10 +65,24 @@ The current data supports that direction. Official DRC can produce hundreds or t
 
 Before public beta:
 
-- Add an in-app official DRC result summary that highlights the largest official rule families.
-- Compare official DRC groups and ModuMake review groups in the UI, not just in the JSON audit.
+- Keep the in-app official DRC vs ModuMake comparison visible in both the PCB viewer and the report.
 - Keep the 50-file render gate green after every KiCad import/render change.
 - Add user-facing copy that explains `official DRC`, `ModuMake pre-check`, and `review group` in plain language.
+
+## 2026-07-01 UI Comparison Follow-Up
+
+The PCB viewer and verification report now separate official KiCad DRC groups from ModuMake review groups when official DRC data is present.
+
+Verification:
+
+- `npm run test:e2e -- tests/e2e/editor-report-smoke.spec.ts`: 10/10 passed
+- `npm run test:import-render -- --output=tmp/chrome-render-audit/drc-comparison-ui-50`: 50/50 passed, DOM issues 0
+
+Remaining before public beta:
+
+- Add clearer user-facing help text for what each source means.
+- Run the same comparison with external beta user files, not only the fixed rusefi sample set.
+- Decide whether official DRC should run automatically after PCB import or remain an explicit button.
 
 Do not do yet:
 

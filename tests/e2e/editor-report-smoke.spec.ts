@@ -13,6 +13,35 @@ const importedSchematicFixturePath = path.join(
   'tests/kicad_samples/rusefi/A4988_stepper_motor_driver/Motor_driver_A4988.kicad_sch',
 );
 
+const fakeKiCadDrcResponse = {
+  drcMode: 'schematic-parity',
+  warnings: [],
+  report: {
+    violations: [
+      {
+        type: 'clearance',
+        severity: 'error',
+        description: 'Mock official clearance finding',
+        items: [{ description: 'track-to-pad clearance', pos: { x: 71.25, y: 43.5 } }],
+      },
+      {
+        type: 'courtyard_overlap',
+        severity: 'warning',
+        description: 'Mock official courtyard overlap',
+        items: [{ description: 'footprint courtyard overlap', pos: { x: 66.1, y: 39.2 } }],
+      },
+    ],
+    unconnected_items: [
+      {
+        type: 'unconnected_items',
+        severity: 'warning',
+        description: 'Mock official unconnected item',
+        items: [{ description: 'unconnected pad', pos: { x: 80.3, y: 54.6 } }],
+      },
+    ],
+  },
+};
+
 type PageErrorLog = {
   message: string;
 };
@@ -292,6 +321,37 @@ test('editor and report show matching imported PCB validation counts', async ({ 
   };
   expect(reportCounts.error).toBe(editorCounts.error);
   expect(reportCounts.warning).toBe(editorCounts.warning);
+  expect(errors).toEqual([]);
+});
+
+test('editor and report separate official KiCad DRC from ModuMake PCB review groups', async ({ page }) => {
+  const errors = collectPageErrors(page);
+
+  await page.route('**/api/kicad/pcb-drc', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(fakeKiCadDrcResponse),
+    });
+  });
+
+  await page.goto('/editor');
+  await page
+    .locator('input[type="file"][accept=".kicad_sch,.kicad_pcb,.pcb,text/plain"]')
+    .setInputFiles(importedPcbFixturePath);
+  await expect(page.getByTestId('imported-pcb-svg')).toBeVisible({ timeout: 15000 });
+
+  await page.getByRole('button', { name: 'KiCad DRC' }).click();
+  await expect(page.getByTestId('imported-pcb-drc-comparison')).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId('imported-pcb-drc-comparison')).toContainText('공식 DRC');
+  await expect(page.getByTestId('imported-pcb-drc-comparison')).toContainText('ModuMake 검토');
+
+  await page.getByRole('button', { name: '분석 보고서 보기' }).click();
+  await page.waitForURL('**/report');
+  await expect(page.getByTestId('report-pcb-drc-source')).toContainText('공식 결과 우선');
+  await expect(page.getByTestId('report-pcb-drc-comparison')).toBeVisible();
+  await expect(page.getByTestId('report-pcb-drc-comparison')).toContainText('공식 KiCad DRC 상위 항목');
+  await expect(page.getByTestId('report-pcb-drc-comparison')).toContainText('ModuMake 검토 그룹');
   expect(errors).toEqual([]);
 });
 

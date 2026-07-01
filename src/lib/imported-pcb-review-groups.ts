@@ -28,6 +28,15 @@ export interface ImportedPcbReviewGroup {
   priority: number;
 }
 
+export interface ImportedPcbReviewComparison {
+  officialIssueCount: number;
+  precheckIssueCount: number;
+  officialGroups: ImportedPcbReviewGroup[];
+  precheckGroups: ImportedPcbReviewGroup[];
+  allGroups: ImportedPcbReviewGroup[];
+  hasOfficialDrc: boolean;
+}
+
 type MutableImportedPcbReviewGroup = Omit<
   ImportedPcbReviewGroup,
   'affectedFootprints' | 'affectedNets' | 'affectedLayers'
@@ -178,4 +187,21 @@ export function buildImportedPcbReviewGroups(
       priority: groupPriority(group),
     }))
     .sort((a, b) => b.priority - a.priority || b.hiddenCandidateCount - a.hiddenCandidateCount || a.title.localeCompare(b.title));
+}
+
+export function buildImportedPcbReviewComparison(
+  report: ImportedPcbValidationReport | null | undefined
+): ImportedPcbReviewComparison {
+  const allGroups = buildImportedPcbReviewGroups(report);
+  const officialIssueCount = report?.issues.filter(issue => issue.source === 'kicad-cli').length ?? 0;
+  const precheckIssueCount = report?.issues.filter(issue => issue.source === 'modumake-pcb').length ?? 0;
+
+  return {
+    officialIssueCount,
+    precheckIssueCount,
+    officialGroups: allGroups.filter(group => group.source === 'kicad-cli'),
+    precheckGroups: allGroups.filter(group => group.source === 'modumake-pcb'),
+    allGroups,
+    hasOfficialDrc: Boolean(report?.checks.kicadDrc || officialIssueCount > 0),
+  };
 }

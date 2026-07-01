@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type WheelEvent } from 'react';
 import {
+  buildImportedPcbReviewComparison,
   buildImportedPcbReviewGroups,
   type ImportedPcbReviewGroup,
 } from '@/lib/imported-pcb-review-groups';
@@ -172,6 +173,78 @@ function reviewGroupCountLabel(group: ImportedPcbReviewGroup, language: AppLangu
   }
 
   return language === 'ko' ? `${visibleCount}건` : `${visibleCount} items`;
+}
+
+function ReviewGroupButton({
+  group,
+  language,
+  onSelectIssue,
+}: {
+  group: ImportedPcbReviewGroup;
+  language: AppLanguage;
+  onSelectIssue?: (issueId: string | null) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelectIssue?.(group.leadIssueId)}
+      className="block w-full rounded-[7px] border border-[#eadfcb] bg-white/72 px-2 py-1.5 text-left transition hover:border-[#d4c4ad] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#4e79ac]"
+      aria-label={`${reviewGroupSourceLabel(group, language)} ${group.title}`}
+      data-testid="imported-pcb-review-group"
+    >
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span
+          className="h-1.5 w-1.5 shrink-0 rounded-full"
+          style={{ backgroundColor: severityColor(group.severity) }}
+        />
+        <span className="min-w-0 flex-1 truncate font-semibold text-[#3f342c]">{group.title}</span>
+        <span className="shrink-0 text-[10px] text-[#8d8074]">
+          {reviewGroupCountLabel(group, language)}
+        </span>
+      </div>
+      <div className="mt-0.5 truncate text-[10px] text-[#8d8074]">
+        {reviewGroupSourceLabel(group, language)} · {reviewGroupScopeLabel(group, language)}
+      </div>
+    </button>
+  );
+}
+
+function ReviewComparisonColumn({
+  emptyLabel,
+  groups,
+  language,
+  limit,
+  title,
+  onSelectIssue,
+}: {
+  emptyLabel: string;
+  groups: ImportedPcbReviewGroup[];
+  language: AppLanguage;
+  limit: number;
+  title: string;
+  onSelectIssue?: (issueId: string | null) => void;
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="mb-1 text-[10px] font-semibold text-[#6b5d51]">{title}</div>
+      {groups.length > 0 ? (
+        <div className="space-y-1">
+          {groups.slice(0, limit).map(group => (
+            <ReviewGroupButton
+              key={group.id}
+              group={group}
+              language={language}
+              onSelectIssue={onSelectIssue}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-[7px] border border-[#eadfcb] bg-white/60 px-2 py-1.5 text-[10px] text-[#8d8074]">
+          {emptyLabel}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function countIssuesBySource(
@@ -555,6 +628,7 @@ export function ImportedPcbViewer({
   const modumakePrecheckIssueCount = countIssuesBySource(validation, 'modumake-pcb');
   const hasKiCadDrc = Boolean(validation?.checks.kicadDrc || kicadDrcIssueCount > 0);
   const reviewGroups = useMemo(() => buildImportedPcbReviewGroups(validation), [validation]);
+  const reviewComparison = useMemo(() => buildImportedPcbReviewComparison(validation), [validation]);
   const issueMarkerState = useMemo(() => {
     const issues = validation?.issues.filter(issue => issue.at) ?? [];
     const selectedMarker = selectedIssueId
@@ -802,34 +876,39 @@ export function ImportedPcbViewer({
                 : `${issueMarkerState.visible.length} markers shown · ${issueMarkerState.hidden} in the list`}
             </div>
           ) : null}
-          {reviewGroups.length > 0 ? (
+          {reviewComparison.hasOfficialDrc ? (
+            <div data-testid="imported-pcb-drc-comparison" className="mt-2">
+              <div className={selectedIssue ? 'space-y-2' : 'grid grid-cols-2 gap-2'}>
+                <ReviewComparisonColumn
+                  title={language === 'ko' ? '공식 DRC' : 'Official DRC'}
+                  emptyLabel={language === 'ko' ? '공식 항목 없음' : 'No official items'}
+                  groups={reviewComparison.officialGroups}
+                  language={language}
+                  limit={selectedIssue ? 1 : 2}
+                  onSelectIssue={onSelectIssue}
+                />
+                <ReviewComparisonColumn
+                  title={language === 'ko' ? 'ModuMake 검토' : 'ModuMake review'}
+                  emptyLabel={language === 'ko' ? '보조 항목 없음' : 'No support items'}
+                  groups={reviewComparison.precheckGroups}
+                  language={language}
+                  limit={selectedIssue ? 1 : 2}
+                  onSelectIssue={onSelectIssue}
+                />
+              </div>
+            </div>
+          ) : reviewGroups.length > 0 ? (
             <div data-testid="imported-pcb-review-groups" className="mt-2 space-y-1">
               <div className="text-[10px] font-semibold text-[#6b5d51]">
                 {language === 'ko' ? '상위 검토 묶음' : 'Top review groups'}
               </div>
               {reviewGroups.slice(0, selectedIssue ? 2 : MAX_VISIBLE_REVIEW_GROUPS).map(group => (
-                <button
+                <ReviewGroupButton
                   key={group.id}
-                  type="button"
-                  onClick={() => onSelectIssue?.(group.leadIssueId)}
-                  className="block w-full rounded-[7px] border border-[#eadfcb] bg-white/72 px-2 py-1.5 text-left transition hover:border-[#d4c4ad] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#4e79ac]"
-                  aria-label={`${reviewGroupSourceLabel(group, language)} ${group.title}`}
-                  data-testid="imported-pcb-review-group"
-                >
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <span
-                      className="h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: severityColor(group.severity) }}
-                    />
-                    <span className="min-w-0 flex-1 truncate font-semibold text-[#3f342c]">{group.title}</span>
-                    <span className="shrink-0 text-[10px] text-[#8d8074]">
-                      {reviewGroupCountLabel(group, language)}
-                    </span>
-                  </div>
-                  <div className="mt-0.5 truncate text-[10px] text-[#8d8074]">
-                    {reviewGroupSourceLabel(group, language)} · {reviewGroupScopeLabel(group, language)}
-                  </div>
-                </button>
+                  group={group}
+                  language={language}
+                  onSelectIssue={onSelectIssue}
+                />
               ))}
             </div>
           ) : null}

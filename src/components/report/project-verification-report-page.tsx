@@ -11,6 +11,7 @@ import { translateEngineIssue } from '@/lib/engine-i18n';
 import { exportReportDocumentAsPdf } from '@/lib/export-report-pdf';
 import { mapImportedPcbValidationIssuesToProjectAuditIssues } from '@/lib/imported-pcb-audit-issues';
 import {
+  buildImportedPcbReviewComparison,
   buildImportedPcbReviewGroups,
   type ImportedPcbReviewGroup,
 } from '@/lib/imported-pcb-review-groups';
@@ -306,6 +307,57 @@ function formatPcbReviewGroupCount(
   return t(`${group.visibleIssueCount}건`, `${group.visibleIssueCount} items`);
 }
 
+function PcbReviewGroupCard({
+  group,
+  t,
+}: {
+  group: ImportedPcbReviewGroup;
+  t: (ko: string, en: string) => string;
+}) {
+  return (
+    <div className="border border-[#e3d7c8] bg-[#fffdf9] px-3 py-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="truncate text-[12px] font-semibold text-[#3d332c]">{group.title}</div>
+        <div className="shrink-0 text-[10px] font-semibold text-[#8b7866]">
+          {formatPcbReviewGroupCount(group, t)}
+        </div>
+      </div>
+      <div className="mt-1 line-clamp-2 text-[11px] leading-5 text-[#6b5d50]">
+        {formatPcbReviewGroupScope(group, t)}
+      </div>
+    </div>
+  );
+}
+
+function PcbReviewGroupColumn({
+  emptyLabel,
+  groups,
+  t,
+  title,
+}: {
+  emptyLabel: string;
+  groups: ImportedPcbReviewGroup[];
+  t: (ko: string, en: string) => string;
+  title: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{title}</div>
+      {groups.length > 0 ? (
+        <div className="space-y-2">
+          {groups.slice(0, 3).map(group => (
+            <PcbReviewGroupCard key={group.id} group={group} t={t} />
+          ))}
+        </div>
+      ) : (
+        <div className="border border-[#e3d7c8] bg-[#fffdf9] px-3 py-2 text-[11px] leading-5 text-[#6b5d50]">
+          {emptyLabel}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function readWorkspaceSnapshot(): ReportWorkspaceSnapshot {
   const defaults = buildDefaultProjectState();
   if (typeof window === 'undefined') {
@@ -479,6 +531,10 @@ export function ProjectVerificationReportPage() {
   }), [effectiveImportedPcbValidation]);
   const pcbReviewGroups = useMemo(
     () => buildImportedPcbReviewGroups(effectiveImportedPcbValidation),
+    [effectiveImportedPcbValidation]
+  );
+  const pcbReviewComparison = useMemo(
+    () => buildImportedPcbReviewComparison(effectiveImportedPcbValidation),
     [effectiveImportedPcbValidation]
   );
 
@@ -859,22 +915,36 @@ export function ProjectVerificationReportPage() {
                     </div>
                   </div>
                 </div>
-                {pcbReviewGroups.length > 0 ? (
+                {pcbReviewComparison.hasOfficialDrc ? (
+                  <div data-testid="report-pcb-drc-comparison" className="border-t border-[#e3d7c8] px-4 py-3">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('공식 DRC와 ModuMake 검토 비교', 'Official DRC and ModuMake review comparison')}</div>
+                    <div className="mt-1 text-[11px] leading-5 text-[#6b5d50]">
+                      {t(
+                        '공식 DRC는 최종 판정 근거로, ModuMake 검토 그룹은 반복 항목을 이해하기 위한 보조 요약으로 봅니다.',
+                        'Treat official DRC as the sign-off source, and ModuMake review groups as an interpretation layer for repeated findings.'
+                      )}
+                    </div>
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      <PcbReviewGroupColumn
+                        title={t('공식 KiCad DRC 상위 항목', 'Top official KiCad DRC items')}
+                        emptyLabel={t('공식 DRC 항목 없음', 'No official DRC items')}
+                        groups={pcbReviewComparison.officialGroups}
+                        t={t}
+                      />
+                      <PcbReviewGroupColumn
+                        title={t('ModuMake 검토 그룹', 'ModuMake review groups')}
+                        emptyLabel={t('ModuMake 보조 항목 없음', 'No ModuMake support items')}
+                        groups={pcbReviewComparison.precheckGroups}
+                        t={t}
+                      />
+                    </div>
+                  </div>
+                ) : pcbReviewGroups.length > 0 ? (
                   <div data-testid="report-pcb-review-groups" className="border-t border-[#e3d7c8] px-4 py-3">
                     <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('상위 PCB 검토 묶음', 'Top PCB review groups')}</div>
                     <div className="mt-2 grid gap-2 md:grid-cols-3">
                       {pcbReviewGroups.slice(0, 3).map(group => (
-                        <div key={group.id} className="border border-[#e3d7c8] bg-[#fffdf9] px-3 py-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="truncate text-[12px] font-semibold text-[#3d332c]">{group.title}</div>
-                            <div className="shrink-0 text-[10px] font-semibold text-[#8b7866]">
-                              {formatPcbReviewGroupCount(group, t)}
-                            </div>
-                          </div>
-                          <div className="mt-1 line-clamp-2 text-[11px] leading-5 text-[#6b5d50]">
-                            {formatPcbReviewGroupScope(group, t)}
-                          </div>
-                        </div>
+                        <PcbReviewGroupCard key={group.id} group={group} t={t} />
                       ))}
                     </div>
                   </div>

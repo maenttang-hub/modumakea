@@ -3,8 +3,15 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { buildEffectiveImportedPcbValidation } from '@/lib/effective-imported-pcb-validation';
 import { mapImportedPcbValidationIssuesToProjectAuditIssues } from '@/lib/imported-pcb-audit-issues';
-import { buildImportedPcbReviewGroups } from '@/lib/imported-pcb-review-groups';
-import { mapKiCadPcbDrcReport, validateImportedPcbDocument } from '@/lib/imported-pcb-validation';
+import {
+  buildImportedPcbReviewComparison,
+  buildImportedPcbReviewGroups,
+} from '@/lib/imported-pcb-review-groups';
+import {
+  mapKiCadPcbDrcReport,
+  mergeImportedPcbValidationReports,
+  validateImportedPcbDocument,
+} from '@/lib/imported-pcb-validation';
 import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
 import { createProjectDocument, normalizeProjectDocument } from '@/store/project-document';
 import { buildDefaultProjectState } from '@/store/store-defaults';
@@ -353,4 +360,36 @@ test('PCB review groups keep repeated candidates tied to one visible cause', asy
       report.issues.some(issue => issue.id === issueId && issue.code === 'PCB_CLEARANCE_TRACK_TRACK_REPRESENTATIVE_LIMIT')
     )
   );
+});
+
+test('PCB review comparison separates official DRC from ModuMake pre-check groups', () => {
+  const document = parseKiCadPcb(ADVANCED_RULE_PROJECT, { sourceFilename: 'advanced.kicad_pcb' });
+  const localReport = validateImportedPcbDocument(document);
+  const officialReport = mapKiCadPcbDrcReport({
+    violations: [
+      {
+        type: 'clearance',
+        severity: 'error',
+        description: 'official clearance finding',
+        items: [{ description: 'official marker', pos: { x: 12, y: 8 } }],
+      },
+      {
+        type: 'courtyard_overlap',
+        severity: 'warning',
+        description: 'official courtyard finding',
+        items: [{ description: 'official marker', pos: { x: 16, y: 9 } }],
+      },
+    ],
+    unconnected_items: [],
+  }, { drcMode: 'schematic-parity' });
+  const merged = mergeImportedPcbValidationReports(localReport, officialReport);
+  const comparison = buildImportedPcbReviewComparison(merged);
+
+  assert.equal(comparison.hasOfficialDrc, true);
+  assert.equal(comparison.officialIssueCount, officialReport.issueCount);
+  assert.equal(comparison.precheckIssueCount, localReport.issueCount);
+  assert.ok(comparison.officialGroups.length > 0);
+  assert.ok(comparison.precheckGroups.length > 0);
+  assert.equal(comparison.officialGroups.every(group => group.source === 'kicad-cli'), true);
+  assert.equal(comparison.precheckGroups.every(group => group.source === 'modumake-pcb'), true);
 });
