@@ -9,6 +9,7 @@
       "title": "Healthy 3.3V I2C sensor with explicit 4.7k pull-ups",
       "boardId": "uno",
       "fixtureKind": "synthetic-circuit",
+      "expectNoIssues": true,
       "expectedIssues": [],
       "expectedNonIssues": [
         {
@@ -104,6 +105,203 @@
         {
           "ruleId": "netlist.power-short.direct",
           "notes": "The op-amp sample is an analog range issue, not a rail short."
+        }
+      ]
+    },
+    {
+      "sampleId": "led-current-limit-missing-01",
+      "title": "LED tied directly between 5V and GND",
+      "boardId": "uno",
+      "fixtureKind": "synthetic-circuit",
+      "expectedIssues": [
+        {
+          "ruleId": "netlist.led-current-limit-missing",
+          "code": "netlist.led-current-limit-missing",
+          "severity": "error",
+          "confidence": "strong-inference",
+          "notes": "A bare LED needs a visible series resistor."
+        }
+      ],
+      "expectedNonIssues": [
+        {
+          "ruleId": "netlist.power-short.direct",
+          "notes": "A current-limited LED issue is not a direct rail short."
+        }
+      ]
+    },
+    {
+      "sampleId": "led-series-resistor-ok-01",
+      "title": "LED with a 220 ohm series resistor",
+      "boardId": "uno",
+      "fixtureKind": "synthetic-circuit",
+      "expectedIssues": [],
+      "expectedNonIssues": [
+        {
+          "ruleId": "netlist.led-current-limit-missing",
+          "code": "netlist.led-current-limit-missing",
+          "notes": "The 220 ohm resistor is in series with the LED."
+        },
+        {
+          "ruleId": "netlist.led-current-too-low",
+          "code": "netlist.led-current-too-low",
+          "notes": "The series resistor should still allow a normal indicator current."
+        }
+      ]
+    },
+    {
+      "sampleId": "hc06-5v-rx-direct-01",
+      "title": "HC-06 RX driven directly from a 5V Arduino GPIO",
+      "boardId": "uno",
+      "fixtureKind": "synthetic-circuit",
+      "expectedIssues": [
+        {
+          "ruleId": "part-master.signal-level-mismatch",
+          "code": "part-master.signal-level-mismatch",
+          "severity": "error",
+          "confidence": "confirmed",
+          "notes": "HC-06 RX should not be treated as a confirmed-safe 5V input path."
+        }
+      ],
+      "expectedNonIssues": [
+        {
+          "ruleId": "netlist.power-short.direct",
+          "notes": "A signal-level mismatch is not a rail short."
+        }
+      ]
+    },
+    {
+      "sampleId": "hc06-level-shifter-ok-01",
+      "title": "HC-06 RX protected by a matched level shifter channel",
+      "boardId": "uno",
+      "fixtureKind": "synthetic-circuit",
+      "expectedIssues": [],
+      "expectedNonIssues": [
+        {
+          "ruleId": "part-master.signal-level-mismatch",
+          "code": "part-master.signal-level-mismatch",
+          "notes": "The board GPIO reaches HC-06 RX through a matched level-shifter path."
+        },
+        {
+          "ruleId": "part-master.level-shifter-path-incomplete",
+          "code": "part-master.level-shifter-path-incomplete",
+          "notes": "The HV and LV channel sides are both connected."
+        }
+      ]
+    },
+    {
+      "sampleId": "opamp-feedback-missing-01",
+      "title": "General op-amp stage without a feedback path",
+      "boardId": "uno",
+      "fixtureKind": "synthetic-circuit",
+      "expectedIssues": [
+        {
+          "ruleId": "netlist.opamp-feedback-missing",
+          "code": "netlist.opamp-feedback-missing",
+          "severity": "warning",
+          "confidence": "needs-review",
+          "notes": "The op-amp has input and output use but no visible feedback network."
+        }
+      ],
+      "expectedNonIssues": [
+        {
+          "ruleId": "netlist.power-short.direct",
+          "notes": "The missing feedback path should not look like a power short."
+        }
+      ]
+    },
+    {
+      "sampleId": "adc-high-impedance-divider-01",
+      "title": "1M/1M divider feeding an Arduino ADC input directly",
+      "boardId": "uno",
+      "fixtureKind": "synthetic-circuit",
+      "expectedIssues": [
+        {
+          "ruleId": "netlist.adc-source-impedance-high",
+          "code": "netlist.adc-source-impedance-high",
+          "severity": "warning",
+          "confidence": "needs-review",
+          "notes": "A megaohm divider is too high impedance for a direct ADC source."
+        }
+      ],
+      "expectedNonIssues": [
+        {
+          "ruleId": "netlist.power-short.direct",
+          "notes": "The divider is high impedance, not a short."
+        }
+      ]
+    },
+    {
+      "sampleId": "power-rail-low-headroom-01",
+      "title": "VIN 9V source with 5V rail load near regulator headroom",
+      "boardId": "uno",
+      "fixtureKind": "synthetic-circuit",
+      "expectedIssues": [
+        {
+          "ruleId": "power.rail-low-headroom.5v",
+          "code": "power.rail-low-headroom",
+          "severity": "warning",
+          "confidence": "needs-review",
+          "notes": "The 5V rail is close enough to the budget to warn before hard overload."
+        }
+      ],
+      "expectedNonIssues": [
+        {
+          "ruleId": "power.rail-over-budget",
+          "code": "power.rail-over-budget",
+          "notes": "This sample should be low headroom, not a full budget failure."
+        }
+      ]
+    },
+    {
+      "sampleId": "custom-symbol-conservative-review-01",
+      "title": "Custom fallback-style I2C module with unknown onboard pull-ups",
+      "boardId": "uno",
+      "fixtureKind": "synthetic-circuit",
+      "expectedIssues": [
+        {
+          "ruleId": "bus.i2c-impedance-voltage",
+          "code": "bus.i2c-impedance-voltage.missing-pullup",
+          "severity": "warning",
+          "confidence": "needs-review",
+          "notes": "Generic/custom module status should remain conservative instead of becoming a hard error."
+        }
+      ],
+      "expectedNonIssues": [
+        {
+          "ruleId": "netlist.power-short.direct",
+          "notes": "Unknown pull-ups are not a direct short."
+        }
+      ]
+    },
+    {
+      "sampleId": "unsupported-zip-import-01",
+      "title": "Unsupported zip import gets a safe failure category",
+      "boardId": "n/a",
+      "fixtureKind": "unsupported-import",
+      "expectedIssues": [],
+      "expectedNonIssues": [],
+      "expectedImportFailure": {
+        "reasonCategory": "unsupported-file",
+        "fileExtension": ".zip",
+        "fileKind": "unknown"
+      }
+    },
+    {
+      "sampleId": "healthy-adc-divider-01",
+      "title": "10k/10k divider feeding an Arduino ADC input",
+      "boardId": "uno",
+      "fixtureKind": "synthetic-circuit",
+      "expectNoIssues": true,
+      "expectedIssues": [],
+      "expectedNonIssues": [
+        {
+          "ruleId": "netlist.adc-source-impedance-high",
+          "code": "netlist.adc-source-impedance-high",
+          "notes": "The divider source impedance is low enough for this seed sample."
+        },
+        {
+          "ruleId": "netlist.power-short.direct",
+          "notes": "The divider path is resistive, not a rail short."
         }
       ]
     }
