@@ -10,6 +10,7 @@ This gate covers the beta-blocking import and first-screen review experience for
 - Imported schematic review must not clip the imported source drawing on first open. The source-faithful view should fit the full imported drawing; any readable/structured view may focus content, but must clamp zoom to the canvas bounds.
 - Imported PCB review should default to board-review layers. Fabrication/helper layers such as `F.Fab`, `B.Fab`, and `Dwgs.User` must stay available but should not be enabled on first open.
 - Imported PCB findings from ModuMake pre-checks must be labeled as pre-check/review findings unless KiCad official DRC data is present.
+- Imported PCB review must group repeated findings into visible causes before listing raw candidates. The grouping layer should help users decide what to inspect first, without claiming to replace KiCad official DRC.
 - Icon-only controls must expose accessible names.
 
 ## Regression Samples
@@ -30,6 +31,7 @@ The first beta smoke set must include:
 - PCB upload must keep `F.Fab`, `B.Fab`, and `Dwgs.User` disabled by default when those layers exist.
 - PCB layer controls must not overlap rendered board graphics on first open.
 - ModuMake PCB pre-checks must show representative candidates instead of every repeated geometry candidate. Official KiCad DRC may show exact DRC counts; local pre-checks should keep repeated candidates capped and summarized.
+- PCB review and report surfaces must show top review groups for repeated findings, including representative and hidden candidate counts when applicable.
 - PCB upload must show `ModuMake 사전점검` / `KiCad 공식 DRC 미실행` until official DRC is run.
 - Visible buttons in imported schematic and PCB states must not be unnamed.
 
@@ -95,6 +97,13 @@ Follow-up PCB pre-check adjustment:
 - Repeated ModuMake pre-check candidates are capped to representative entries and summarized.
 - Official KiCad DRC remains the source for exhaustive board-rule counts.
 - Large real PCB samples that previously showed hundreds of local pre-check entries now show representative counts instead of full candidate counts.
+
+Follow-up PCB review grouping:
+
+- Repeated representative candidates are grouped by source and rule code into top review causes.
+- Editor and report surfaces show the highest-priority PCB review groups with visible and hidden candidate counts.
+- The grouping layer is an interpretation aid. It does not change the underlying KiCad DRC/pre-check issue records.
+- Verified with `npm run test:import-render -- --output=tmp/chrome-render-audit/pcb-review-groups-50`; result: 50/50 samples passed with zero DOM issues.
 
 ## Non-Goals
 

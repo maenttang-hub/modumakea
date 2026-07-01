@@ -1,6 +1,10 @@
 'use client';
 
 import { useMemo, useState, type WheelEvent } from 'react';
+import {
+  buildImportedPcbReviewGroups,
+  type ImportedPcbReviewGroup,
+} from '@/lib/imported-pcb-review-groups';
 import { pickLanguage } from '@/lib/ui-language';
 import type {
   AppLanguage,
@@ -41,6 +45,7 @@ const LAYER_COLORS: Record<string, string> = {
 };
 
 const MAX_VISIBLE_ISSUE_MARKERS = 240;
+const MAX_VISIBLE_REVIEW_GROUPS = 3;
 const BOARD_OUTLINE_STROKE = '#1f2937';
 const BOARD_OUTLINE_HALO = '#fffdf9';
 const MIN_PCB_ZOOM = 0.5;
@@ -132,6 +137,41 @@ function issueToneLabel(issue: ImportedPcbValidationIssue, language: AppLanguage
 
 function issueToneColor(issue: ImportedPcbValidationIssue) {
   return severityColor(issueToneSeverity(issue));
+}
+
+function reviewGroupSourceLabel(group: ImportedPcbReviewGroup, language: AppLanguage) {
+  if (group.source === 'kicad-cli') {
+    return language === 'ko' ? 'KiCad DRC' : 'KiCad DRC';
+  }
+
+  return language === 'ko' ? '사전점검' : 'Pre-check';
+}
+
+function reviewGroupScopeLabel(group: ImportedPcbReviewGroup, language: AppLanguage) {
+  const scopeParts = [
+    group.affectedFootprints.length > 0
+      ? `${language === 'ko' ? '부품' : 'Parts'} ${group.affectedFootprints.join(', ')}`
+      : null,
+    group.affectedNets.length > 0
+      ? `${language === 'ko' ? '넷' : 'Nets'} ${group.affectedNets.join(', ')}`
+      : null,
+    group.affectedLayers.length > 0
+      ? `${language === 'ko' ? '레이어' : 'Layers'} ${group.affectedLayers.join(', ')}`
+      : null,
+  ].filter((item): item is string => Boolean(item));
+
+  return scopeParts.length > 0 ? scopeParts.join(' · ') : language === 'ko' ? '보드 전체' : 'Board-wide';
+}
+
+function reviewGroupCountLabel(group: ImportedPcbReviewGroup, language: AppLanguage) {
+  const visibleCount = Math.max(0, group.visibleIssueCount);
+  if (group.hiddenCandidateCount > 0) {
+    return language === 'ko'
+      ? `대표 ${visibleCount} · 숨김 ${group.hiddenCandidateCount}`
+      : `${visibleCount} shown · ${group.hiddenCandidateCount} hidden`;
+  }
+
+  return language === 'ko' ? `${visibleCount}건` : `${visibleCount} items`;
 }
 
 function countIssuesBySource(
@@ -514,6 +554,7 @@ export function ImportedPcbViewer({
   const kicadDrcIssueCount = countIssuesBySource(validation, 'kicad-cli');
   const modumakePrecheckIssueCount = countIssuesBySource(validation, 'modumake-pcb');
   const hasKiCadDrc = Boolean(validation?.checks.kicadDrc || kicadDrcIssueCount > 0);
+  const reviewGroups = useMemo(() => buildImportedPcbReviewGroups(validation), [validation]);
   const issueMarkerState = useMemo(() => {
     const issues = validation?.issues.filter(issue => issue.at) ?? [];
     const selectedMarker = selectedIssueId
@@ -730,7 +771,11 @@ export function ImportedPcbViewer({
       {validation && validation.issueCount > 0 ? (
         <div
           data-testid="imported-pcb-issue-summary"
-          className={`absolute right-3 z-10 max-w-[min(360px,calc(100%-24px))] rounded-[10px] border border-[#e6dfd4] bg-[#fffdfa]/94 px-3 py-2 text-[11px] leading-5 text-[#4e4238] shadow-sm backdrop-blur ${
+          className={`absolute right-3 z-10 rounded-[10px] border border-[#e6dfd4] bg-[#fffdfa]/94 px-3 py-2 text-[11px] leading-5 text-[#4e4238] shadow-sm backdrop-blur ${
+            selectedIssue
+              ? 'max-w-[min(230px,calc(40%-12px))]'
+              : 'max-w-[min(360px,calc(100%-24px))]'
+          } ${
             selectedIssue ? 'bottom-[118px] md:bottom-3' : 'bottom-3'
           }`}
         >
@@ -757,13 +802,44 @@ export function ImportedPcbViewer({
                 : `${issueMarkerState.visible.length} markers shown · ${issueMarkerState.hidden} in the list`}
             </div>
           ) : null}
+          {reviewGroups.length > 0 ? (
+            <div data-testid="imported-pcb-review-groups" className="mt-2 space-y-1">
+              <div className="text-[10px] font-semibold text-[#6b5d51]">
+                {language === 'ko' ? '상위 검토 묶음' : 'Top review groups'}
+              </div>
+              {reviewGroups.slice(0, selectedIssue ? 2 : MAX_VISIBLE_REVIEW_GROUPS).map(group => (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() => onSelectIssue?.(group.leadIssueId)}
+                  className="block w-full rounded-[7px] border border-[#eadfcb] bg-white/72 px-2 py-1.5 text-left transition hover:border-[#d4c4ad] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#4e79ac]"
+                  aria-label={`${reviewGroupSourceLabel(group, language)} ${group.title}`}
+                  data-testid="imported-pcb-review-group"
+                >
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span
+                      className="h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: severityColor(group.severity) }}
+                    />
+                    <span className="min-w-0 flex-1 truncate font-semibold text-[#3f342c]">{group.title}</span>
+                    <span className="shrink-0 text-[10px] text-[#8d8074]">
+                      {reviewGroupCountLabel(group, language)}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 truncate text-[10px] text-[#8d8074]">
+                    {reviewGroupSourceLabel(group, language)} · {reviewGroupScopeLabel(group, language)}
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
       {selectedIssue ? (
         <div
           data-testid="imported-pcb-selected-issue"
-          className="absolute bottom-14 left-3 z-10 max-w-[min(520px,calc(100%-24px))] rounded-[10px] border bg-[#fffdfa]/94 px-3 py-2 text-[11px] leading-5 text-[#4e4238] shadow-sm backdrop-blur"
+          className="absolute bottom-14 left-3 z-10 max-w-[min(520px,calc(100%-24px))] rounded-[10px] border bg-[#fffdfa]/94 px-3 py-2 text-[11px] leading-5 text-[#4e4238] shadow-sm backdrop-blur md:max-w-[min(360px,calc(56%-12px))]"
           style={{ borderColor: `${issueToneColor(selectedIssue)}66` }}
         >
           <div className="flex flex-wrap items-center gap-2">

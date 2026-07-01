@@ -268,6 +268,8 @@ test('editor and report show matching imported PCB validation counts', async ({ 
     .locator('input[type="file"][accept=".kicad_sch,.kicad_pcb,.pcb,text/plain"]')
     .setInputFiles(importedPcbFixturePath);
   await expect(page.getByTestId('imported-pcb-svg')).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId('imported-pcb-review-groups')).toBeVisible();
+  await expect(page.getByTestId('imported-pcb-review-group').first()).toBeVisible();
 
   const editorCounts = {
     error: await readCount(page, 'editor-error-count'),
@@ -281,6 +283,7 @@ test('editor and report show matching imported PCB validation counts', async ({ 
   await expect(page.getByText('PCB 형상 / Net 연속성 / 제조성 DRC')).toBeVisible();
   await expect(page.getByTestId('report-pcb-drc-source')).toContainText('KiCad 공식 DRC 미실행');
   await expect(page.getByTestId('report-pcb-drc-source')).toContainText('ModuMake 자체 PCB 검사');
+  await expect(page.getByTestId('report-pcb-review-groups')).toBeVisible();
   await expect(page.getByText('가져온 PCB의 형상', { exact: false })).toBeVisible();
 
   const reportCounts = {

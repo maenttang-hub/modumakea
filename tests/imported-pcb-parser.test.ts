@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { buildEffectiveImportedPcbValidation } from '@/lib/effective-imported-pcb-validation';
 import { mapImportedPcbValidationIssuesToProjectAuditIssues } from '@/lib/imported-pcb-audit-issues';
+import { buildImportedPcbReviewGroups } from '@/lib/imported-pcb-review-groups';
 import { mapKiCadPcbDrcReport, validateImportedPcbDocument } from '@/lib/imported-pcb-validation';
 import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
 import { createProjectDocument, normalizeProjectDocument } from '@/store/project-document';
@@ -328,4 +329,28 @@ test('real PCB pre-check keeps repeated ModuMake candidates representative', asy
   for (const code of repeatedCodes) {
     assert.ok(report.issues.filter(issue => issue.code === code).length <= 6, `${code} should be capped`);
   }
+});
+
+test('PCB review groups keep repeated candidates tied to one visible cause', async () => {
+  const source = await readFile(WIDEBAND_PCB, 'utf8');
+  const document = parseKiCadPcb(source);
+  const report = validateImportedPcbDocument(document);
+  const groups = buildImportedPcbReviewGroups(report);
+  const trackTrackGroup = groups.find(group => group.code === 'PCB_CLEARANCE_TRACK_TRACK');
+
+  assert.ok(groups.length < report.issueCount);
+  assert.ok(trackTrackGroup);
+  assert.equal(trackTrackGroup.source, 'modumake-pcb');
+  assert.ok(trackTrackGroup.visibleIssueCount <= 6);
+  assert.ok(trackTrackGroup.hiddenCandidateCount > 0);
+  assert.ok(
+    trackTrackGroup.issueIds.some(issueId =>
+      report.issues.some(issue => issue.id === issueId && issue.code === 'PCB_CLEARANCE_TRACK_TRACK')
+    )
+  );
+  assert.ok(
+    trackTrackGroup.issueIds.some(issueId =>
+      report.issues.some(issue => issue.id === issueId && issue.code === 'PCB_CLEARANCE_TRACK_TRACK_REPRESENTATIVE_LIMIT')
+    )
+  );
 });

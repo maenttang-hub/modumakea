@@ -10,6 +10,10 @@ import { buildEffectiveImportedPcbValidation } from '@/lib/effective-imported-pc
 import { translateEngineIssue } from '@/lib/engine-i18n';
 import { exportReportDocumentAsPdf } from '@/lib/export-report-pdf';
 import { mapImportedPcbValidationIssuesToProjectAuditIssues } from '@/lib/imported-pcb-audit-issues';
+import {
+  buildImportedPcbReviewGroups,
+  type ImportedPcbReviewGroup,
+} from '@/lib/imported-pcb-review-groups';
 import { buildProjectVerificationReport } from '@/lib/project-verification-report';
 import {
   resolveIssueSourceBucketInfo,
@@ -275,6 +279,33 @@ function kicadDrcModeLabel(
   return t('실행 모드 미기록', 'mode not recorded');
 }
 
+function formatPcbReviewGroupScope(
+  group: ImportedPcbReviewGroup,
+  t: (ko: string, en: string) => string
+) {
+  const scopeParts = [
+    group.affectedFootprints.length > 0 ? `${t('부품', 'Parts')} ${group.affectedFootprints.join(', ')}` : null,
+    group.affectedNets.length > 0 ? `${t('넷', 'Nets')} ${group.affectedNets.join(', ')}` : null,
+    group.affectedLayers.length > 0 ? `${t('레이어', 'Layers')} ${group.affectedLayers.join(', ')}` : null,
+  ].filter((item): item is string => Boolean(item));
+
+  return scopeParts.length > 0 ? scopeParts.join(' · ') : t('보드 전체', 'Board-wide');
+}
+
+function formatPcbReviewGroupCount(
+  group: ImportedPcbReviewGroup,
+  t: (ko: string, en: string) => string
+) {
+  if (group.hiddenCandidateCount > 0) {
+    return t(
+      `대표 ${group.visibleIssueCount} · 숨김 ${group.hiddenCandidateCount}`,
+      `${group.visibleIssueCount} shown · ${group.hiddenCandidateCount} hidden`
+    );
+  }
+
+  return t(`${group.visibleIssueCount}건`, `${group.visibleIssueCount} items`);
+}
+
 function readWorkspaceSnapshot(): ReportWorkspaceSnapshot {
   const defaults = buildDefaultProjectState();
   if (typeof window === 'undefined') {
@@ -446,6 +477,10 @@ export function ProjectVerificationReportPage() {
     hasKiCadDrc: Boolean(effectiveImportedPcbValidation?.checks.kicadDrc),
     kicadDrcMode: effectiveImportedPcbValidation?.checks.kicadDrcMode,
   }), [effectiveImportedPcbValidation]);
+  const pcbReviewGroups = useMemo(
+    () => buildImportedPcbReviewGroups(effectiveImportedPcbValidation),
+    [effectiveImportedPcbValidation]
+  );
 
   const issues = useMemo<ProjectAuditIssue[]>(() => {
     if (!audit || !workspace) {
@@ -824,6 +859,26 @@ export function ProjectVerificationReportPage() {
                     </div>
                   </div>
                 </div>
+                {pcbReviewGroups.length > 0 ? (
+                  <div data-testid="report-pcb-review-groups" className="border-t border-[#e3d7c8] px-4 py-3">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('상위 PCB 검토 묶음', 'Top PCB review groups')}</div>
+                    <div className="mt-2 grid gap-2 md:grid-cols-3">
+                      {pcbReviewGroups.slice(0, 3).map(group => (
+                        <div key={group.id} className="border border-[#e3d7c8] bg-[#fffdf9] px-3 py-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="truncate text-[12px] font-semibold text-[#3d332c]">{group.title}</div>
+                            <div className="shrink-0 text-[10px] font-semibold text-[#8b7866]">
+                              {formatPcbReviewGroupCount(group, t)}
+                            </div>
+                          </div>
+                          <div className="mt-1 line-clamp-2 text-[11px] leading-5 text-[#6b5d50]">
+                            {formatPcbReviewGroupScope(group, t)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </section>
