@@ -28,11 +28,18 @@ import { getSafeRightTab, getVisibleRightTabs, type RightPanelTab, type ShellMod
 import { getBoardById } from '@/constants/boards';
 import { getTemplateById } from '@/constants/component-templates';
 import { getSurfaceFlags } from '@/constants/product-surface';
+import { recordBetaEvent } from '@/lib/beta-telemetry';
 import { getLocalizedTemplateName } from '@/lib/catalog-i18n';
 import { buildCloudProjectPath } from '@/lib/cloud-projects';
 import { buildImportedSchematicIntegratedValidationJson } from '@/lib/build-imported-schematic-integrated-validation-json';
-import { detectKiCadFileKind } from '@/lib/kicad-file-kind';
+import { detectKiCadFileKind, type KiCadFileKind } from '@/lib/kicad-file-kind';
 import { importKiCadSchematicAsync } from '@/lib/import-kicad-schematic-async';
+import {
+  buildImportFailureReport,
+  buildImportFileTelemetryAttributes,
+  type ImportFailureStage,
+} from '@/lib/import-failure-report';
+import { getProductFeedbackHref } from '@/lib/product-config';
 import { getImportedPcbIssueId, isImportedPcbAuditIssue } from '@/lib/imported-pcb-audit-issues';
 import { validateImportedPcbDocument } from '@/lib/imported-pcb-validation';
 import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
@@ -563,18 +570,47 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
   }, [generatedCode, generatedCodeFileLabel, hasSchematicContent, importedPcbDocument, importedPcbSource, pcbFileLabel, schematicFileLabel]);
 
   const importDroppedKiCadFile = useCallback(async (file: File) => {
+    let importStage: ImportFailureStage = 'read';
+    let kiCadFileKind: KiCadFileKind | null = null;
+
+    recordBetaEvent({
+      name: 'import_attempt',
+      source: 'editor-import',
+      route: '/editor',
+      attributes: buildImportFileTelemetryAttributes({
+        fileName: file.name,
+        fileSizeBytes: file.size,
+      }),
+    });
+
     try {
       const text = await file.text();
-      const kiCadFileKind = detectKiCadFileKind(file.name, text);
+      importStage = 'detect';
+      kiCadFileKind = detectKiCadFileKind(file.name, text);
 
       if (!kiCadFileKind) {
-        toast.info(t('KiCad 파일만 바로 올릴 수 있습니다.', 'This quick-review surface accepts KiCad files.'), {
-          description: t('`.kicad_sch`, `.kicad_pcb` 또는 KiCad PCB 텍스트 파일을 올려 주세요.', 'Drop a `.kicad_sch`, `.kicad_pcb`, or KiCad PCB text file.'),
+        const report = buildImportFailureReport({
+          fileName: file.name,
+          fileSizeBytes: file.size,
+          fileKind: null,
+          stage: 'unsupported',
+          language: appLanguage,
+        });
+        toast.info(report.title, {
+          description: report.toastDescription,
+        });
+        recordBetaEvent({
+          name: 'import_failed',
+          source: 'editor-import',
+          route: '/editor',
+          outcome: report.reasonCategory,
+          attributes: report.telemetry,
         });
         return;
       }
 
       if (kiCadFileKind === 'pcb') {
+        importStage = 'parse-pcb';
         const document = parseKiCadPcb(text, { sourceFilename: file.name });
         const validation = validateImportedPcbDocument(document, {
           schematicParity: {
@@ -590,6 +626,22 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
         if (initialCloudProjectId) {
           router.replace('/editor', { scroll: false });
         }
+        recordBetaEvent({
+          name: 'import_succeeded',
+          source: 'editor-import',
+          route: '/editor',
+          outcome: 'pcb',
+          attributes: {
+            ...buildImportFileTelemetryAttributes({
+              fileName: file.name,
+              fileSizeBytes: file.size,
+              fileKind: 'pcb',
+            }),
+            issueCount: validation.issueCount,
+            errorCount: validation.errorCount,
+            warningCount: validation.warningCount,
+          },
+        });
         toast.success(t('KiCad PCB 파일을 불러왔습니다.', 'KiCad PCB loaded.'), {
           description: appLanguage === 'ko'
             ? `${file.name}을 PCB 검증 화면으로 가져왔습니다.`
@@ -598,6 +650,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
         return;
       }
 
+      importStage = 'parse-schematic';
       const imported = await importKiCadSchematicAsync(text, {
         projectName: file.name.replace(/\.kicad_sch$/i, ''),
       });
@@ -609,9 +662,25 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
           importSummary: imported.summary,
         }),
       };
+      importStage = 'hydrate';
       const result = hydrateProject(payload);
       if (!result.success) {
-        toast.error(t('불러오기 실패', 'Load failed'), { description: result.error });
+        const report = buildImportFailureReport({
+          fileName: file.name,
+          fileSizeBytes: file.size,
+          fileKind: kiCadFileKind,
+          stage: 'hydrate',
+          error: result.error,
+          language: appLanguage,
+        });
+        toast.error(report.title, { description: report.toastDescription });
+        recordBetaEvent({
+          name: 'import_failed',
+          source: 'editor-import',
+          route: '/editor',
+          outcome: report.reasonCategory,
+          attributes: report.telemetry,
+        });
         return;
       }
 
@@ -619,16 +688,43 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
       if (initialCloudProjectId) {
         router.replace('/editor', { scroll: false });
       }
+      recordBetaEvent({
+        name: 'import_succeeded',
+        source: 'editor-import',
+        route: '/editor',
+        outcome: 'schematic',
+        attributes: {
+          ...buildImportFileTelemetryAttributes({
+            fileName: file.name,
+            fileSizeBytes: file.size,
+            fileKind: 'schematic',
+          }),
+          noticeShown: Boolean(result.notice),
+        },
+      });
       toast.success(t('KiCad 회로도를 불러왔습니다.', 'KiCad schematic loaded.'), {
         description: appLanguage === 'ko'
           ? `${file.name}을 리뷰 캔버스로 가져왔습니다.${result.notice ? ` ${result.notice}` : ''}`
           : `Imported ${file.name} into the review canvas.${result.notice ? ` ${result.notice}` : ''}`,
       });
     } catch (error) {
-      toast.error(t('불러오기 실패', 'Load failed'), {
-        description: error instanceof Error && error.message
-          ? error.message
-          : t('KiCad 파일을 읽는 중 문제가 발생했습니다.', 'There was a problem reading the KiCad file.'),
+      const report = buildImportFailureReport({
+        fileName: file.name,
+        fileSizeBytes: file.size,
+        fileKind: kiCadFileKind,
+        stage: importStage,
+        error,
+        language: appLanguage,
+      });
+      toast.error(report.title, {
+        description: report.toastDescription,
+      });
+      recordBetaEvent({
+        name: 'import_failed',
+        source: 'editor-import',
+        route: '/editor',
+        outcome: report.reasonCategory,
+        attributes: report.telemetry,
       });
     }
   }, [appLanguage, clearCloudProjectState, components, hydrateProject, importedSchematicScene, initialCloudProjectId, manualConnections, router, setImportedPcbDocument, setWorkspaceMode, t]);
@@ -703,6 +799,23 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
     router.push('/report', { scroll: false });
   }, [persistCurrentWorkspaceSnapshotForReport, router]);
 
+  const handleOpenProductScope = useCallback(() => {
+    router.push('/product-scope', { scroll: false });
+  }, [router]);
+
+  const handleOpenPrivacy = useCallback(() => {
+    router.push('/privacy', { scroll: false });
+  }, [router]);
+
+  const handleOpenFeedback = useCallback(() => {
+    const href = getProductFeedbackHref();
+    if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:')) {
+      window.open(href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    router.push(href, { scroll: false });
+  }, [router]);
+
   const handleExportReport = useCallback(() => {
     const projectDocument = serializeProject();
     const filename = `${projectName || 'modumake-project'}-report.json`;
@@ -713,8 +826,20 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
     anchor.download = filename;
     anchor.click();
     URL.revokeObjectURL(url);
+    recordBetaEvent({
+      name: 'report_exported',
+      source: 'editor-report',
+      route: '/editor',
+      outcome: 'json',
+      attributes: {
+        issueCount: validationIssues.length,
+        errorCount: validationSeverityCounts.error,
+        warningCount: validationSeverityCounts.warning,
+        infoCount: validationSeverityCounts.info,
+      },
+    });
     toast.success(t('리포트를 내보냈습니다.', 'Report exported.'), { description: filename });
-  }, [projectName, serializeProject, t]);
+  }, [projectName, serializeProject, t, validationIssues.length, validationSeverityCounts.error, validationSeverityCounts.info, validationSeverityCounts.warning]);
 
   const handleShare = useCallback(async () => {
     if (cloudProjectId) {
@@ -840,6 +965,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
             projectName={projectName}
             fileLabel={workspaceFileLabel}
             hasCode={generatedCode.trim().length > 0}
+            hasWorkspaceContent={hasWorkspaceContent}
             isAnalyzing={isGenerating}
             onProjectNameChange={setProjectName}
             onOpenSchematic={() => schematicFileInputRef.current?.click()}
@@ -850,6 +976,9 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
             onRunAnalysis={handleRunAnalysis}
             onOpenReport={handleOpenReportView}
             onSave={handleSaveWorkspace}
+            onOpenProductScope={handleOpenProductScope}
+            onOpenPrivacy={handleOpenPrivacy}
+            onOpenFeedback={handleOpenFeedback}
           />
         }
         leftSidebar={
@@ -872,7 +1001,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
         }
         canvasArea={
           <CanvasArea
-            toolbar={
+            toolbar={showReviewDropzone ? null : (
               <>
                 {surfaceFlags.showPcbWorkspace || importedPcbDocument ? <WorkspaceModeBar /> : null}
                 {!showPcbWorkspace ? (
@@ -893,8 +1022,8 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
                   />
                 ) : null}
               </>
-            }
-            canvas={showPcbWorkspace ? <PcbWorkspace /> : <ComponentCanvas />}
+            )}
+            canvas={showReviewDropzone ? null : showPcbWorkspace ? <PcbWorkspace /> : <ComponentCanvas />}
             overlay={!showPcbWorkspace && showReviewDropzone ? (
               <div
                 className="absolute inset-0 z-20 flex items-center justify-center p-6"
@@ -904,14 +1033,14 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
                 onDragLeave={handleReviewDragLeave}
               >
                 <div
-                  className="w-full max-w-3xl rounded-2xl border-2 border-dashed px-8 py-12 text-center transition-colors"
+                  className="w-full max-w-2xl rounded-[16px] border-2 border-dashed px-7 py-10 text-center transition-colors"
                   style={{
                     borderColor: reviewDropActive ? '#7aa8dc' : importedSchematicMode ? importedPalette.shellBorder : '#d6cec3',
                     background: reviewDropActive
                       ? 'rgba(122,168,220,0.10)'
                       : importedSchematicMode
                         ? `${importedPalette.shellElevatedBackground}eb`
-                        : 'rgba(255,255,255,0.78)',
+                        : '#fffdf9',
                   }}
                 >
                   <div
@@ -974,6 +1103,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
                 projectName={projectName}
                 boardName={board.name}
                 fileLabel={workspaceFileLabel}
+                hasReviewTarget={hasWorkspaceContent}
                 issues={validationIssues}
                 onSelectIssue={handleSelectValidationIssue}
               />
@@ -998,12 +1128,22 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
           <BottomBar
             errorCount={validationSeverityCounts.error}
             warningCount={validationSeverityCounts.warning}
-            okLabel={validationIssues.length === 0 ? '분석 통과' : `분석 이슈 ${validationIssues.length}`}
+            okLabel={!hasWorkspaceContent ? '검토 대기' : validationIssues.length === 0 ? '분석 통과' : `분석 이슈 ${validationIssues.length}`}
+            hasWorkspaceContent={hasWorkspaceContent}
             issues={validationIssues}
             onSelectIssue={handleSelectValidationIssue}
             onExportReport={handleExportReport}
             onShare={handleShare}
           />
+        }
+        mobileAction={
+          <button
+            type="button"
+            onClick={handleOpenImportFromEmptyState}
+            className="inline-flex h-10 w-full items-center justify-center rounded-[10px] bg-[#4f84be] px-4 text-[12px] font-semibold text-white transition hover:bg-[#3f74af]"
+          >
+            파일 열기
+          </button>
         }
       />
 

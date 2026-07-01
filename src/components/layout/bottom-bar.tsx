@@ -140,6 +140,7 @@ export function BottomBar({
   errorCount,
   warningCount,
   okLabel,
+  hasWorkspaceContent,
   issues,
   onSelectIssue,
   onExportReport,
@@ -148,6 +149,7 @@ export function BottomBar({
   errorCount: number;
   warningCount: number;
   okLabel: string;
+  hasWorkspaceContent: boolean;
   issues: BottomBarIssue[];
   onSelectIssue: (issue: BottomBarIssue) => void;
   onExportReport: () => void;
@@ -195,6 +197,10 @@ export function BottomBar({
   }, [openMode]);
 
   const toggleMode = (mode: IssueListMode) => {
+    if (!hasWorkspaceContent) {
+      return;
+    }
+
     setOpenMode(current => current === mode ? null : mode);
   };
 
@@ -287,7 +293,8 @@ export function BottomBar({
         <button
           type="button"
           onClick={() => toggleMode('error')}
-          className={`inline-flex h-7 items-center gap-1 rounded-[9px] px-2 font-semibold text-[#b94747] transition hover:bg-[#fbeaea] ${openMode === 'error' ? 'bg-[#fbeaea]' : ''}`}
+          disabled={!hasWorkspaceContent}
+          className={`inline-flex h-7 items-center gap-1 rounded-[9px] px-2 font-semibold text-[#b94747] transition hover:bg-[#fbeaea] disabled:cursor-default disabled:opacity-45 ${openMode === 'error' ? 'bg-[#fbeaea]' : ''}`}
           aria-expanded={openMode === 'error'}
         >
           <XCircle size={12} />
@@ -297,7 +304,8 @@ export function BottomBar({
         <button
           type="button"
           onClick={() => toggleMode('warning')}
-          className={`inline-flex h-7 items-center gap-1 rounded-[9px] px-2 font-semibold text-[#b67b17] transition hover:bg-[#fbf0d7] ${openMode === 'warning' ? 'bg-[#fbf0d7]' : ''}`}
+          disabled={!hasWorkspaceContent}
+          className={`inline-flex h-7 items-center gap-1 rounded-[9px] px-2 font-semibold text-[#b67b17] transition hover:bg-[#fbf0d7] disabled:cursor-default disabled:opacity-45 ${openMode === 'warning' ? 'bg-[#fbf0d7]' : ''}`}
           aria-expanded={openMode === 'warning'}
         >
           <AlertTriangle size={12} />
@@ -307,18 +315,20 @@ export function BottomBar({
         <button
           type="button"
           onClick={() => toggleMode('erc')}
-          className={`inline-flex h-7 items-center gap-1 rounded-[9px] px-2 font-semibold text-[#2f8a46] transition hover:bg-[#e7f4ea] ${openMode === 'erc' ? 'bg-[#e7f4ea]' : ''}`}
+          disabled={!hasWorkspaceContent}
+          className={`inline-flex h-7 items-center gap-1 rounded-[9px] px-2 font-semibold text-[#2f8a46] transition hover:bg-[#e7f4ea] disabled:cursor-default disabled:opacity-60 ${openMode === 'erc' ? 'bg-[#e7f4ea]' : ''}`}
           aria-expanded={openMode === 'erc'}
         >
           <Check size={12} />
           {okLabel}
         </button>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="hidden items-center gap-3 sm:flex">
         <button
           type="button"
           onClick={onExportReport}
-          className="inline-flex items-center gap-1 text-[#847568] transition hover:text-[#4f4339]"
+          disabled={!hasWorkspaceContent}
+          className="inline-flex items-center gap-1 text-[#847568] transition hover:text-[#4f4339] disabled:cursor-not-allowed disabled:opacity-45"
         >
           <FileText size={12} />
           리포트 내보내기
@@ -326,7 +336,8 @@ export function BottomBar({
         <button
           type="button"
           onClick={onShare}
-          className="inline-flex items-center gap-1 text-[#847568] transition hover:text-[#4f4339]"
+          disabled={!hasWorkspaceContent}
+          className="inline-flex items-center gap-1 text-[#847568] transition hover:text-[#4f4339] disabled:cursor-not-allowed disabled:opacity-45"
         >
           <Share2 size={12} />
           공유

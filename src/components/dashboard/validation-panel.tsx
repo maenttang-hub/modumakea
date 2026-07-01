@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, CircleHelp, Download, FileSearch, FileText, Flag, ShieldAlert, Wrench } from 'lucide-react';
+import { recordBetaEvent } from '@/lib/beta-telemetry';
 import { importKiCadSchematicAsync } from '@/lib/import-kicad-schematic-async';
 import { buildImportedSchematicIntegratedValidationJson } from '@/lib/build-imported-schematic-integrated-validation-json';
 import {
@@ -271,6 +272,18 @@ export function ValidationPanel() {
         ...existing,
         primary: update,
       });
+      recordBetaEvent({
+        name: 'issue_feedback_updated',
+        source: 'validation-panel',
+        route: '/editor',
+        outcome: update,
+        attributes: {
+          ruleId: issue.ruleId ?? issue.code ?? 'unknown',
+          severity: issue.severity,
+          confidence: issue.confidence,
+          sourceBucket: issue.sourceBucket,
+        },
+      });
       return;
     }
 
@@ -281,6 +294,19 @@ export function ValidationPanel() {
     setValidationReviewDecision(key, {
       ...existing,
       flags: nextFlags,
+    });
+    recordBetaEvent({
+      name: 'issue_feedback_updated',
+      source: 'validation-panel',
+      route: '/editor',
+      outcome: update,
+      attributes: {
+        ruleId: issue.ruleId ?? issue.code ?? 'unknown',
+        severity: issue.severity,
+        confidence: issue.confidence,
+        sourceBucket: issue.sourceBucket,
+        enabled: nextFlags.includes(update),
+      },
     });
   };
 

@@ -8,12 +8,14 @@ export function WorkspaceShell({
   canvasArea,
   rightSidebar,
   bottomBar,
+  mobileAction,
 }: {
   titleBar: ReactNode;
   leftSidebar: ReactNode;
   canvasArea: ReactNode;
   rightSidebar: ReactNode;
   bottomBar: ReactNode;
+  mobileAction?: ReactNode;
 }) {
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-[#f7f2ea] text-[#3f342c]">
@@ -36,6 +38,7 @@ export function WorkspaceShell({
               회로 검토 화면은 좌측 구조, 중앙 회로도, 우측 검토 패널을 동시에 비교하도록 설계되어 있습니다.
               공식 최소 폭은 1024px이며, 권장 폭은 1280px 이상입니다.
             </div>
+            {mobileAction ? <div className="mt-4">{mobileAction}</div> : null}
           </div>
         </div>
         {bottomBar}

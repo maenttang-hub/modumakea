@@ -76,6 +76,14 @@ function fileIcon(kind: SidebarFileItem['kind']) {
   }
 }
 
+function EmptySectionMessage({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-[10px] border border-dashed border-[#e5dace] bg-[#fffcf7] px-3 py-3 text-[10px] leading-5 text-[#9a8d80]">
+      {children}
+    </div>
+  );
+}
+
 export function SidebarLeft({
   components,
   nets,
@@ -110,7 +118,9 @@ export function SidebarLeft({
       </div>
       <Section title="컴포넌트" collapsed={sectionState.components} onToggle={() => onToggleSection('components')}>
         <div className="space-y-0.5 px-2">
-          {components.map(item => {
+          {components.length === 0 ? (
+            <EmptySectionMessage>KiCad 파일을 열면 부품 목록이 표시됩니다.</EmptySectionMessage>
+          ) : components.map(item => {
             const Icon = componentIcon(item.kind);
             const active = item.id === selectedComponentId;
             const badge = item.status === 'error' ? 'ERC' : item.status === 'warning' ? '?' : null;
@@ -142,7 +152,9 @@ export function SidebarLeft({
 
       <Section title="넷리스트" collapsed={sectionState.nets} onToggle={() => onToggleSection('nets')}>
         <div className="space-y-0.5 px-2">
-          {nets.map(net => (
+          {nets.length === 0 ? (
+            <EmptySectionMessage>연결 정보는 파일을 불러온 뒤 계산됩니다.</EmptySectionMessage>
+          ) : nets.map(net => (
             <div key={net.id} className="flex min-h-[30px] items-center gap-2 rounded-[8px] px-2 text-[11px] text-[#5c5147] hover:bg-[#f3eee6]">
               {net.kind === 'power' ? <Bolt size={13} className="text-[#b67b17]" /> : <Waves size={13} className="text-[#8b7d70]" />}
               <div className="min-w-0 flex-1">

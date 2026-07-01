@@ -87,7 +87,15 @@ function sectionTitleTone(severity: ProjectAuditIssue['severity']) {
   return 'text-[#3d7a52]';
 }
 
-function decisionLabel(errorCount: number, warningCount: number) {
+function decisionLabel(errorCount: number, warningCount: number, hasReviewTarget: boolean) {
+  if (!hasReviewTarget) {
+    return {
+      label: '검토 대기',
+      description: '검토할 파일이 아직 없습니다.',
+      className: 'border-[#dce8f3] bg-[#f8fbff] text-[#365f8f]',
+    };
+  }
+
   if (errorCount > 0) {
     return {
       label: '수정 필요',
@@ -165,7 +173,11 @@ function sourceBadgesForIssue(issue: ReviewPanelIssue) {
   ].filter((item): item is string => Boolean(item))));
 }
 
-function nextActionLine(issue: ProjectAuditIssue | undefined) {
+function nextActionLine(issue: ProjectAuditIssue | undefined, hasReviewTarget: boolean) {
+  if (!hasReviewTarget) {
+    return '기존 KiCad 회로도 또는 PCB 파일을 열면 검토가 시작됩니다.';
+  }
+
   if (!issue) {
     return '차단 이슈는 없습니다. 리포트로 내보내기 전에 실제 배선과 전원 입력 조건만 한 번 더 확인하세요.';
   }
@@ -178,12 +190,14 @@ export function AiReviewPanel({
   projectName,
   boardName,
   fileLabel,
+  hasReviewTarget,
   issues,
   onSelectIssue,
 }: {
   projectName: string;
   boardName: string;
   fileLabel: string;
+  hasReviewTarget: boolean;
   issues: ReviewPanelIssue[];
   onSelectIssue: (issue: ReviewPanelIssue) => void;
 }) {
@@ -192,11 +206,25 @@ export function AiReviewPanel({
   const warningCount = severityCounts.warning;
   const infoCount = severityCounts.info;
   const lead = issues[0];
-  const decision = decisionLabel(errorCount, warningCount);
-  const actionLine = nextActionLine(lead);
-  const augmentationCandidates = buildSchematicPcbAugmentationCandidates(issues);
+  const decision = decisionLabel(errorCount, warningCount, hasReviewTarget);
+  const actionLine = nextActionLine(lead, hasReviewTarget);
+  const augmentationCandidates = hasReviewTarget ? buildSchematicPcbAugmentationCandidates(issues) : [];
   const visibleItems: ReviewItem[] =
-    issues.length > 0
+    !hasReviewTarget
+      ? [
+          {
+            id: 'waiting-for-file',
+            severity: 'info',
+            title: '파일을 먼저 열어주세요',
+            body: '빈 작업공간에서는 분석 결과를 판단하지 않습니다. `.kicad_sch` 또는 `.kicad_pcb` 파일을 열면 검토 항목이 표시됩니다.',
+            observedFacts: [],
+            assumptions: [],
+            sourceBadges: [],
+            lowConfidenceReasons: [],
+            isConservativeFinding: false,
+          },
+        ]
+      : issues.length > 0
       ? issues.slice(0, 4).map((issue, index) => ({
           id: `${issue.ruleId ?? issue.title}-${index}`,
           severity: issue.severity,
@@ -239,7 +267,7 @@ export function AiReviewPanel({
             </div>
           </div>
           <div className="max-w-[132px] truncate rounded-full bg-[#efe8dc] px-2.5 py-1 text-[10px] font-semibold text-[#7c6d60]" title={boardName}>
-            {boardName === 'Imported schematic' ? '가져온 회로도' : boardName}
+            {!hasReviewTarget ? '파일 대기' : boardName === 'Imported schematic' ? '가져온 회로도' : boardName}
           </div>
         </div>
         <div className="mt-3 rounded-[14px] border border-[#eadfce] bg-white px-3 py-3">
@@ -267,20 +295,22 @@ export function AiReviewPanel({
             </div>
           </div>
         </div>
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          <div className="rounded-[12px] border border-[#edd8d8] bg-[#fff8f8] px-3 py-2.5">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-[#ac938b]">오류</div>
-            <div data-testid="editor-error-count" className="mt-1 text-[16px] font-semibold text-[#b24f4f]">{errorCount}</div>
+        {hasReviewTarget ? (
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="rounded-[12px] border border-[#edd8d8] bg-[#fff8f8] px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-[0.14em] text-[#ac938b]">오류</div>
+              <div data-testid="editor-error-count" className="mt-1 text-[16px] font-semibold text-[#b24f4f]">{errorCount}</div>
+            </div>
+            <div className="rounded-[12px] border border-[#ece2cf] bg-[#fffdf7] px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-[0.14em] text-[#ac938b]">경고</div>
+              <div data-testid="editor-warning-count" className="mt-1 text-[16px] font-semibold text-[#a57019]">{warningCount}</div>
+            </div>
+            <div className="rounded-[12px] border border-[#dde8dd] bg-[#fbfffb] px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-[0.14em] text-[#ac938b]">정보</div>
+              <div data-testid="editor-info-count" className="mt-1 text-[16px] font-semibold text-[#34764a]">{infoCount}</div>
+            </div>
           </div>
-          <div className="rounded-[12px] border border-[#ece2cf] bg-[#fffdf7] px-3 py-2.5">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-[#ac938b]">경고</div>
-            <div data-testid="editor-warning-count" className="mt-1 text-[16px] font-semibold text-[#a57019]">{warningCount}</div>
-          </div>
-          <div className="rounded-[12px] border border-[#dde8dd] bg-[#fbfffb] px-3 py-2.5">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-[#ac938b]">정보</div>
-            <div data-testid="editor-info-count" className="mt-1 text-[16px] font-semibold text-[#34764a]">{infoCount}</div>
-          </div>
-        </div>
+        ) : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
@@ -329,7 +359,7 @@ export function AiReviewPanel({
 
         <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a19386]">
           <Zap size={12} className="text-[#537fb2]" />
-          감수 항목
+          {hasReviewTarget ? '감수 항목' : '다음 단계'}
         </div>
         <div className="space-y-2.5">
           {visibleItems.map((item, index) => {
@@ -352,12 +382,13 @@ export function AiReviewPanel({
               >
                 <button
                   type="button"
+                  disabled={!sourceIssue}
                   onClick={() => {
                     if (sourceIssue) {
                       onSelectIssue(sourceIssue);
                     }
                   }}
-                  className="flex w-full items-start justify-between gap-3 px-3.5 py-3 text-left"
+                  className={`flex w-full items-start justify-between gap-3 px-3.5 py-3 text-left ${sourceIssue ? '' : 'cursor-default'}`}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -379,14 +410,14 @@ export function AiReviewPanel({
                     <div className="mt-2 text-[12px] font-semibold leading-5 text-[#43372f]">
                       {item.componentName ? `${item.componentName} — ${item.title}` : item.title}
                     </div>
-                    <div className="mt-1 line-clamp-2 text-[10px] leading-[1.55]" style={{ color: tone.body }}>
+                    <div className={`mt-1 text-[10px] leading-[1.55] ${sourceIssue ? 'line-clamp-2' : ''}`} style={{ color: tone.body }}>
                       {evidenceLine}
                     </div>
                     <div className="mt-2 text-[10px] font-semibold text-[#6f7f9a]">
-                      {sourceIssue ? '항목 위치 보기' : '요약 확인'}
+                      {sourceIssue ? '항목 위치 보기' : '파일을 열면 자동으로 채워집니다'}
                     </div>
                   </div>
-                  <ChevronRight size={14} className="mt-0.5 shrink-0 text-[#b3a79a]" />
+                  {sourceIssue ? <ChevronRight size={14} className="mt-0.5 shrink-0 text-[#b3a79a]" /> : null}
                 </button>
                 {hasDetails ? (
                   <details className="group border-t border-[#f0e7dc] px-3.5 pb-3 pt-2">
