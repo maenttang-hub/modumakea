@@ -625,3 +625,74 @@ test('formal verifier flags VCC-side buttons that incorrectly use INPUT_PULLUP',
     'expected VCC-side polarity mismatch warning'
   );
 });
+
+test('formal verifier async path preserves fallback C++ review coverage', async () => {
+  const components = [
+    makeComponent({
+      instanceId: 'trap-1',
+      templateId: 'tpl_ground_trap',
+      name: 'Ground Trap 1',
+      assignedPins: {
+        Signal: 'D2',
+        GND: 'GND',
+      },
+    }),
+    makeComponent({
+      instanceId: 'oled-1',
+      templateId: 'tpl_oled',
+      name: 'OLED 1',
+      assignedPins: {
+        VCC: '5V',
+        GND: 'GND',
+        SDA: 'A4',
+        SCL: 'A5',
+      },
+    }),
+  ];
+  const manualConnections = [
+    makeManualConnection(
+      'trap-link',
+      { ownerType: 'component', ownerId: 'trap-1', pinId: 'Signal' },
+      { ownerType: 'component', ownerId: 'trap-1', pinId: 'GND' }
+    ),
+  ];
+  const circuitAnalysis = analyzeCircuitNetlist(components, 'uno', resolveTemplate, manualConnections);
+
+  const report = await verifyCircuitCodeConsistencyAsync({
+    boardId: 'uno',
+    code: `
+      #include <Wire.h>
+
+      void setup() {
+        pinMode(D2, INPUT);
+        Wire.begin();
+      }
+
+      void leaf(int pin) {
+        digitalWrite(pin, HIGH);
+      }
+
+      void loop() {
+        leaf(D2);
+        Wire.beginTransmission(0x27);
+        Wire.endTransmission();
+      }
+    `,
+    components,
+    resolveTemplate,
+    circuitAnalysis,
+  });
+
+  assert.ok(
+    report.issues.some(issue => issue.ruleId === 'formal.pin-mode-state-conflict'),
+    'expected async path to preserve pin mode conflict diagnostics'
+  );
+  assert.ok(
+    report.issues.some(issue => issue.ruleId === 'formal.output-drive-grounded-net'),
+    'expected async path to preserve grounded output diagnostics'
+  );
+  assert.ok(
+    report.issues.some(issue => issue.ruleId === 'formal.i2c-address-mismatch'),
+    'expected async path to preserve I2C address diagnostics'
+  );
+});

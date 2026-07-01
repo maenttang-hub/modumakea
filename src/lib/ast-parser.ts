@@ -111,6 +111,66 @@ function normalizeTreeBackend(tree: CppParseTree | null) {
   } as CppParseTree;
 }
 
+function uniqueBy<T>(items: T[], getKey: (item: T) => string) {
+  const seen = new Set<string>();
+  const unique: T[] = [];
+
+  for (const item of items) {
+    const key = getKey(item);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    unique.push(item);
+  }
+
+  return unique;
+}
+
+function cppOperationKey(operation: ParsedCppOperation) {
+  return [
+    operation.type,
+    operation.boardPin,
+    'mode' in operation ? operation.mode : '',
+    'value' in operation ? operation.value ?? '' : '',
+    operation.line,
+    operation.scope,
+    operation.conditions?.join('&') ?? '',
+    operation.callPath?.join('>') ?? '',
+  ].join('|');
+}
+
+function collectFallbackCppReviewArtifacts(code: string, boardId: string): CppReviewArtifacts {
+  return {
+    language: 'cpp',
+    operations: collectCppOperationsFallback(code, boardId),
+    i2cAddressUses: collectI2cAddressUsesInternal(code),
+    interruptUses: collectInterruptUsesInternal(code, boardId),
+    includedHeaders: collectIncludedHeadersInternal(code),
+    parseTree: null,
+  };
+}
+
+function mergeCppReviewArtifacts(
+  primary: CppReviewArtifacts,
+  fallback: CppReviewArtifacts
+): CppReviewArtifacts {
+  return {
+    language: 'cpp',
+    operations: uniqueBy([...primary.operations, ...fallback.operations], cppOperationKey),
+    i2cAddressUses: uniqueBy(
+      [...primary.i2cAddressUses, ...fallback.i2cAddressUses],
+      item => `${item.address}|${item.line}|${item.source}|${item.templateHint ?? ''}`
+    ),
+    interruptUses: uniqueBy(
+      [...primary.interruptUses, ...fallback.interruptUses],
+      item => `${item.boardPin}|${item.line}`
+    ),
+    includedHeaders: Array.from(new Set([...primary.includedHeaders, ...fallback.includedHeaders])),
+    parseTree: primary.parseTree ?? fallback.parseTree,
+  };
+}
+
 export async function parseCpp(source: string): Promise<CppParseTree | null> {
   await ensureGeneratedModuMakeWasmKernelBindings();
   const bindings = getModuMakeWasmKernelBindings();
@@ -382,6 +442,7 @@ function collectInterruptUsesInternal(code: string, boardId: string): ParsedCppI
 export function collectCppReviewArtifacts(code: string, boardId: string): CppReviewArtifacts {
   const bindings = getModuMakeWasmKernelBindings();
   const wasmCollector = bindings?.collectCppReviewArtifactsJson;
+  const fallbackArtifacts = collectFallbackCppReviewArtifacts(code, boardId);
 
   if (wasmCollector) {
     try {
@@ -390,28 +451,21 @@ export function collectCppReviewArtifacts(code: string, boardId: string): CppRev
       ) as RawCppReviewArtifacts | null;
 
       if (result) {
-        return {
+        return mergeCppReviewArtifacts({
           language: 'cpp',
           operations: result.operations ?? [],
           i2cAddressUses: result.i2cAddressUses ?? [],
           interruptUses: result.interruptUses ?? [],
           includedHeaders: result.includedHeaders ?? [],
           parseTree: normalizeTreeBackend(result.parseTree ?? null),
-        };
+        }, fallbackArtifacts);
       }
     } catch {
       // Fall back to the TypeScript collector below.
     }
   }
 
-  return {
-    language: 'cpp',
-    operations: collectCppOperations(code, boardId),
-    i2cAddressUses: collectI2cAddressUsesInternal(code),
-    interruptUses: collectInterruptUsesInternal(code, boardId),
-    includedHeaders: collectIncludedHeadersInternal(code),
-    parseTree: null,
-  };
+  return fallbackArtifacts;
 }
 
 export async function collectCppReviewArtifactsAsync(code: string, boardId: string): Promise<CppReviewArtifacts> {
