@@ -16,10 +16,14 @@ type ParseErrorMessage = {
   error: string;
 };
 
+type ParseStartedMessage = {
+  type: 'PARSE_STARTED';
+};
+
 type ParserWorkerMessage = StartParseMessage;
 
 const workerScope = self as typeof globalThis & {
-  postMessage: (message: ParseCompleteMessage | ParseErrorMessage) => void;
+  postMessage: (message: ParseCompleteMessage | ParseErrorMessage | ParseStartedMessage) => void;
   onmessage: ((event: MessageEvent<ParserWorkerMessage>) => void) | null;
 };
 
@@ -30,6 +34,7 @@ workerScope.onmessage = (event: MessageEvent<ParserWorkerMessage>) => {
   }
 
   try {
+    workerScope.postMessage({ type: 'PARSE_STARTED' });
     const payload = importKiCadSchematic(message.rawText, {
       projectName: message.projectName,
     });

@@ -91,6 +91,7 @@ export function SidebarLeft({
   selectedComponentId,
   selectedFileId,
   sectionState,
+  compact = false,
   onToggleSection,
   onSelectComponent,
   onSelectFile,
@@ -102,13 +103,14 @@ export function SidebarLeft({
   selectedComponentId: string | null;
   selectedFileId?: string | null;
   sectionState: Record<'components' | 'nets' | 'files', boolean>;
+  compact?: boolean;
   onToggleSection: (section: 'components' | 'nets' | 'files') => void;
   onSelectComponent: (id: string) => void;
   onSelectFile: (id: string) => void;
   onRemoveFile: (id: string) => void;
 }) {
   return (
-    <aside className="flex h-full w-[clamp(172px,14vw,196px)] shrink-0 flex-col overflow-hidden border-r border-[#e2d7c8] bg-[linear-gradient(180deg,#fdfaf6_0%,#f7f1e8_100%)]">
+    <aside className={`flex h-full shrink-0 flex-col overflow-hidden border-r border-[#e2d7c8] bg-[linear-gradient(180deg,#fdfaf6_0%,#f7f1e8_100%)] ${compact ? 'w-[clamp(148px,11vw,172px)]' : 'w-[clamp(172px,14vw,196px)]'}`}>
       <div className="border-b border-[#e7ddd1] px-4 pb-3 pt-4">
         <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a29487]">탐색</div>
         <div className="mt-1 text-[15px] font-semibold text-[#40342c]">회로 구조</div>
@@ -201,6 +203,7 @@ export function SidebarLeft({
                   onClick={() => onRemoveFile(file.id)}
                   className="rounded p-1 text-[#8b7d70] transition hover:bg-white hover:text-[#5a4c41]"
                   title="파일 제거"
+                  aria-label={`${file.label} 제거`}
                 >
                   <X size={11} />
                 </button>

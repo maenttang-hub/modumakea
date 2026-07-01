@@ -17,6 +17,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={`flex h-8 flex-1 items-center justify-center rounded-[10px] text-[11px] font-semibold transition ${
         active
           ? 'bg-white text-[#352c25] shadow-[0_1px_2px_rgba(92,73,54,0.08)]'
@@ -34,15 +35,17 @@ export function SidebarRight({
   aiPanel,
   propertyPanel,
   codePanel,
+  compact = false,
 }: {
   activeTab: RightTab;
   onTabChange: (tab: RightTab) => void;
   aiPanel: ReactNode;
   propertyPanel: ReactNode;
   codePanel: ReactNode;
+  compact?: boolean;
 }) {
   return (
-    <aside className="flex h-full w-[clamp(280px,24vw,360px)] shrink-0 flex-col overflow-hidden border-l border-[#e2d7c8] bg-[linear-gradient(180deg,#fdfaf6_0%,#f7f1e8_100%)]">
+    <aside className={`flex h-full shrink-0 flex-col overflow-hidden border-l border-[#e2d7c8] bg-[linear-gradient(180deg,#fdfaf6_0%,#f7f1e8_100%)] ${compact ? 'w-[clamp(260px,21vw,320px)]' : 'w-[clamp(280px,24vw,360px)]'}`}>
       <div className="border-b border-[#e7ddd1] px-4 pb-3 pt-4">
         <div className="flex items-center justify-between gap-3">
           <div>

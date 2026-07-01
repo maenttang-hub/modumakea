@@ -7,11 +7,13 @@ type Mode = 'select' | 'pan';
 
 function ToolButton({
   active = false,
+  toggle = false,
   onClick,
   title,
   children,
 }: {
   active?: boolean;
+  toggle?: boolean;
   onClick: () => void;
   title: string;
   children: React.ReactNode;
@@ -21,6 +23,8 @@ function ToolButton({
       type="button"
       onClick={onClick}
       title={title}
+      aria-label={title}
+      aria-pressed={toggle ? active : undefined}
       className={`flex h-[26px] w-[26px] items-center justify-center rounded-[8px] border text-[#8b7d70] transition ${
         active
           ? 'border-[#8bb4e5] bg-[#dbe9fa] text-[#3c6899]'
@@ -80,10 +84,10 @@ export function CanvasToolbar({
   return (
     <div className="relative z-10 flex h-[44px] min-w-0 items-center gap-2 overflow-hidden border-b border-[#e4d8ca] bg-[linear-gradient(180deg,#fdfaf6_0%,#f7f1e8_100%)] px-2.5">
       <div className="flex min-w-0 flex-1 items-center overflow-x-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <ToolButton active={mode === 'select'} onClick={() => onModeChange('select')} title="선택 모드">
+        <ToolButton active={mode === 'select'} toggle onClick={() => onModeChange('select')} title="선택 모드">
           <MousePointer2 size={14} />
         </ToolButton>
-        <ToolButton active={mode === 'pan'} onClick={() => onModeChange('pan')} title="패닝 모드">
+        <ToolButton active={mode === 'pan'} toggle onClick={() => onModeChange('pan')} title="패닝 모드">
           <Hand size={14} />
         </ToolButton>
         <Divider />
@@ -96,12 +100,12 @@ export function CanvasToolbar({
         <ToolButton onClick={onFitView} title="화면 맞춤">
           <Scan size={14} />
         </ToolButton>
-        <span className="ml-1.5 min-w-[42px] shrink-0 font-mono text-[10px] text-[#8b7d70]">{zoomLabel}</span>
+        <span data-testid="schematic-zoom-label" className="ml-1.5 min-w-[42px] shrink-0 font-mono text-[10px] text-[#8b7d70]">{zoomLabel}</span>
         <Divider />
-        <ToolButton active={showMinimap} onClick={onToggleMinimap} title="레이어/미니맵 토글">
+        <ToolButton active={showMinimap} toggle onClick={onToggleMinimap} title="레이어/미니맵 토글">
           <Layers3 size={14} />
         </ToolButton>
-        <ToolButton active={showGrid} onClick={onToggleGrid} title="격자 토글">
+        <ToolButton active={showGrid} toggle onClick={onToggleGrid} title="격자 토글">
           <Grid2X2 size={14} />
         </ToolButton>
       </div>
@@ -111,6 +115,8 @@ export function CanvasToolbar({
             <button
               type="button"
               onClick={() => applyImportedViewModeChange('original', onImportedSchematicViewModeChange)}
+              aria-label="원본 도면 보기"
+              aria-pressed={importedSchematicViewMode === 'original'}
               className={`rounded-[8px] whitespace-nowrap px-2 py-1 text-[10px] font-semibold transition ${
                 importedSchematicViewMode === 'original'
                   ? 'bg-[#dbe9fa] text-[#315f95]'
@@ -122,6 +128,8 @@ export function CanvasToolbar({
             <button
               type="button"
               onClick={() => applyImportedViewModeChange('structured', onImportedSchematicViewModeChange)}
+              aria-label="자동정리 도면 보기"
+              aria-pressed={importedSchematicViewMode === 'structured'}
               className={`rounded-[8px] whitespace-nowrap px-2 py-1 text-[10px] font-semibold transition ${
                 importedSchematicViewMode === 'structured'
                   ? 'bg-[#d8f0e4] text-[#216c4d]'

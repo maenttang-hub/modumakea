@@ -144,7 +144,11 @@ function getImportedReviewFitPadding(
 }
 
 function getImportedReviewZoomBias(viewMode: 'original' | 'structured') {
-  return viewMode === 'original' ? 1 : 1;
+  return viewMode === 'original' ? 1.18 : 1.08;
+}
+
+function getImportedReviewMinimumZoom(viewMode: 'original' | 'structured') {
+  return viewMode === 'original' ? 0.55 : 0.45;
 }
 
 function getImportedReviewFocusBounds(
@@ -329,7 +333,10 @@ export function useComponentCanvasController() {
         }
         const applyBoost = () => {
           const viewport = rfInstance.getViewport();
-          const nextZoom = Number((viewport.zoom * zoomBias).toFixed(4));
+          const nextZoom = Number(Math.max(
+            viewport.zoom * zoomBias,
+            getImportedReviewMinimumZoom(importedSchematicViewMode)
+          ).toFixed(4));
           rfInstance.setCenter(centerX, centerY, {
             zoom: nextZoom,
             duration: 0,
@@ -463,6 +470,11 @@ export function useComponentCanvasController() {
           : getImportedSchematicReviewViewportBounds(components, importedSchematicScene);
       }
 
+      const readableBounds = getImportedSchematicReviewViewportBounds(components, importedSchematicScene);
+      if (readableBounds) {
+        return readableBounds;
+      }
+
       const sourceFaithfulBounds = getImportedSchematicSceneBounds([], importedSchematicScene);
       return sourceFaithfulBounds
         ? {
@@ -471,7 +483,7 @@ export function useComponentCanvasController() {
             width: sourceFaithfulBounds.width,
             height: sourceFaithfulBounds.height,
           }
-        : getImportedSchematicReviewViewportBounds(components, importedSchematicScene);
+        : null;
     },
     [components, importedSchematicScene, importedSchematicViewMode, manualConnections]
   );
@@ -682,7 +694,10 @@ export function useComponentCanvasController() {
       const centerY = focusBounds.y + focusBounds.height / 2;
       window.setTimeout(() => {
         const viewport = rfInstance.getViewport();
-        const nextZoom = Number((viewport.zoom * zoomBias).toFixed(4));
+        const nextZoom = Number(Math.max(
+          viewport.zoom * zoomBias,
+          getImportedReviewMinimumZoom(importedSchematicViewMode)
+        ).toFixed(4));
         rfInstance.setCenter(centerX, centerY, {
           zoom: nextZoom,
           duration: 0,

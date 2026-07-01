@@ -53,7 +53,9 @@ import { useValidationReport } from '@/hooks/use-validation-report';
 import { useBoardStore } from '@/store/use-board-store';
 import { persistReportWorkspaceSnapshot } from '@/lib/report-workspace-snapshot';
 import {
+  AlertTriangle,
   FileUp,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { COMMENT_PANEL_OPEN_EVENT } from '@/lib/comment-focus';
@@ -82,6 +84,14 @@ function normalizeLegacyRightTab(tab: RightTabValue): RightPanelTab {
 type WorkspacePresence = 'empty' | 'restored' | 'imported';
 type WorkspaceFileKind = WorkspacePresence | 'pcb';
 
+type KiCadImportProgress = {
+  status: 'running' | 'failed';
+  fileName: string;
+  title: string;
+  description: string;
+  recoveryActions?: string[];
+};
+
 function buildWorkspaceFileLabel({
   projectName,
   presence,
@@ -104,6 +114,61 @@ function buildWorkspaceFileLabel({
   return '파일을 열어주세요';
 }
 
+function KiCadImportProgressOverlay({
+  progress,
+  onOpenFile,
+}: {
+  progress: KiCadImportProgress;
+  onOpenFile: () => void;
+}) {
+  const failed = progress.status === 'failed';
+
+  return (
+    <div
+      className="absolute inset-0 z-30 flex items-center justify-center bg-[#fbf7ef]/88 p-6 backdrop-blur-sm"
+      aria-live="polite"
+      data-testid="kicad-import-progress"
+    >
+      <div className="w-full max-w-md rounded-[14px] border border-[#ded2c2] bg-[#fffdf9] px-5 py-4 text-left shadow-[0_18px_48px_rgba(88,68,50,0.16)]">
+        <div className="flex items-start gap-3">
+          <div
+            className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border ${
+              failed
+                ? 'border-[#efd3d3] bg-[#fff8f8] text-[#b24f4f]'
+                : 'border-[#dce8f3] bg-[#f8fbff] text-[#4f84be]'
+            }`}
+          >
+            {failed ? <AlertTriangle size={17} /> : <Loader2 size={17} className="animate-spin" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[13px] font-semibold text-[#3f342c]">{progress.title}</div>
+            <div className="mt-1 truncate font-mono text-[11px] text-[#7f7265]" title={progress.fileName}>
+              {progress.fileName}
+            </div>
+            <div className="mt-2 text-[11px] leading-5 text-[#75685c]">{progress.description}</div>
+            {failed && progress.recoveryActions?.length ? (
+              <div className="mt-3 space-y-1 text-[10px] leading-5 text-[#8a7868]">
+                {progress.recoveryActions.slice(0, 2).map(action => (
+                  <div key={action}>- {action}</div>
+                ))}
+              </div>
+            ) : null}
+            {failed ? (
+              <button
+                type="button"
+                onClick={onOpenFile}
+                className="mt-4 inline-flex h-8 items-center justify-center rounded-[9px] bg-[#4f84be] px-3 text-[11px] font-semibold text-white transition hover:bg-[#3f74af]"
+              >
+                파일 다시 선택
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export type HomeShellProps = {
   initialCloudProjectId?: string;
   initialAppLanguage?: AppLanguage;
@@ -122,6 +187,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
   const [editorRightTab, setEditorRightTab] = useState<'ai' | 'property' | 'code'>('ai');
   const [canvasMode, setCanvasMode] = useState<'select' | 'pan'>('select');
   const [canvasZoomLabel, setCanvasZoomLabel] = useState('100%');
+  const [importProgress, setImportProgress] = useState<KiCadImportProgress | null>(null);
   const [leftSectionState, setLeftSectionState] = useState({
     components: false,
     nets: false,
@@ -129,6 +195,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
   });
   const schematicFileInputRef = useRef<HTMLInputElement | null>(null);
   const codeFileInputRef = useRef<HTMLInputElement | null>(null);
+  const importedDensityAppliedRef = useRef(false);
   const activeBoardId = useBoardStore(state => state.activeBoardId);
   const schematicTheme = useBoardStore(state => state.schematicTheme);
   const importedSchematicViewMode = useBoardStore(state => state.importedSchematicViewMode);
@@ -231,6 +298,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
     : selectedFileId === 'generated-code'
       ? generatedCodeFileLabel
       : schematicFileLabel;
+  const importedReviewSurface = importedSchematicMode || Boolean(importedPcbDocument);
   const showReviewDropzone = useMemo(
     () => !isCloudProjectLoading && workspacePresence === 'empty',
     [isCloudProjectLoading, workspacePresence]
@@ -296,6 +364,24 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
       ),
     });
   }, [importedPcbDocument, surfaceFlags.showPcbWorkspace, t, workspaceMode]);
+
+  useEffect(() => {
+    if (!importedReviewSurface) {
+      importedDensityAppliedRef.current = false;
+      return;
+    }
+
+    if (importedDensityAppliedRef.current) {
+      return;
+    }
+
+    importedDensityAppliedRef.current = true;
+    setLeftSectionState({
+      components: true,
+      nets: true,
+      files: false,
+    });
+  }, [importedReviewSurface]);
 
   const {
     setActiveRightTab,
@@ -572,6 +658,19 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
   const importDroppedKiCadFile = useCallback(async (file: File) => {
     let importStage: ImportFailureStage = 'read';
     let kiCadFileKind: KiCadFileKind | null = null;
+    const setRunningProgress = (title: string, description: string) => {
+      setImportProgress({
+        status: 'running',
+        fileName: file.name,
+        title,
+        description,
+      });
+    };
+
+    setRunningProgress(
+      t('파일을 읽는 중입니다', 'Reading file'),
+      t('로컬 파일 내용을 작업공간으로 가져오고 있습니다.', 'Loading the local file into the workspace.')
+    );
 
     recordBetaEvent({
       name: 'import_attempt',
@@ -586,6 +685,10 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
     try {
       const text = await file.text();
       importStage = 'detect';
+      setRunningProgress(
+        t('KiCad 파일 형식을 확인하는 중입니다', 'Checking KiCad file type'),
+        t('회로도와 PCB 중 어떤 작업공간으로 열지 판단하고 있습니다.', 'Detecting whether this should open as a schematic or PCB.')
+      );
       kiCadFileKind = detectKiCadFileKind(file.name, text);
 
       if (!kiCadFileKind) {
@@ -595,6 +698,13 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
           fileKind: null,
           stage: 'unsupported',
           language: appLanguage,
+        });
+        setImportProgress({
+          status: 'failed',
+          fileName: file.name,
+          title: report.title,
+          description: report.description,
+          recoveryActions: report.recoveryActions,
         });
         toast.info(report.title, {
           description: report.toastDescription,
@@ -611,6 +721,10 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
 
       if (kiCadFileKind === 'pcb') {
         importStage = 'parse-pcb';
+        setRunningProgress(
+          t('PCB를 해석하는 중입니다', 'Parsing PCB'),
+          t('보드 형상, 레이어, 넷, 풋프린트를 읽고 있습니다.', 'Reading board geometry, layers, nets, and footprints.')
+        );
         const document = parseKiCadPcb(text, { sourceFilename: file.name });
         const validation = validateImportedPcbDocument(document, {
           schematicParity: {
@@ -622,10 +736,16 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
         });
         setImportedPcbDocument(document, text, validation);
         setWorkspaceMode('pcb');
+        setLeftSectionState({
+          components: true,
+          nets: true,
+          files: false,
+        });
         clearCloudProjectState();
         if (initialCloudProjectId) {
           router.replace('/editor', { scroll: false });
         }
+        setImportProgress(null);
         recordBetaEvent({
           name: 'import_succeeded',
           source: 'editor-import',
@@ -651,6 +771,10 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
       }
 
       importStage = 'parse-schematic';
+      setRunningProgress(
+        t('회로도를 분석하는 중입니다', 'Parsing schematic'),
+        t('심볼, 와이어, 라벨을 읽고 리뷰 화면을 준비하고 있습니다.', 'Reading symbols, wires, and labels for the review canvas.')
+      );
       const imported = await importKiCadSchematicAsync(text, {
         projectName: file.name.replace(/\.kicad_sch$/i, ''),
       });
@@ -663,6 +787,10 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
         }),
       };
       importStage = 'hydrate';
+      setRunningProgress(
+        t('리뷰 화면을 구성하는 중입니다', 'Preparing review canvas'),
+        t('파싱된 회로도를 작업공간 상태로 변환하고 있습니다.', 'Converting the parsed schematic into workspace state.')
+      );
       const result = hydrateProject(payload);
       if (!result.success) {
         const report = buildImportFailureReport({
@@ -672,6 +800,13 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
           stage: 'hydrate',
           error: result.error,
           language: appLanguage,
+        });
+        setImportProgress({
+          status: 'failed',
+          fileName: file.name,
+          title: report.title,
+          description: report.description,
+          recoveryActions: report.recoveryActions,
         });
         toast.error(report.title, { description: report.toastDescription });
         recordBetaEvent({
@@ -688,6 +823,13 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
       if (initialCloudProjectId) {
         router.replace('/editor', { scroll: false });
       }
+      setWorkspaceMode('schematic');
+      setLeftSectionState({
+        components: true,
+        nets: true,
+        files: false,
+      });
+      setImportProgress(null);
       recordBetaEvent({
         name: 'import_succeeded',
         source: 'editor-import',
@@ -715,6 +857,13 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
         stage: importStage,
         error,
         language: appLanguage,
+      });
+      setImportProgress({
+        status: 'failed',
+        fileName: file.name,
+        title: report.title,
+        description: report.description,
+        recoveryActions: report.recoveryActions,
       });
       toast.error(report.title, {
         description: report.toastDescription,
@@ -989,6 +1138,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
             selectedComponentId={selectedComponentId}
             selectedFileId={selectedFileId}
             sectionState={leftSectionState}
+            compact={importedReviewSurface}
             onToggleSection={handleToggleLeftSection}
             onSelectComponent={id => {
               setWorkspaceMode('schematic');
@@ -1024,7 +1174,12 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
               </>
             )}
             canvas={showReviewDropzone ? null : showPcbWorkspace ? <PcbWorkspace /> : <ComponentCanvas />}
-            overlay={!showPcbWorkspace && showReviewDropzone ? (
+            overlay={importProgress ? (
+              <KiCadImportProgressOverlay
+                progress={importProgress}
+                onOpenFile={() => schematicFileInputRef.current?.click()}
+              />
+            ) : !showPcbWorkspace && showReviewDropzone ? (
               <div
                 className="absolute inset-0 z-20 flex items-center justify-center p-6"
                 onDrop={handleReviewDrop}
@@ -1089,6 +1244,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
         rightSidebar={
           <SidebarRight
             activeTab={editorRightTab}
+            compact={importedReviewSurface}
             onTabChange={tab => {
               setEditorRightTab(tab);
               if (tab === 'code') {
