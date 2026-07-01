@@ -1,4 +1,5 @@
 import { getBoardById } from '@/constants/boards';
+import { canonicalizeJoinableNetLabel, normalizeNetLabelToken, parseVoltageFromPowerNetLabel } from '@/lib/net-label-utils';
 import type { PinType } from '@/types';
 
 export interface BoardSignalLimits {
@@ -12,13 +13,17 @@ export interface BoardSignalLimits {
 
 export function getBoardSignalLimits(boardId: string, pinId: string): BoardSignalLimits | undefined {
   const board = getBoardById(boardId);
-  const pin = board.pinDefinitions.find(item => item.id === pinId);
+  const requestedPinKey = canonicalizeJoinableNetLabel(pinId);
+  const pin = board.pinDefinitions.find(item => item.id === pinId || canonicalizeJoinableNetLabel(item.id) === requestedPinKey);
   if (!pin) {
     return undefined;
   }
 
   if (pin.type.includes('POWER')) {
-    const voltage = pinId === '3.3V' ? 3.3 : 5;
+    const normalizedPinId = normalizeNetLabelToken(pin.id);
+    const voltage =
+      parseVoltageFromPowerNetLabel(pin.id) ??
+      (normalizedPinId === 'VBUS' || normalizedPinId === 'VUSB' ? 5 : board.logicVoltage === '3.3V' ? 3.3 : 5);
     return {
       nominal: voltage,
       maxSafe: voltage + 0.25,

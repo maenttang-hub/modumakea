@@ -102,7 +102,9 @@ test('buildIntegratedValidationJson turns unified model into provider-neutral in
 
   assert.equal(payload.project.projectName, 'Integrated Builder');
   assert.equal(payload.components.length, 2);
-  assert.deepEqual(payload.components.find(component => component.reference === 'U1')?.netLabels ?? null, []);
+  const sensorComponent = payload.components.find(component => component.reference === 'U1');
+  assert.deepEqual(sensorComponent?.netLabels ?? null, []);
+  assert.ok(sensorComponent?.pins.some(pin => pin.pinName === 'DATA' && pin.connectedNetIds.length === 1));
   assert.ok(payload.nets.some(net => net.memberRefs.some(member => member.ownerType === 'board' && member.pinId === 'GPIO17')));
   assert.equal(payload.codePinUsage.length, 2);
   assert.equal(payload.codePinUsage[0]?.matchedMcuPinLabel, 'GPIO17');

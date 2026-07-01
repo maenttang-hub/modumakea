@@ -1,4 +1,5 @@
 import type { UnifiedCircuitNet, UnifiedCircuitNetKind } from '@/types';
+import { isGroundLikeNetLabel, isPowerLikeNetLabel, normalizeNetLabelToken } from '@/lib/net-label-utils';
 import type { V3LabelAnchor } from '@/lib/v3-kicad-parser/extractors/label-extractor';
 import type { V3LibraryPin, V3LibrarySymbol, V3Point, V3SymbolInstance } from '@/lib/v3-kicad-parser/extractors/symbol-extractor';
 import type { V3WireSegment } from '@/lib/v3-kicad-parser/extractors/wire-extractor';
@@ -123,20 +124,15 @@ function snapBucketIndex(value: number, toleranceMm = V3_POINT_SNAP_TOLERANCE_MM
 }
 
 function normalizeSupplyLabel(label: string) {
-  return label.trim().toUpperCase().replace(/^\+/, '');
+  return normalizeNetLabelToken(label);
 }
 
 function isGroundLikeName(label: string) {
-  const normalized = normalizeSupplyLabel(label);
-  return ['GND', 'AGND', 'DGND', 'PGND', 'GNDPWR', 'GNDREF', 'VSS', 'VSSA'].includes(normalized) || normalized.includes('GNDPWR');
+  return isGroundLikeNetLabel(label);
 }
 
 function isPowerLikeName(label: string) {
-  const normalized = normalizeSupplyLabel(label);
-  return (
-    ['VCC', 'VDD', 'VDDA', 'AVCC', 'AVDD', 'VIN', 'VBUS', 'VBAT', 'VUSB', '3V3', '3.3V', '5V', '12V', '24V'].includes(normalized) ||
-    /^[+-]?\d+(?:\.\d+)?V$/.test(label.trim().toUpperCase())
-  );
+  return isPowerLikeNetLabel(label);
 }
 
 function inferNetKind(labels: string[], members: UnifiedCircuitNet['members']): UnifiedCircuitNetKind {

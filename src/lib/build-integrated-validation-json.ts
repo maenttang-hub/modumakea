@@ -1,6 +1,6 @@
 import { getBoardById } from '@/constants/boards';
 import { mergeCodePinUsage } from '@/lib/merge-code-pin-usage';
-import { summarizeComponentNetLabels } from '@/lib/net-label-utils';
+import { isGroundLikeNetLabel, isPowerLikeNetLabel } from '@/lib/net-label-utils';
 import { isReportableValidationComponent } from '@/lib/validation-reportable-component-policy';
 import type {
   DatasheetReviewBusProtocol,
@@ -50,10 +50,10 @@ function inferProtocols(pin: UnifiedCircuitComponentPin): DatasheetReviewBusProt
   const upper = pin.pinName.trim().toUpperCase();
   const protocols = new Set<DatasheetReviewBusProtocol>();
 
-  if (upper === 'VCC' || upper === 'VDD' || upper === 'VIN' || upper === 'AVCC' || upper === '3V' || upper === '3.3V' || upper === '5V') {
+  if (isPowerLikeNetLabel(upper)) {
     protocols.add('POWER');
   }
-  if (upper === 'GND' || upper === 'GNDPWR' || upper === 'VSS') {
+  if (isGroundLikeNetLabel(upper)) {
     protocols.add('GND');
   }
   if (upper.includes('SDA') || upper.includes('SCL')) protocols.add('I2C');
@@ -117,7 +117,7 @@ function buildComponentInput(component: UnifiedCircuitComponent): DatasheetRevie
     symbolName: component.symbolName,
     referencePrefix: component.reference.replace(/\d+/g, '') || undefined,
     pinNames: dedupeStrings(pins.map(pin => pin.pinName)),
-    netLabels: summarizeComponentNetLabels(pins),
+    netLabels: [],
     connectedNetIds: dedupeStrings(pins.flatMap(pin => pin.connectedNetIds)),
     mpnCandidates: component.mpnCandidates,
     manufacturerCandidates: manufacturerCandidates(component),
@@ -252,7 +252,7 @@ function buildRequestedSections(component: DatasheetReviewComponentInput) {
   const pinNames = component.pinNames.map(name => name.toUpperCase());
   const protocols = component.pins.flatMap(pin => pin.protocols);
 
-  if (pinNames.some(name => ['VCC', 'VDD', 'VIN', 'AVCC', 'GND', 'VSS', '3V', '3.3V', '5V'].includes(name))) {
+  if (pinNames.some(name => isPowerLikeNetLabel(name) || isGroundLikeNetLabel(name))) {
     sections.add('power-supply');
     sections.add('application-circuit');
   }

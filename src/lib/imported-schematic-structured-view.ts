@@ -1,4 +1,5 @@
 import { layoutImportedGeometry } from '@/lib/imported-schematic-geometry';
+import { isGroundLikeNetLabel, isPowerLikeNetLabel } from '@/lib/net-label-utils';
 import type { ImportedSchematicPoint, ManualNetConnection, PlacedComponent } from '@/types';
 
 type StructuredPoint = { x: number; y: number };
@@ -75,14 +76,14 @@ function isGroundName(value?: string) {
   if (!value) {
     return false;
   }
-  return ['GND', 'GNDPWR', 'PGND', 'DGND', 'AGND', 'VSS'].includes(value.trim().toUpperCase());
+  return isGroundLikeNetLabel(value);
 }
 
 export function isPowerName(value?: string) {
   if (!value) {
     return false;
   }
-  return /^\+?(3V3|3\.3V|5V|12V|24V|VBUS|VBAT|VIN|VCC|VSYS)$/.test(value.trim().toUpperCase());
+  return isPowerLikeNetLabel(value);
 }
 
 function classifyNetKind(connection: ManualNetConnection) {

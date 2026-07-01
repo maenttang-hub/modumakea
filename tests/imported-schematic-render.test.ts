@@ -14,6 +14,8 @@ import {
   hasNativeImportedText,
   isPowerLikeImportedText,
   isLowPriorityImportedPinText,
+  layoutImportedTextPrimitivesForReviewOverview,
+  measureImportedTextPrimitiveBox,
   normalizeImportedGeometryForRender,
   resolveImportedOverlayVisibility,
   shouldUseImportedBodyFill,
@@ -800,8 +802,8 @@ test('imported text overview de-emphasizes dense pin metadata while keeping sign
   assert.equal(isLowPriorityImportedPinText(portName), true);
   assert.equal(isLowPriorityImportedPinText(muxedPortName), true);
   assert.equal(isLowPriorityImportedPinText(signalName), false);
-  assert.ok(getImportedTextOverviewOpacity(pinNumber) < 0.25);
-  assert.ok(getImportedTextOverviewOpacity(signalName) > 0.6);
+  assert.ok(getImportedTextOverviewOpacity(pinNumber) >= 0.5);
+  assert.ok(getImportedTextOverviewOpacity(signalName) > getImportedTextOverviewOpacity(pinNumber));
 });
 
 test('viewport bounds keep both imported wires and imported component bodies visible after reload', () => {
@@ -1479,6 +1481,160 @@ test('imported review suppresses noisy annotation and pin-number text for review
     }),
     true
   );
+});
+
+test('imported overview keeps crowded pin text visible and repositions overlaps', () => {
+  const primitives: ImportedSchematicPrimitive[] = [
+    { kind: 'rect', start: { x: -8, y: -12 }, end: { x: 8, y: 12 } },
+    {
+      kind: 'text',
+      at: { x: 12, y: 0 },
+      text: '27',
+      angle: 0,
+      sizeMm: 1.27,
+      role: 'pin-number',
+    },
+    {
+      kind: 'text',
+      at: { x: 12, y: 0 },
+      text: 'PA3',
+      angle: 0,
+      sizeMm: 1.27,
+      role: 'pin-name',
+    },
+    {
+      kind: 'text',
+      at: { x: 12, y: 0 },
+      text: 'MOSI',
+      angle: 0,
+      sizeMm: 1.27,
+      role: 'pin-name',
+    },
+  ];
+
+  const layout = layoutImportedTextPrimitivesForReviewOverview({
+    primitives,
+    family: 'mcu',
+    pinAnchorCount: 28,
+  });
+  const textLayout = layout.filter(
+    (primitive): primitive is Extract<ImportedSchematicPrimitive, { kind: 'text' }> =>
+      primitive.kind === 'text'
+  );
+
+  assert.deepEqual(textLayout.map(primitive => primitive.text), ['27', 'PA3', 'MOSI']);
+  assert.equal(new Set(textLayout.map(primitive => `${primitive.at.x},${primitive.at.y}`)).size, 3);
+
+  const boxes = textLayout.map(measureImportedTextPrimitiveBox);
+  for (let left = 0; left < boxes.length; left += 1) {
+    for (let right = left + 1; right < boxes.length; right += 1) {
+      const overlapX = Math.max(
+        0,
+        Math.min(boxes[left].x + boxes[left].width, boxes[right].x + boxes[right].width) -
+          Math.max(boxes[left].x, boxes[right].x)
+      );
+      const overlapY = Math.max(
+        0,
+        Math.min(boxes[left].y + boxes[left].height, boxes[right].y + boxes[right].height) -
+          Math.max(boxes[left].y, boxes[right].y)
+      );
+      assert.equal(overlapX * overlapY, 0);
+    }
+  }
+});
+
+test('imported overview shares occupied text boxes across scene-level symbol layout', () => {
+  const placedTextBoxes: { x: number; y: number; width: number; height: number }[] = [];
+  const first = layoutImportedTextPrimitivesForReviewOverview({
+    primitives: [{
+      kind: 'text',
+      at: { x: 40, y: 20 },
+      text: 'U1',
+      angle: 0,
+      sizeMm: 1.27,
+      role: 'reference',
+    }],
+    family: 'generic',
+    pinAnchorCount: 2,
+    placedTextBoxes,
+  });
+  const second = layoutImportedTextPrimitivesForReviewOverview({
+    primitives: [{
+      kind: 'text',
+      at: { x: 40, y: 20 },
+      text: 'U2',
+      angle: 0,
+      sizeMm: 1.27,
+      role: 'reference',
+    }],
+    family: 'generic',
+    pinAnchorCount: 2,
+    placedTextBoxes,
+  });
+  const firstText = first[0];
+  const secondText = second[0];
+
+  assert.equal(firstText?.kind, 'text');
+  assert.equal(secondText?.kind, 'text');
+  if (firstText?.kind !== 'text' || secondText?.kind !== 'text') {
+    return;
+  }
+
+  assert.equal(firstText.text, 'U1');
+  assert.equal(secondText.text, 'U2');
+  assert.notDeepEqual(firstText.at, secondText.at);
+
+  const firstBox = measureImportedTextPrimitiveBox(firstText);
+  const secondBox = measureImportedTextPrimitiveBox(secondText);
+  const overlapX = Math.max(
+    0,
+    Math.min(firstBox.x + firstBox.width, secondBox.x + secondBox.width) -
+      Math.max(firstBox.x, secondBox.x)
+  );
+  const overlapY = Math.max(
+    0,
+    Math.min(firstBox.y + firstBox.height, secondBox.y + secondBox.height) -
+      Math.max(firstBox.y, secondBox.y)
+  );
+
+  assert.equal(overlapX * overlapY, 0);
+});
+
+test('imported overview pulls far IC properties near the symbol without dropping text', () => {
+  const primitives: ImportedSchematicPrimitive[] = [
+    { kind: 'rect', start: { x: -10, y: -10 }, end: { x: 10, y: 10 } },
+    {
+      kind: 'text',
+      at: { x: 120, y: 80 },
+      text: 'U1',
+      angle: 0,
+      sizeMm: 1.27,
+      role: 'reference',
+    },
+    {
+      kind: 'text',
+      at: { x: 120, y: 80 },
+      text: 'ATmega328P-PU',
+      angle: 0,
+      sizeMm: 1.27,
+      role: 'value',
+    },
+  ];
+
+  const layout = layoutImportedTextPrimitivesForReviewOverview({
+    primitives,
+    family: 'mcu',
+    pinAnchorCount: 28,
+    primaryBounds: { x: -10, y: -10, width: 20, height: 20 },
+  });
+  const textLayout = layout.filter(
+    (primitive): primitive is Extract<ImportedSchematicPrimitive, { kind: 'text' }> =>
+      primitive.kind === 'text'
+  );
+
+  assert.deepEqual(textLayout.map(primitive => primitive.text), ['U1', 'ATmega328P-PU']);
+  assert.ok(textLayout.every(primitive => primitive.at.x <= 44 && primitive.at.y <= 44));
+  assert.equal(new Set(textLayout.map(primitive => `${primitive.at.x},${primitive.at.y}`)).size, 2);
 });
 
 test('imported review keeps connector annotations when original KiCad primitives exist', () => {

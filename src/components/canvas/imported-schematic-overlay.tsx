@@ -28,7 +28,7 @@ import {
   getImportedReadableTextOffset,
   getImportedTextOverviewOpacity,
   classifyImportedNetLabel,
-  isLowPriorityImportedPinText,
+  layoutImportedTextPrimitivesForReviewOverview,
   shouldFlattenImportedTextForReadability,
   shouldUseImportedBodyFill,
 } from '@/lib/imported-schematic-render';
@@ -49,6 +49,8 @@ import type {
 } from '@/types';
 
 type ImportedSchematicOverlayPalette = ReturnType<typeof getImportedSchematicPalette>;
+type OverlayBounds = { x: number; y: number; width: number; height: number };
+type ImportedLabelLayout = ReturnType<typeof getImportedNetLabelDisplay> & { displayText: string };
 
 function arcPath(
   start: { x: number; y: number },
@@ -118,25 +120,48 @@ function resolveImportedPrimitiveFill(
     : 'none';
 }
 
-function shouldRenderPrimitiveInOriginalOverview(
-  symbol: ImportedSchematicSceneSymbol,
-  primitive: ImportedSchematicPrimitive,
-  highlighted: boolean
-) {
-  if (primitive.kind !== 'text' || highlighted) {
-    return true;
+function getSymbolPrimaryGeometryBounds(symbol: ImportedSchematicSceneSymbol): OverlayBounds | null {
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  const includePoint = (x: number, y: number) => {
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  };
+
+  for (const primitive of symbol.primitives) {
+    if (primitive.kind === 'rect') {
+      includePoint(primitive.start.x, primitive.start.y);
+      includePoint(primitive.end.x, primitive.end.y);
+    } else if (primitive.kind === 'polyline') {
+      primitive.points.forEach(point => includePoint(point.x, point.y));
+    } else if (primitive.kind === 'circle') {
+      includePoint(primitive.center.x - primitive.radius, primitive.center.y - primitive.radius);
+      includePoint(primitive.center.x + primitive.radius, primitive.center.y + primitive.radius);
+    } else if (primitive.kind === 'arc') {
+      includePoint(primitive.start.x, primitive.start.y);
+      includePoint(primitive.mid.x, primitive.mid.y);
+      includePoint(primitive.end.x, primitive.end.y);
+    }
   }
 
-  const isDenseSymbol =
-    symbol.family === 'mcu' ||
-    symbol.family === 'connector' ||
-    symbol.pinAnchors.length >= 8;
-
-  if (!isDenseSymbol) {
-    return true;
+  for (const anchor of symbol.pinAnchors) {
+    includePoint(anchor.at.x, anchor.at.y);
   }
 
-  return !isLowPriorityImportedPinText(primitive);
+  if (!Number.isFinite(minX)) {
+    return null;
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(maxX - minX, 1),
+    height: Math.max(maxY - minY, 1),
+  };
 }
 
 function orderImportedPrimitivesForOriginalOverview(
@@ -325,6 +350,71 @@ function getPinSideOrderIndex(
   fallbackIndex: number
 ) {
   return sideOrder.get(`${anchor.pinId}:${anchor.number ?? ''}:${anchor.at.x}:${anchor.at.y}`) ?? fallbackIndex;
+}
+
+function hasNativeImportedPinText(symbol: ImportedSchematicSceneSymbol) {
+  return symbol.primitives.some(
+    primitive =>
+      primitive.kind === 'text' &&
+      (primitive.role === 'pin-name' || primitive.role === 'pin-number')
+  );
+}
+
+function buildFallbackPinTextPrimitives(symbol: ImportedSchematicSceneSymbol): ImportedSchematicPrimitive[] {
+  if (hasNativeImportedPinText(symbol)) {
+    return [];
+  }
+
+  const sideOrder = getPinSideOrder(symbol.pinAnchors);
+
+  return symbol.pinAnchors.flatMap((anchor, anchorIndex) => {
+    const text = anchor.label.trim();
+    if (!text) {
+      return [];
+    }
+
+    const radians = (anchor.angle * Math.PI) / 180;
+    const lengthPx = anchor.lengthMm * (1 / 0.18);
+    const innerX = anchor.at.x + Math.cos(radians) * lengthPx;
+    const innerY = anchor.at.y + Math.sin(radians) * lengthPx;
+    const sideIndex = getPinSideOrderIndex(sideOrder, anchor, anchorIndex);
+    const stagger = symbol.pinAnchors.length >= 12 ? (sideIndex % 2 === 0 ? -2.4 : 2.4) : 0;
+    const textAnchor = anchor.angle === 180 ? 'end' : anchor.angle === 0 ? 'start' : 'middle';
+    const labelX =
+      anchor.angle === 180
+        ? innerX - 4
+        : anchor.angle === 0
+          ? innerX + 4
+          : innerX + stagger;
+    const labelY =
+      anchor.angle === 90
+        ? innerY - 3
+        : anchor.angle === 270
+          ? innerY + 7
+          : innerY + stagger;
+
+    return [{
+      kind: 'text',
+      at: {
+        x: Number(labelX.toFixed(3)),
+        y: Number(labelY.toFixed(3)),
+      },
+      text,
+      angle: 0,
+      originalAngle: 0,
+      sizeMm: 1.17,
+      role: 'pin-name',
+      textAnchor,
+      baseline: 'middle',
+    }] satisfies ImportedSchematicPrimitive[];
+  });
+}
+
+function buildOriginalOverviewPrimitives(symbol: ImportedSchematicSceneSymbol) {
+  return orderImportedPrimitivesForOriginalOverview([
+    ...symbol.primitives,
+    ...buildFallbackPinTextPrimitives(symbol),
+  ]);
 }
 
 function offsetPrimitive(
@@ -649,6 +739,25 @@ export function ImportedSchematicOverlayNode({
     () => [...displaySymbols, ...fallbackSymbols],
     [displaySymbols, fallbackSymbols]
   );
+  const originalOverviewLayout = useMemo(() => {
+    const placedTextBoxes: OverlayBounds[] = [];
+    const primitivesBySymbolId = new Map<string, ImportedSchematicPrimitive[]>();
+
+    for (const symbol of mergedSymbols) {
+      primitivesBySymbolId.set(
+        symbol.instanceId,
+        layoutImportedTextPrimitivesForReviewOverview({
+          primitives: buildOriginalOverviewPrimitives(symbol),
+          family: symbol.family ?? 'generic',
+          pinAnchorCount: symbol.pinAnchors.length,
+          primaryBounds: getSymbolPrimaryGeometryBounds(symbol),
+          placedTextBoxes,
+        })
+      );
+    }
+
+    return { primitivesBySymbolId, textBoxes: placedTextBoxes };
+  }, [mergedSymbols]);
   const powerSymbols = useMemo(
     () => mergedSymbols.filter(isPowerSceneSymbol),
     [mergedSymbols]
@@ -661,6 +770,54 @@ export function ImportedSchematicOverlayNode({
     () => getImportedSchematicDisplayLabels(scene),
     [scene]
   );
+  const originalLabelLayouts = useMemo(() => {
+    const placedTextBoxes: OverlayBounds[] = [...originalOverviewLayout.textBoxes];
+    const layouts = new Map<number, ImportedLabelLayout>();
+
+    displayLabels.forEach((label, index) => {
+      const display = getImportedNetLabelDisplay({
+        ...label,
+        side: resolveCrowdedPowerLabelSide(label, displayLabels, index),
+      });
+      const displayText = label.text.trim();
+      if (!displayText) {
+        layouts.set(index, { ...display, displayText });
+        return;
+      }
+
+      const angle =
+        display.angle === 90 || display.angle === 180 || display.angle === 270
+          ? display.angle
+          : 0;
+      const [placedPrimitive] = layoutImportedTextPrimitivesForReviewOverview({
+        primitives: [{
+          kind: 'text',
+          at: { x: display.x, y: display.y },
+          text: displayText,
+          angle,
+          originalAngle: angle,
+          preserveNativeOrientation: true,
+          sizeMm: label.sizeMm ?? 1.27,
+          role: 'annotation',
+          textAnchor: display.textAnchor,
+          baseline: display.baseline,
+        }],
+        family: 'generic',
+        pinAnchorCount: 0,
+        placedTextBoxes,
+      });
+      const placedText = placedPrimitive?.kind === 'text' ? placedPrimitive : null;
+
+      layouts.set(index, {
+        ...display,
+        x: placedText?.at.x ?? display.x,
+        y: placedText?.at.y ?? display.y,
+        displayText,
+      });
+    });
+
+    return layouts;
+  }, [displayLabels, originalOverviewLayout.textBoxes]);
   const structuredLayout = useMemo(
     () => buildImportedStructuredLayout(
       data.components,
@@ -742,9 +899,9 @@ export function ImportedSchematicOverlayNode({
           )}
           {showOriginalScene ? (
             <>
-              <SymbolsLayer symbols={powerSymbols} palette={palette} highlightedComponentIds={highlightedComponentIds} dimNonTargets={data.dimNonTargets === true} pulse={data.pulse === true} structuredMode={false} componentOffsets={{}} />
-              <SymbolsLayer symbols={componentSymbols} palette={palette} highlightedComponentIds={highlightedComponentIds} dimNonTargets={data.dimNonTargets === true} pulse={data.pulse === true} structuredMode={false} componentOffsets={{}} />
-              <LabelsLayer labels={displayLabels} palette={palette} dimmed={data.dimNonTargets && hasFocusedComponents} />
+              <SymbolsLayer symbols={powerSymbols} palette={palette} highlightedComponentIds={highlightedComponentIds} dimNonTargets={data.dimNonTargets === true} pulse={data.pulse === true} structuredMode={false} componentOffsets={{}} overviewPrimitivesBySymbolId={originalOverviewLayout.primitivesBySymbolId} />
+              <SymbolsLayer symbols={componentSymbols} palette={palette} highlightedComponentIds={highlightedComponentIds} dimNonTargets={data.dimNonTargets === true} pulse={data.pulse === true} structuredMode={false} componentOffsets={{}} overviewPrimitivesBySymbolId={originalOverviewLayout.primitivesBySymbolId} />
+              <LabelsLayer labels={displayLabels} labelLayouts={originalLabelLayouts} palette={palette} dimmed={data.dimNonTargets && hasFocusedComponents} />
             </>
           ) : (
             <>
@@ -1087,10 +1244,12 @@ const NoConnectsLayer = memo(function NoConnectsLayer({
 
 const LabelsLayer = memo(function LabelsLayer({
   labels,
+  labelLayouts,
   palette,
   dimmed,
 }: {
   labels: ImportedSchematicScene['labels'];
+  labelLayouts?: Map<number, ImportedLabelLayout>;
   palette: ImportedSchematicOverlayPalette;
   dimmed?: boolean;
 }) {
@@ -1098,12 +1257,14 @@ const LabelsLayer = memo(function LabelsLayer({
     <>
       {labels.map((label, index) => {
         const fontSize = Math.min(Math.max((label.sizeMm ?? 1.27) * (1 / 0.18) * 0.66, 6.25), 7.4);
-        const display = getImportedNetLabelDisplay({
-          ...label,
-          side: resolveCrowdedPowerLabelSide(label, labels, index),
-        });
+        const layout = labelLayouts?.get(index);
+        const display = layout ??
+          getImportedNetLabelDisplay({
+            ...label,
+            side: resolveCrowdedPowerLabelSide(label, labels, index),
+          });
         const kind = display.kind;
-        const displayText = truncateOverlayText(label.text, kind === 'signal' ? 20 : 14);
+        const displayText = layout?.displayText ?? label.text.trim();
         const textFill =
           kind === 'power' ? '#9c6f1f' : kind === 'ground' ? '#5e564f' : '#486b8d';
         const labelOpacity = dimmed ? 0.16 : kind === 'signal' ? 0.52 : 0.72;
@@ -1147,6 +1308,7 @@ const SymbolsLayer = memo(function SymbolsLayer({
   pulse,
   structuredMode,
   componentOffsets,
+  overviewPrimitivesBySymbolId,
 }: {
   symbols: ImportedSchematicSceneSymbol[];
   palette: ImportedSchematicOverlayPalette;
@@ -1155,18 +1317,22 @@ const SymbolsLayer = memo(function SymbolsLayer({
   pulse: boolean;
   structuredMode: boolean;
   componentOffsets: Record<string, { x: number; y: number }>;
+  overviewPrimitivesBySymbolId?: Map<string, ImportedSchematicPrimitive[]>;
 }) {
   return (
     <>
       {symbols.map((symbol, symbolIndex) => {
         const isHighlighted = highlightedComponentIds.has(symbol.instanceId);
         const opacity = dimNonTargets && highlightedComponentIds.size > 0 && !isHighlighted ? 0.24 : 1;
-        const fallbackPinSideOrder = getPinSideOrder(symbol.pinAnchors);
-        const hasNativePinText = symbol.primitives.some(
-          primitive =>
-            primitive.kind === 'text' &&
-            (primitive.role === 'pin-name' || primitive.role === 'pin-number')
-        );
+        const originalOverviewPrimitives = structuredMode
+          ? []
+          : overviewPrimitivesBySymbolId?.get(symbol.instanceId) ??
+            layoutImportedTextPrimitivesForReviewOverview({
+              primitives: buildOriginalOverviewPrimitives(symbol),
+              family: symbol.family ?? 'generic',
+              pinAnchorCount: symbol.pinAnchors.length,
+              primaryBounds: getSymbolPrimaryGeometryBounds(symbol),
+            });
 
         return (
           <g
@@ -1183,8 +1349,7 @@ const SymbolsLayer = memo(function SymbolsLayer({
             {structuredMode ? (
               <StructuredSymbolShape symbol={symbol} palette={palette} highlighted={isHighlighted} />
             ) : (
-              orderImportedPrimitivesForOriginalOverview(symbol.primitives)
-                .filter(primitive => shouldRenderPrimitiveInOriginalOverview(symbol, primitive, isHighlighted))
+              originalOverviewPrimitives
                 .map((primitive, index) => (
                   <ImportedPrimitiveShape
                     key={`${symbol.instanceId}-shape-${index}`}
@@ -1195,47 +1360,6 @@ const SymbolsLayer = memo(function SymbolsLayer({
                   />
                 ))
             )}
-
-            {!structuredMode && !hasNativePinText &&
-              symbol.pinAnchors.map((anchor, anchorIndex) => {
-                const radians = (anchor.angle * Math.PI) / 180;
-                const lengthPx = anchor.lengthMm * (1 / 0.18);
-                const innerX = anchor.at.x + Math.cos(radians) * lengthPx;
-                const innerY = anchor.at.y + Math.sin(radians) * lengthPx;
-                const isHorizontal = anchor.angle === 0 || anchor.angle === 180;
-                const sideIndex = getPinSideOrderIndex(fallbackPinSideOrder, anchor, anchorIndex);
-                const displayLabel = getImportedPinLabelDisplay({
-                  label: anchor.label,
-                  pinAnchorCount: symbol.pinAnchors.length,
-                  sideIndex,
-                  highlighted: isHighlighted,
-                });
-                const textAnchor =
-                  anchor.angle === 180 ? 'end' : anchor.angle === 0 ? 'start' : 'middle';
-                const labelX =
-                  anchor.angle === 180 ? innerX - 4 : anchor.angle === 0 ? innerX + 4 : innerX;
-                const labelY =
-                  anchor.angle === 90 ? innerY - 3 : anchor.angle === 270 ? innerY + 7 : innerY;
-
-                if (!displayLabel) {
-                  return null;
-                }
-
-                return (
-                  <text
-                    key={`${symbol.instanceId}-pin-label-${anchor.pinId}-${anchorIndex}`}
-                    x={labelX}
-                    y={labelY}
-                    fontSize={5.2}
-                    fill={palette.pinLabel}
-                    textAnchor={textAnchor}
-                    dominantBaseline={isHorizontal ? 'middle' : 'central'}
-                    fontFamily={IMPORTED_SCHEMATIC_FONT_FAMILY}
-                  >
-                    {displayLabel}
-                  </text>
-                );
-              })}
           </g>
         );
       })}

@@ -234,7 +234,7 @@ function graphicStrokeWidth(graphic: ImportedPcbGraphic, variant: GraphicShapeVa
   if (variant === 'outline') {
     return 2.25;
   }
-  return Math.max(graphic.width, 0.04);
+  return 'width' in graphic ? Math.max(graphic.width, 0.04) : 0.04;
 }
 
 function graphicOpacity(graphic: ImportedPcbGraphic, variant: GraphicShapeVariant) {
@@ -248,7 +248,7 @@ function GraphicShape({ graphic, variant = 'default' }: { graphic: ImportedPcbGr
   const color = graphicStroke(graphic, variant);
   const strokeWidth = graphicStrokeWidth(graphic, variant);
   const opacity = graphicOpacity(graphic, variant);
-  const fill = variant === 'default' && graphic.fill ? `${color}22` : 'none';
+  const fill = variant === 'default' && 'fill' in graphic && graphic.fill ? `${color}22` : 'none';
 
   switch (graphic.kind) {
     case 'line':

@@ -6,6 +6,7 @@ import type {
   WiringMode,
 } from '@/types';
 import { IMPORTED_MM_TO_CANVAS } from '@/lib/imported-schematic-geometry';
+import { isGroundLikeNetLabel, isPowerLikeNetLabel, normalizeNetLabelToken } from '@/lib/net-label-utils';
 
 type ImportedRenderData = Pick<
   SensorNodeData,
@@ -14,6 +15,7 @@ type ImportedRenderData = Pick<
 
 export type ImportedSymbolFamily = 'passive' | 'power' | 'connector' | 'mcu' | 'generic';
 export type ImportedTextRole = 'reference' | 'value' | 'annotation' | 'pin-name' | 'pin-number';
+export type ImportedTextLayoutBounds = { x: number; y: number; width: number; height: number };
 
 export function shouldUseImportedBodyFill(options: {
   family: ImportedSymbolFamily;
@@ -409,8 +411,103 @@ export function isLowPriorityImportedPinText(
   );
 }
 
+type ImportedTextLayoutOptions = {
+  family?: ImportedSymbolFamily;
+  pinAnchorCount: number;
+  primaryBounds?: ImportedTextLayoutBounds;
+};
+
+function isDenseImportedSymbol(options: {
+  family?: ImportedSymbolFamily;
+  pinAnchorCount: number;
+}) {
+  return (
+    options.family === 'mcu' ||
+    options.family === 'connector' ||
+    options.pinAnchorCount >= 8
+  );
+}
+
+function roundImportedTextCoordinate(value: number) {
+  return Number(value.toFixed(3));
+}
+
+function translateImportedTextPrimitive(
+  primitive: Extract<ImportedSchematicPrimitive, { kind: 'text' }>,
+  offset: ImportedSchematicPoint
+) {
+  if (offset.x === 0 && offset.y === 0) {
+    return primitive;
+  }
+
+  return {
+    ...primitive,
+    at: {
+      x: roundImportedTextCoordinate(primitive.at.x + offset.x),
+      y: roundImportedTextCoordinate(primitive.at.y + offset.y),
+    },
+  };
+}
+
+function getImportedTextPullMargin(options: {
+  family?: ImportedSymbolFamily;
+  pinAnchorCount: number;
+}) {
+  if (options.family === 'mcu') {
+    return 34;
+  }
+
+  if (options.family === 'connector') {
+    return 30;
+  }
+
+  if (options.pinAnchorCount >= 8) {
+    return 28;
+  }
+
+  return 22;
+}
+
+function clampImportedTextCoordinate(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function pullImportedPropertyTextNearPrimaryBounds(
+  primitive: Extract<ImportedSchematicPrimitive, { kind: 'text' }>,
+  options: ImportedTextLayoutOptions
+) {
+  if (
+    !options.primaryBounds ||
+    (primitive.role !== 'reference' && primitive.role !== 'value') ||
+    options.family === 'passive' ||
+    options.family === 'power'
+  ) {
+    return primitive;
+  }
+
+  const margin = getImportedTextPullMargin(options);
+  const minX = options.primaryBounds.x - margin;
+  const maxX = options.primaryBounds.x + options.primaryBounds.width + margin;
+  const minY = options.primaryBounds.y - margin;
+  const maxY = options.primaryBounds.y + options.primaryBounds.height + margin;
+  const x = clampImportedTextCoordinate(primitive.at.x, minX, maxX);
+  const y = clampImportedTextCoordinate(primitive.at.y, minY, maxY);
+
+  if (x === primitive.at.x && y === primitive.at.y) {
+    return primitive;
+  }
+
+  return {
+    ...primitive,
+    at: {
+      x: roundImportedTextCoordinate(x),
+      y: roundImportedTextCoordinate(y),
+    },
+  };
+}
+
 function normalizeImportedPowerText(value?: string) {
-  return value?.trim().toUpperCase().replace(/\s+/g, '') ?? '';
+  return value ? normalizeNetLabelToken(value) : '';
 }
 
 export function isPowerLikeImportedText(value?: string) {
@@ -419,19 +516,13 @@ export function isPowerLikeImportedText(value?: string) {
     return false;
   }
 
-  return (
-    /^(?:AGND|DGND|GND|GNDPWR|PGND|VSS)$/.test(token) ||
-    /^(?:AVCC|VCC|VDD|VDDA|VDDD|VSYS|VIN|VBAT|VBUS)$/.test(token) ||
-    /^\+?(?:1V8|2V5|3V|3V3|3\.3V|5V|9V|12V|24V)$/.test(token) ||
-    token === 'PWR_FLAG'
-  );
+  return isGroundLikeNetLabel(token) || isPowerLikeNetLabel(token) || token === 'PWR_FLAG';
 }
 
 export type ImportedNetLabelKind = 'power' | 'ground' | 'signal';
 
 export function classifyImportedNetLabel(text: string): ImportedNetLabelKind {
-  const normalized = text.trim().toUpperCase();
-  if (['GND', 'GNDPWR', 'AGND', 'DGND', 'PGND', 'VSS'].includes(normalized)) {
+  if (isGroundLikeNetLabel(text)) {
     return 'ground';
   }
   if (isPowerLikeImportedText(text)) {
@@ -512,11 +603,11 @@ export function getImportedTextOverviewOpacity(
   primitive: Extract<ImportedSchematicPrimitive, { kind: 'text' }>
 ) {
   if (primitive.role === 'pin-number') {
-    return 0.18;
+    return 0.54;
   }
 
   if (primitive.role === 'pin-name') {
-    return isLowPriorityImportedPinText(primitive) ? 0.24 : 0.68;
+    return isLowPriorityImportedPinText(primitive) ? 0.62 : 0.78;
   }
 
   if (primitive.role === 'annotation') {
@@ -563,6 +654,201 @@ export function measureImportedTextPrimitiveBox(
     width: textWidth,
     height: textHeight,
   };
+}
+
+function inflateImportedTextBox(
+  box: ImportedTextLayoutBounds,
+  padding: number
+) {
+  return {
+    x: box.x - padding,
+    y: box.y - padding,
+    width: box.width + padding * 2,
+    height: box.height + padding * 2,
+  };
+}
+
+function getImportedTextCollisionPadding(
+  primitive: Extract<ImportedSchematicPrimitive, { kind: 'text' }>
+) {
+  if (primitive.role === 'pin-number') {
+    return 1.2;
+  }
+
+  if (primitive.role === 'pin-name') {
+    return 1.6;
+  }
+
+  return 2;
+}
+
+function getImportedTextCollisionBox(
+  primitive: Extract<ImportedSchematicPrimitive, { kind: 'text' }>
+) {
+  return inflateImportedTextBox(
+    measureImportedTextPrimitiveBox(primitive),
+    getImportedTextCollisionPadding(primitive)
+  );
+}
+
+function getImportedTextOverlapArea(
+  left: ImportedTextLayoutBounds,
+  right: ImportedTextLayoutBounds
+) {
+  const width = Math.max(
+    0,
+    Math.min(left.x + left.width, right.x + right.width) - Math.max(left.x, right.x)
+  );
+  const height = Math.max(
+    0,
+    Math.min(left.y + left.height, right.y + right.height) - Math.max(left.y, right.y)
+  );
+  return width * height;
+}
+
+function getImportedTextOverlapScore(
+  box: ImportedTextLayoutBounds,
+  placedBoxes: ImportedTextLayoutBounds[]
+) {
+  return placedBoxes.reduce(
+    (score, placedBox) => score + getImportedTextOverlapArea(box, placedBox),
+    0
+  );
+}
+
+function getImportedPinTextPlacementCandidates(
+  primitive: Extract<ImportedSchematicPrimitive, { kind: 'text' }>,
+  options: ImportedTextLayoutOptions
+) {
+  const sourceAngle = primitive.originalAngle ?? primitive.angle;
+  const denseSymbol = isDenseImportedSymbol(options);
+  const step = primitive.role === 'pin-number' ? 4.6 : 5.8;
+  const maxRings = denseSymbol ? 18 : 10;
+  const candidates: ImportedSchematicPoint[] = [{ x: 0, y: 0 }];
+
+  for (let ring = 1; ring <= maxRings; ring += 1) {
+    const spread = ring * step;
+    const outward = denseSymbol ? Math.min(2 + ring * 1.1, 13) : Math.min(ring * 0.8, 6);
+
+    if (sourceAngle === 0 || sourceAngle === 180) {
+      const direction = sourceAngle === 180 ? -1 : 1;
+      candidates.push(
+        { x: direction * outward, y: spread },
+        { x: direction * outward, y: -spread },
+        { x: direction * (outward + step), y: spread * 0.5 },
+        { x: direction * (outward + step), y: -spread * 0.5 }
+      );
+    } else {
+      const direction = sourceAngle === 90 ? -1 : 1;
+      candidates.push(
+        { x: spread, y: direction * outward },
+        { x: -spread, y: direction * outward },
+        { x: spread * 0.5, y: direction * (outward + step) },
+        { x: -spread * 0.5, y: direction * (outward + step) }
+      );
+    }
+  }
+
+  return candidates;
+}
+
+function getImportedGeneralTextPlacementCandidates(
+  options: ImportedTextLayoutOptions
+) {
+  const denseSymbol = isDenseImportedSymbol(options);
+  const step = denseSymbol ? 7.2 : 6.2;
+  const maxRings = denseSymbol ? 14 : 9;
+  const directions = [
+    { x: 0, y: -1 },
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+    { x: -1, y: 0 },
+    { x: 1, y: -1 },
+    { x: -1, y: -1 },
+    { x: 1, y: 1 },
+    { x: -1, y: 1 },
+  ];
+  const candidates: ImportedSchematicPoint[] = [{ x: 0, y: 0 }];
+
+  for (let ring = 1; ring <= maxRings; ring += 1) {
+    for (const direction of directions) {
+      candidates.push({
+        x: direction.x * ring * step,
+        y: direction.y * ring * step,
+      });
+    }
+  }
+
+  return candidates;
+}
+
+function getImportedTextPlacementCandidates(
+  primitive: Extract<ImportedSchematicPrimitive, { kind: 'text' }>,
+  options: ImportedTextLayoutOptions
+) {
+  if (primitive.role === 'pin-name' || primitive.role === 'pin-number') {
+    return getImportedPinTextPlacementCandidates(primitive, options);
+  }
+
+  return getImportedGeneralTextPlacementCandidates(options);
+}
+
+function resolveImportedTextCollisionPlacement(
+  primitive: Extract<ImportedSchematicPrimitive, { kind: 'text' }>,
+  placedBoxes: ImportedTextLayoutBounds[],
+  options: ImportedTextLayoutOptions
+) {
+  const basePrimitive = pullImportedPropertyTextNearPrimaryBounds(primitive, options);
+  let bestPrimitive = basePrimitive;
+  let bestScore = Number.POSITIVE_INFINITY;
+
+  for (const candidate of getImportedTextPlacementCandidates(basePrimitive, options)) {
+    const candidatePrimitive = translateImportedTextPrimitive(basePrimitive, candidate);
+    const candidateBox = getImportedTextCollisionBox(candidatePrimitive);
+    const overlapScore = getImportedTextOverlapScore(candidateBox, placedBoxes);
+
+    if (overlapScore === 0) {
+      return candidatePrimitive;
+    }
+
+    const distancePenalty = Math.hypot(candidate.x, candidate.y) * 0.01;
+    const score = overlapScore + distancePenalty;
+    if (score < bestScore) {
+      bestScore = score;
+      bestPrimitive = candidatePrimitive;
+    }
+  }
+
+  return bestPrimitive;
+}
+
+export function layoutImportedTextPrimitivesForReviewOverview(options: {
+  primitives: ImportedSchematicPrimitive[];
+  family?: ImportedSymbolFamily;
+  pinAnchorCount: number;
+  primaryBounds?: ImportedTextLayoutBounds | null;
+  placedTextBoxes?: ImportedTextLayoutBounds[];
+}) {
+  const placedBoxes = options.placedTextBoxes ?? [];
+  const layoutOptions: ImportedTextLayoutOptions = {
+    family: options.family,
+    pinAnchorCount: options.pinAnchorCount,
+    primaryBounds: options.primaryBounds ?? undefined,
+  };
+
+  return options.primitives.map(primitive => {
+    if (primitive.kind !== 'text') {
+      return primitive;
+    }
+
+    const placedPrimitive = resolveImportedTextCollisionPlacement(
+      primitive,
+      placedBoxes,
+      layoutOptions
+    );
+    placedBoxes.push(getImportedTextCollisionBox(placedPrimitive));
+    return placedPrimitive;
+  });
 }
 
 export function shouldShowImportedFallbackBadge(data: ImportedRenderData) {

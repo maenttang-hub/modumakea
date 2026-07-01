@@ -1,4 +1,5 @@
 import type { UnifiedCircuitNetKind, UnifiedCircuitNetMember } from '@/types';
+import { expandPowerNetAliases, isGroundLikeNetLabel, isPowerLikeNetLabel, normalizeNetLabelToken } from '@/lib/net-label-utils';
 import { pointNearSegment } from '@/lib/v3-kicad-parser/geometry/collision';
 import type { Segment } from '@/lib/v3-kicad-parser/geometry/primitives';
 import type { SchematicDomainModel, SchematicPoint } from '@/types/schematic-domain';
@@ -55,62 +56,19 @@ function snapBucketIndex(value: number, toleranceMicrons: number) {
 }
 
 function normalizeSupplyLabel(label: string) {
-  return label.trim().toUpperCase().replace(/^\+/, '');
+  return normalizeNetLabelToken(label);
 }
 
 function isGroundLikeName(label: string) {
-  const normalized = normalizeSupplyLabel(label);
-  return (
-    ['GND', 'AGND', 'DGND', 'PGND', 'GNDPWR', 'GNDREF', 'VSS', 'VSSA'].includes(normalized) ||
-    normalized.includes('GNDPWR')
-  );
+  return isGroundLikeNetLabel(label);
 }
 
 function isPowerLikeName(label: string) {
-  const normalized = normalizeSupplyLabel(label);
-  return (
-    [
-      'VCC',
-      'VDD',
-      'VDDA',
-      'AVCC',
-      'AVDD',
-      'VIN',
-      'VAA',
-      'VPP',
-      'VBUS',
-      'VDC',
-      'VBAT',
-      'VUSB',
-      'VDRIVE',
-      'BATT',
-      'VREF',
-      'VREF+',
-      'VREF-',
-      'VREFH',
-      'VREFL',
-      '3V3',
-      '3.3V',
-      '5V',
-      '12V',
-      '24V',
-    ].includes(normalized) ||
-    /^[+-]?\d+(?:\.\d+)?V$/.test(label.trim().toUpperCase())
-  );
+  return isPowerLikeNetLabel(label);
 }
 
 function expandPowerAliases(label: string) {
-  const trimmed = label.trim();
-  if (!trimmed) {
-    return [];
-  }
-
-  const aliases = [trimmed];
-  const canonical = normalizeSupplyLabel(trimmed);
-  if (canonical && canonical !== trimmed.toUpperCase()) {
-    aliases.push(canonical);
-  }
-  return aliases;
+  return expandPowerNetAliases(label);
 }
 
 function inferNetKind(labels: string[], members: ConnectedPinRef[]): UnifiedCircuitNetKind {
