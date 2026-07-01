@@ -28,6 +28,8 @@ const DEFAULT_DIFF_PAIR_WIDTH_TOLERANCE_MM = 0.03;
 const MAX_TRACK_PAD_CLEARANCE_GROUPS = 120;
 const MAX_TRACK_PAD_CLEARANCE_ITEMS = 6;
 const MAX_VISIBLE_MODUMAKE_PRECHECKS_PER_CODE = 6;
+const MIN_SCHEMATIC_PARITY_REF_OVERLAP_RATIO = 0.2;
+const MIN_SCHEMATIC_PARITY_REFS_FOR_SYNC_GATE = 12;
 
 const MODUMAKE_PRECHECK_ERROR_CODES = new Set([
   'PCB_EMPTY_GEOMETRY',
@@ -55,6 +57,9 @@ const REPRESENTATIVE_LIMITED_PRECHECK_CODES = new Set([
   'PCB_ZONE_CLEARANCE_TRACK',
   'PCB_ZONE_CLEARANCE_VIA',
   'PCB_ZONE_CLEARANCE_ZONE',
+  'PCB_SCHEMATIC_MISSING_FOOTPRINT',
+  'PCB_SCHEMATIC_EXTRA_FOOTPRINT',
+  'PCB_SCHEMATIC_NET_MISSING',
 ]);
 
 const REDUNDANT_PRECHECK_SUMMARY_CODES = new Set([
@@ -1648,6 +1653,26 @@ function expectedSchematicNetNames(context: ImportedPcbSchematicParityContext) {
   return new Set(names.map(name => name.trim()).filter(name => name.length > 0));
 }
 
+function countSetIntersection(first: Set<string>, second: Set<string>) {
+  let count = 0;
+  for (const item of first) {
+    if (second.has(item)) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function shouldTreatSchematicPcbSyncAsUncertain(expectedRefs: Set<string>, pcbRefs: Set<string>) {
+  const comparableRefCount = Math.min(expectedRefs.size, pcbRefs.size);
+  if (comparableRefCount < MIN_SCHEMATIC_PARITY_REFS_FOR_SYNC_GATE) {
+    return false;
+  }
+
+  const overlapCount = countSetIntersection(expectedRefs, pcbRefs);
+  return overlapCount / comparableRefCount < MIN_SCHEMATIC_PARITY_REF_OVERLAP_RATIO;
+}
+
 export function buildImportedPcbSchematicParityKey(context: ImportedPcbSchematicParityContext) {
   return JSON.stringify({
     nets: Array.from(expectedSchematicNetNames(context)).sort(),
@@ -1671,6 +1696,22 @@ function validateSchematicParity(
       .map(footprint => normalizeReference(footprint.reference))
       .filter(reference => reference && !isNonElectricalReference(reference))
   );
+
+  if (shouldTreatSchematicPcbSyncAsUncertain(expectedRefs, pcbRefs)) {
+    const overlapCount = countSetIntersection(expectedRefs, pcbRefs);
+    issues.push(makeIssue({
+      severity: 'warning',
+      code: 'PCB_SCHEMATIC_SYNC_UNCERTAIN',
+      title: '회로도와 PCB 매칭 신뢰가 낮습니다',
+      message: `회로도 부품 참조 ${expectedRefs.size}개와 PCB footprint 참조 ${pcbRefs.size}개 중 공통 참조가 ${overlapCount}개뿐이라 개별 missing/extra 판정은 숨겼습니다.`,
+      recommendation: '같은 리비전의 .kicad_sch와 .kicad_pcb인지 확인하고, KiCad의 Update PCB from Schematic 이후 다시 비교해 주세요.',
+      items: [
+        { description: `회로도 참조 예: ${Array.from(expectedRefs).slice(0, 6).join(', ')}` },
+        { description: `PCB 참조 예: ${Array.from(pcbRefs).slice(0, 6).join(', ')}` },
+      ],
+    }, index++));
+    return;
+  }
 
   for (const reference of expectedRefs) {
     if (!pcbRefs.has(reference)) {

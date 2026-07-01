@@ -16,6 +16,7 @@ import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
 import { createProjectDocument, normalizeProjectDocument } from '@/store/project-document';
 import { buildDefaultProjectState } from '@/store/store-defaults';
 import { DEFAULT_BOARD_ID, DEFAULT_PROJECT_NAME, POWER_INPUT_MODES, PROJECT_FILE_VERSION } from '@/store/store-config';
+import { makeComponent } from './test-fixtures.ts';
 
 const FAIL_PROJECT = '/Users/gimdong-il/Desktop/프로그램/modumake/pydrc/test-projects/fail-project/fail-project.kicad_pcb';
 const GOOD_PROJECT = '/Users/gimdong-il/Desktop/프로그램/modumake/pydrc/test-projects/good-project/good-project.kicad_pcb';
@@ -123,6 +124,37 @@ const REPEATED_TRACK_PAD_CLEARANCE_PROJECT = `
   (segment (start -1 -0.05) (end 1 -0.05) (width 0.2) (layer "F.Cu") (net 2))
 )
 `;
+
+function buildReferenceMismatchPcb(referencePrefix: string, count: number) {
+  const nets = Array.from({ length: count }, (_, index) => `  (net ${index + 1} "PCB_NET_${index + 1}")`).join('\n');
+  const footprints = Array.from({ length: count }, (_, index) => {
+    const ref = `${referencePrefix}${index + 1}`;
+    const x = 2 + index * 1.5;
+    return `
+  (footprint "Test:R" (layer "F.Cu") (at ${x} 5)
+    (fp_text reference "${ref}" (at 0 0) (layer "F.SilkS") (effects (font (size 1 1))))
+    (fp_text value "R" (at 0 1) (layer "F.Fab") (effects (font (size 1 1))))
+    (pad "1" smd rect (at -0.3 0) (size 0.5 0.5) (layers "F.Cu" "F.Mask") (net ${index + 1} "PCB_NET_${index + 1}"))
+    (pad "2" smd rect (at 0.3 0) (size 0.5 0.5) (layers "F.Cu" "F.Mask") (net 0 ""))
+  )`;
+  }).join('\n');
+
+  return `
+(kicad_pcb
+  (version 20240101)
+  (generator modumake-test)
+  (layers
+    (0 "F.Cu" signal)
+    (36 "F.Mask" user)
+    (44 "Edge.Cuts" user)
+  )
+  (setup (trace_clearance 0.2))
+${nets}
+  (gr_rect (start 0 0) (end ${count * 1.5 + 4} 10) (layer "Edge.Cuts") (width 0.15))
+${footprints}
+)
+`;
+}
 
 test('parseKiCadPcb extracts core board geometry from KiCad 5 module files', async () => {
   const source = await readFile(FAIL_PROJECT, 'utf8');
@@ -269,6 +301,35 @@ test('effective PCB validation refreshes stale schematic parity context', () => 
   assert.equal(effectiveValidation?.issues.some(issue => issue.code === 'PCB_SCHEMATIC_NET_MISSING' && issue.netName === 'MISSING_NET'), false);
   assert.equal(effectiveValidation?.checks.schematicParity, true);
   assert.ok(effectiveValidation?.checks.schematicParityContextKey);
+});
+
+test('schematic parity summarizes large reference mismatches instead of flooding missing items', () => {
+  const document = parseKiCadPcb(buildReferenceMismatchPcb('U', 20), { sourceFilename: 'reference-mismatch.kicad_pcb' });
+  const components = Array.from({ length: 20 }, (_, index) => ({
+    ...makeComponent({
+      instanceId: `schematic-r-${index + 1}`,
+      templateId: 'tpl_resistor',
+      name: `R${index + 1}`,
+      assignedPins: {
+        '1': `SCHEMATIC_NET_${index + 1}`,
+        '2': 'GND',
+      },
+    }),
+    importedReference: `R${index + 1}`,
+  }));
+  const report = validateImportedPcbDocument(document, {
+    schematicParity: {
+      components,
+      manualConnections: [],
+      importedSchematicScene: null,
+    },
+  });
+  const codes = new Set(report.issues.map(issue => issue.code));
+
+  assert.ok(codes.has('PCB_SCHEMATIC_SYNC_UNCERTAIN'));
+  assert.equal(codes.has('PCB_SCHEMATIC_MISSING_FOOTPRINT'), false);
+  assert.equal(codes.has('PCB_SCHEMATIC_EXTRA_FOOTPRINT'), false);
+  assert.equal(codes.has('PCB_SCHEMATIC_NET_MISSING'), false);
 });
 
 test('KiCad PCB DRC mapping keeps official source mode metadata', () => {

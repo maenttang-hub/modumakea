@@ -169,8 +169,8 @@ function reviewGroupCountLabel(group: ImportedPcbReviewGroup, language: AppLangu
   const visibleCount = Math.max(0, group.visibleIssueCount);
   if (group.hiddenCandidateCount > 0) {
     return language === 'ko'
-      ? `대표 ${visibleCount} · 숨김 ${group.hiddenCandidateCount}`
-      : `${visibleCount} shown · ${group.hiddenCandidateCount} hidden`;
+      ? `대표 ${visibleCount} · 반복 후보 묶음`
+      : `${visibleCount} shown · repeated candidates grouped`;
   }
 
   return language === 'ko' ? `${visibleCount}건` : `${visibleCount} items`;
@@ -660,7 +660,6 @@ export function ImportedPcbViewer({
   const zoomLabel = `${Math.round((baseViewBox.width / activeViewBox.width) * 100)}%`;
   const selectedIssue = validation?.issues.find(issue => issue.id === selectedIssueId) ?? null;
   const kicadDrcIssueCount = countIssuesBySource(validation, 'kicad-cli');
-  const modumakePrecheckIssueCount = countIssuesBySource(validation, 'modumake-pcb');
   const hasKiCadDrc = Boolean(validation?.checks.kicadDrc || kicadDrcIssueCount > 0);
   const reviewGroups = useMemo(() => buildImportedPcbReviewGroups(validation), [validation]);
   const reviewComparison = useMemo(() => buildImportedPcbReviewComparison(validation), [validation]);
@@ -905,11 +904,11 @@ export function ImportedPcbViewer({
           <div className="font-semibold text-[#3f342c]">
             {hasKiCadDrc
               ? language === 'ko'
-                ? `KiCad DRC ${kicadDrcIssueCount}개 · 사전점검 ${modumakePrecheckIssueCount}개`
-                : `${kicadDrcIssueCount} KiCad DRC · ${modumakePrecheckIssueCount} pre-checks`
+                ? `KiCad DRC ${kicadDrcIssueCount}개 · ModuMake 묶음 ${reviewComparison.precheckGroups.length}개`
+                : `${kicadDrcIssueCount} KiCad DRC · ${reviewComparison.precheckGroups.length} ModuMake groups`
               : language === 'ko'
-                ? `ModuMake 대표 사전점검 ${validation.issueCount}개 · 검토 필요`
-                : `${validation.issueCount} representative ModuMake pre-checks`}
+                ? `ModuMake 검토 묶음 ${reviewGroups.length}개 · 대표 위치 ${validation.issueCount}개`
+                : `${reviewGroups.length} ModuMake groups · ${validation.issueCount} representative locations`}
           </div>
           {!hasKiCadDrc ? (
             <div className="mt-0.5 text-[10px] text-[#8d8074]">

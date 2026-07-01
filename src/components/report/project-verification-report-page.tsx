@@ -267,6 +267,17 @@ function formatPcbSourceCounts(
   );
 }
 
+function formatModuMakePcbReviewCounts(
+  groupCount: number,
+  representativeCount: number,
+  t: (ko: string, en: string) => string
+) {
+  return t(
+    `검토 묶음 ${groupCount}개 · 대표 위치 ${representativeCount}개`,
+    `${groupCount} review groups · ${representativeCount} representative locations`
+  );
+}
+
 function kicadDrcModeLabel(
   mode: ImportedPcbValidationReport['checks']['kicadDrcMode'],
   t: (ko: string, en: string) => string
@@ -299,8 +310,8 @@ function formatPcbReviewGroupCount(
 ) {
   if (group.hiddenCandidateCount > 0) {
     return t(
-      `대표 ${group.visibleIssueCount} · 숨김 ${group.hiddenCandidateCount}`,
-      `${group.visibleIssueCount} shown · ${group.hiddenCandidateCount} hidden`
+      `대표 ${group.visibleIssueCount} · 반복 후보 묶음`,
+      `${group.visibleIssueCount} shown · repeated candidates grouped`
     );
   }
 
@@ -916,7 +927,11 @@ export function ProjectVerificationReportPage() {
                     <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('ModuMake 자체 PCB 검사', 'ModuMake PCB pre-check')}</div>
                     <div className="mt-1 text-[11px] leading-5 text-[#6b5d50]">{modumakePcbReviewHelpText(t)}</div>
                     <div className="mt-2 text-[12px] font-semibold leading-6 text-[#3d332c]">
-                      {formatPcbSourceCounts(pcbSourceStats.modumake, t)}
+                      {formatModuMakePcbReviewCounts(
+                        pcbReviewComparison.precheckGroups.length,
+                        pcbSourceStats.modumake.total,
+                        t
+                      )}
                     </div>
                   </div>
                   <div className="px-4 py-3">
