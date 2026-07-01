@@ -119,3 +119,25 @@ Do not do yet:
 - Do not split `circuit-netlist.ts`, `kicad-sch-parser.ts`, or `datasheet-rules.ts`.
 - Do not add a large batch of new rules before this baseline is stable.
 - Do not market ModuMake as a replacement for KiCad DRC.
+
+## 2026-07-01 PCB Review Feedback Follow-Up
+
+PCB review items can now be marked from the PCB viewer as `의도한 설계` or `오탐/숨김`. These decisions are saved with the workspace, reflected in the active PCB viewer counts, and excluded from the verification report issue list. The purpose is public-beta noise control: ModuMake cannot know every designer intent, so review-only findings must be easy to remove from the working set without deleting the underlying board data.
+
+If beta telemetry is enabled, this flow records the feedback outcome only. It does not send the full issue key, component text, or PCB source-derived detail.
+
+Verification:
+
+- `npm run lint -- src/lib/issue-feedback.ts src/lib/review-focus.ts src/lib/imported-pcb-audit-issues.ts src/components/app/home-shell.tsx src/components/dashboard/imported-pcb-viewer.tsx src/components/dashboard/pcb-workspace.tsx src/components/report/project-verification-report-page.tsx src/components/dashboard/validation-panel.tsx tests/issue-feedback.test.ts tests/e2e/editor-report-smoke.spec.ts`: passed
+- `node --test --experimental-strip-types --import ./tests/register-alias-loader.mjs ./tests/issue-feedback.test.ts ./tests/imported-pcb-parser.test.ts ./tests/project-verification-report.test.ts ./tests/ui-state-coverage.test.ts`: 28/28 passed
+- `npm run test:e2e -- tests/e2e/editor-report-smoke.spec.ts`: 10/10 passed
+- `npm run test:import-render -- --output=tmp/chrome-render-audit/pcb-review-feedback-50`: 50/50 passed, DOM issues 0
+- `node --experimental-strip-types --import ./tests/register-alias-loader.mjs ./tmp/consistency-audit-30.ts`: 30/30 passed
+- `npm run test:validation:baseline`: 260 pass / 3 skip / 0 fail
+- `npm run build`: passed
+- `npm run product:preflight`: passed with the expected non-production strict-mode reminder
+
+Remaining public-beta risk:
+
+- This reduces visible noise after user review; it does not prove that every ModuMake PCB pre-check is correct.
+- Public beta should still track false-positive rate from real user files and use repeated feedback to tune rules.

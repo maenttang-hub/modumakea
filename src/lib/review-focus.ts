@@ -1,4 +1,5 @@
 import type { WarningSeverity } from '@/types';
+import { sanitizePlainText } from '@/lib/security-input';
 
 export const REVIEW_FOCUS_EVENT = 'modumake:review-focus';
 
@@ -46,7 +47,7 @@ export type ReviewFocusTarget =
   | null;
 
 export function buildReviewIssueKey(detail: ReviewIssueLocator) {
-  return [
+  return sanitizePlainText([
     detail.code ?? '',
     detail.componentName ?? '',
     detail.boardPin ?? '',
@@ -55,7 +56,7 @@ export function buildReviewIssueKey(detail: ReviewIssueLocator) {
     detail.ruleId ?? '',
     detail.title ?? '',
     detail.message ?? '',
-  ].join('::');
+  ].join('::'), { maxLength: 240 });
 }
 
 export function resolveReviewFocusTarget(

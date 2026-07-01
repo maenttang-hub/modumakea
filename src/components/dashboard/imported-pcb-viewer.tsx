@@ -7,6 +7,8 @@ import {
   countImportedPcbReviewGroupImpacts,
   type ImportedPcbReviewGroup,
 } from '@/lib/imported-pcb-review-groups';
+import { buildImportedPcbAuditIssueKey } from '@/lib/imported-pcb-audit-issues';
+import { getValidationReviewDecisionBadges, shouldHideIssueForReviewDecision } from '@/lib/issue-feedback';
 import { pickLanguage } from '@/lib/ui-language';
 import type {
   AppLanguage,
@@ -17,6 +19,8 @@ import type {
   ImportedPcbValidationIssue,
   ImportedPcbValidationReport,
   ImportedPcbZone,
+  ValidationReviewDecision,
+  ValidationReviewPrimaryStatus,
 } from '@/types';
 import { ChevronDown, ChevronUp, Eye, EyeOff, Layers3, Minus, Plus, Scan } from 'lucide-react';
 
@@ -190,6 +194,22 @@ function reviewGroupImpactLabel(group: ImportedPcbReviewGroup, language: AppLang
   return language === 'ko' ? '참고' : 'Info';
 }
 
+function reviewDecisionBadgeLabel(status: ReturnType<typeof getValidationReviewDecisionBadges>[number], language: AppLanguage) {
+  if (status === 'fixed') {
+    return language === 'ko' ? '수정 완료' : 'Resolved';
+  }
+  if (status === 'already-handled') {
+    return language === 'ko' ? '의도한 설계' : 'Intended';
+  }
+  if (status === 'false-positive') {
+    return language === 'ko' ? '오탐/숨김' : 'False positive';
+  }
+  if (status === 'included-in-module') {
+    return language === 'ko' ? '모듈 포함' : 'Module included';
+  }
+  return language === 'ko' ? '데이터시트 확인' : 'Datasheet checked';
+}
+
 function reviewGroupImpactCounts(groups: ImportedPcbReviewGroup[]) {
   return countImportedPcbReviewGroupImpacts(groups);
 }
@@ -319,6 +339,13 @@ function countIssuesBySource(
   source: 'kicad-cli' | 'modumake-pcb'
 ) {
   return validation?.issues.filter(issue => issue.source === source).length ?? 0;
+}
+
+function countIssuesBySeverity(
+  issues: ImportedPcbValidationIssue[],
+  severity: ImportedPcbValidationIssue['severity']
+) {
+  return issues.filter(issue => issue.severity === severity).length;
 }
 
 function pathForArc(graphic: Extract<ImportedPcbGraphic, { kind: 'arc' }>) {
@@ -627,12 +654,16 @@ export function ImportedPcbViewer({
   validation,
   selectedIssueId,
   onSelectIssue,
+  reviewDecisions = {},
+  onSetReviewDecision,
   language = 'ko',
 }: {
   document: ImportedPcbDocument;
   validation: ImportedPcbValidationReport | null;
   selectedIssueId?: string | null;
   onSelectIssue?: (issueId: string | null) => void;
+  reviewDecisions?: Record<string, ValidationReviewDecision>;
+  onSetReviewDecision?: (issueKey: string, decision: ValidationReviewDecision | null) => void;
   language?: AppLanguage;
 }) {
   const t = (ko: string, en: string) => pickLanguage(language, { ko, en });
@@ -701,13 +732,31 @@ export function ImportedPcbViewer({
   const viewBox = viewBoxToString(activeViewBox);
   const zoomLabel = `${Math.round((baseViewBox.width / activeViewBox.width) * 100)}%`;
   const selectedIssue = validation?.issues.find(issue => issue.id === selectedIssueId) ?? null;
-  const kicadDrcIssueCount = countIssuesBySource(validation, 'kicad-cli');
+  const selectedIssueKey = selectedIssue ? buildImportedPcbAuditIssueKey(selectedIssue) : null;
+  const selectedIssueDecision = selectedIssueKey ? reviewDecisions[selectedIssueKey] : undefined;
+  const activeValidation = useMemo(() => {
+    if (!validation) {
+      return null;
+    }
+    const issues = validation.issues.filter(issue =>
+      !shouldHideIssueForReviewDecision(reviewDecisions[buildImportedPcbAuditIssueKey(issue)])
+    );
+    return {
+      ...validation,
+      issues,
+      issueCount: issues.length,
+      errorCount: countIssuesBySeverity(issues, 'error'),
+      warningCount: countIssuesBySeverity(issues, 'warning'),
+      infoCount: countIssuesBySeverity(issues, 'info'),
+    };
+  }, [reviewDecisions, validation]);
+  const kicadDrcIssueCount = countIssuesBySource(activeValidation, 'kicad-cli');
   const hasKiCadDrc = Boolean(validation?.checks.kicadDrc || kicadDrcIssueCount > 0);
-  const reviewGroups = useMemo(() => buildImportedPcbReviewGroups(validation), [validation]);
-  const reviewComparison = useMemo(() => buildImportedPcbReviewComparison(validation), [validation]);
+  const reviewGroups = useMemo(() => buildImportedPcbReviewGroups(activeValidation), [activeValidation]);
+  const reviewComparison = useMemo(() => buildImportedPcbReviewComparison(activeValidation), [activeValidation]);
   const hasReviewDetailContent = reviewComparison.hasOfficialDrc || reviewGroups.length > 0;
   const issueMarkerState = useMemo(() => {
-    const issues = validation?.issues.filter(issue => issue.at) ?? [];
+    const issues = activeValidation?.issues.filter(issue => issue.at) ?? [];
     const selectedMarker = selectedIssueId
       ? issues.find(issue => issue.id === selectedIssueId)
       : null;
@@ -729,7 +778,7 @@ export function ImportedPcbViewer({
       total: issues.length,
       hidden: Math.max(0, issues.length - visible.length),
     };
-  }, [selectedIssueId, validation]);
+  }, [activeValidation, selectedIssueId]);
 
   const toggleLayer = (layer: string) => {
     setVisibleLayers(current => {
@@ -759,6 +808,21 @@ export function ImportedPcbViewer({
   };
   const handleFitView = () => {
     setZoomViewBox(() => baseViewBox);
+  };
+  const setSelectedIssueDecision = (primary: ValidationReviewPrimaryStatus) => {
+    if (!selectedIssueKey) {
+      return;
+    }
+    onSetReviewDecision?.(selectedIssueKey, {
+      ...(selectedIssueDecision ?? { flags: [] }),
+      primary,
+    });
+  };
+  const clearSelectedIssueDecision = () => {
+    if (!selectedIssueKey) {
+      return;
+    }
+    onSetReviewDecision?.(selectedIssueKey, null);
   };
   const handleWheel = (event: WheelEvent<SVGSVGElement>) => {
     event.preventDefault();
@@ -932,7 +996,7 @@ export function ImportedPcbViewer({
         ) : null}
       </div>
 
-      {validation && validation.issueCount > 0 ? (
+      {activeValidation && activeValidation.issueCount > 0 ? (
         <div
           data-testid="imported-pcb-issue-summary"
           className={`absolute right-3 z-10 rounded-[10px] border border-[#e6dfd4] bg-[#fffdfa]/94 px-3 py-2 text-[11px] leading-5 text-[#4e4238] shadow-sm backdrop-blur ${
@@ -1038,6 +1102,45 @@ export function ImportedPcbViewer({
           {selectedIssue.at ? (
             <div className="mt-1 text-[10px] text-[#8d8074]">
               {t('위치', 'Location')}: {selectedIssue.at.x.toFixed(3)}, {selectedIssue.at.y.toFixed(3)} mm
+            </div>
+          ) : null}
+          {getValidationReviewDecisionBadges(selectedIssueDecision).length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {getValidationReviewDecisionBadges(selectedIssueDecision).map(status => (
+                <span
+                  key={status}
+                  className="rounded-full bg-[#eef6ef] px-2 py-0.5 text-[10px] font-semibold text-[#34764a]"
+                >
+                  {reviewDecisionBadgeLabel(status, language)}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {onSetReviewDecision ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setSelectedIssueDecision('already-handled')}
+                className="h-7 rounded-[7px] border border-[#d8e7da] bg-[#f8fff9] px-2 text-[10px] font-semibold text-[#34764a]"
+              >
+                {t('의도한 설계', 'Intended')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedIssueDecision('false-positive')}
+                className="h-7 rounded-[7px] border border-[#efe1d4] bg-[#fffaf4] px-2 text-[10px] font-semibold text-[#93653c]"
+              >
+                {t('오탐/숨김', 'False positive')}
+              </button>
+              {selectedIssueDecision ? (
+                <button
+                  type="button"
+                  onClick={clearSelectedIssueDecision}
+                  className="h-7 rounded-[7px] border border-[#e4dbcf] bg-white px-2 text-[10px] font-semibold text-[#6b5d51]"
+                >
+                  {t('표시 복원', 'Restore')}
+                </button>
+              ) : null}
             </div>
           ) : null}
         </div>

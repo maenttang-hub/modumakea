@@ -720,7 +720,7 @@ export function ValidationPanel() {
           <section className="rounded-[18px] border border-[#dde8dd] bg-[#fbfffb] px-4 py-8 text-center">
             <div className="text-[16px] font-semibold text-[#34764a]">{t('열린 검토 항목이 없습니다.', 'No open review items.')}</div>
             <div className="mt-2 text-[11px] leading-5 text-[#6d7c6f]">
-              {t('수정 완료 또는 오탐 처리된 항목을 제외하면 현재 추가 검토가 필요하지 않습니다.', 'After fixed or false-positive actions, there are no remaining review items.')}
+              {t('수정 완료, 의도한 설계, 오탐 처리된 항목을 제외하면 현재 추가 검토가 필요하지 않습니다.', 'After resolved, intended, or false-positive actions, there are no remaining review items.')}
             </div>
           </section>
         ) : null}

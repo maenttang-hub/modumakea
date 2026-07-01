@@ -70,6 +70,23 @@ async function readCount(page: Page, testId: string) {
   return value;
 }
 
+async function readStoredReviewDecisionCount(page: Page) {
+  return page.evaluate((workspaceKey) => {
+    const raw = window.localStorage.getItem(workspaceKey);
+    if (!raw) {
+      return 0;
+    }
+
+    const parsed = JSON.parse(raw) as {
+      state?: {
+        validationReviewDecisions?: Record<string, unknown>;
+      };
+    };
+
+    return Object.keys(parsed.state?.validationReviewDecisions ?? {}).length;
+  }, workspaceStorageKey);
+}
+
 function titleBarFileButton(page: Page, label: string) {
   return page.locator('header button').filter({ hasText: label }).first();
 }
@@ -266,6 +283,19 @@ test('editor shows imported PCB zoom controls and changes the board view', async
   await expect(pcbSvg).toBeVisible({ timeout: 15000 });
   await expect(page.getByTestId('pcb-workspace-top-controls')).toContainText('확정 오류 없음');
   await expect(page.getByTestId('imported-pcb-issue-summary')).toContainText('KiCad 공식 DRC는 아직 실행되지 않았습니다.');
+  await page.getByTestId('imported-pcb-toggle-review-details').click();
+  const countAffectingReviewGroup = page
+    .getByTestId('imported-pcb-review-group')
+    .filter({ hasText: /필수 확인|확인 필요/ })
+    .first();
+  if (await countAffectingReviewGroup.count()) {
+    await countAffectingReviewGroup.click();
+  } else {
+    await page.getByTestId('imported-pcb-review-group').first().click();
+  }
+  await expect(page.getByTestId('imported-pcb-selected-issue')).toBeVisible();
+  await page.getByTestId('imported-pcb-selected-issue').getByRole('button', { name: '의도한 설계' }).click();
+  await expect(page.getByTestId('imported-pcb-selected-issue')).toContainText('의도한 설계');
   await expect(page.getByTestId('imported-pcb-zoom-controls')).toBeVisible();
   await expect(zoomLabel).toHaveText('100%');
   await expect.poll(() => readImportedPcbLayerStates(page)).toMatchObject({
@@ -304,6 +334,12 @@ test('editor and report show matching imported PCB validation counts', async ({ 
   await page.getByTestId('imported-pcb-toggle-review-details').click();
   await expect(page.getByTestId('imported-pcb-review-groups')).toBeVisible();
   await expect(page.getByTestId('imported-pcb-review-group').first()).toBeVisible();
+
+  await page.getByTestId('imported-pcb-review-group').first().click();
+  await expect(page.getByTestId('imported-pcb-selected-issue')).toBeVisible();
+  await page.getByTestId('imported-pcb-selected-issue').getByRole('button', { name: '오탐/숨김' }).click();
+  await expect(page.getByTestId('imported-pcb-selected-issue')).toContainText('오탐/숨김');
+  await expect.poll(() => readStoredReviewDecisionCount(page)).toBe(1);
 
   const editorCounts = {
     error: await readCount(page, 'editor-error-count'),

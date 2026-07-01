@@ -26,6 +26,7 @@
 - [ ] 공유 허가가 있는 외부 사용자 KiCad 파일 10개 이상 확보
 - [ ] 큰 회로도에서 `읽기 보기` 버튼으로 글자가 읽히는지 확인
 - [ ] PCB 화면에서 검토 묶음이 기본 요약 상태로 보이고, 펼쳤을 때 공식 DRC/보조 검토가 분리되는지 확인
+- [ ] PCB 검토 항목을 `의도한 설계` 또는 `오탐/숨김`으로 표시했을 때 화면 카운트와 보고서에서 빠지는지 확인
 
 ## 릴리즈 기록 양식
 
@@ -47,6 +48,7 @@ Report export rate:
 False-positive rate:
 Top import failures:
 Top issue feedback:
+False-positive / intended marks:
 Official KiCad DRC:
 External file count:
 Feedback channel:

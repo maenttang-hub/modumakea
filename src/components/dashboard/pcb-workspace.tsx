@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ImportedPcbViewer } from '@/components/dashboard/imported-pcb-viewer';
 import { getBoardById } from '@/constants/boards';
 import { getTemplateById } from '@/constants/component-templates';
+import { recordBetaEvent } from '@/lib/beta-telemetry';
 import { runProjectStageDrc } from '@/lib/drc-engine';
 import { buildEffectiveImportedPcbValidation } from '@/lib/effective-imported-pcb-validation';
 import {
@@ -294,6 +295,8 @@ export function PcbWorkspace() {
     setImportedPcbValidation,
     clearImportedPcbDocument,
     setWorkspaceMode,
+    validationReviewDecisions,
+    setValidationReviewDecision,
     appLanguage,
   } = useBoardStore();
   const t = (ko: string, en: string) => pickLanguage(appLanguage, { ko, en });
@@ -461,6 +464,16 @@ export function PcbWorkspace() {
           validation={effectiveImportedPcbValidation}
           selectedIssueId={selectedPcbIssueId}
           onSelectIssue={setSelectedPcbIssueId}
+          reviewDecisions={validationReviewDecisions}
+          onSetReviewDecision={(issueKey, decision) => {
+            setValidationReviewDecision(issueKey, decision);
+            recordBetaEvent({
+              name: 'issue_feedback_updated',
+              source: 'pcb-viewer',
+              route: '/editor',
+              outcome: decision?.primary ?? 'cleared',
+            });
+          }}
           language={appLanguage}
         />
       ) : (

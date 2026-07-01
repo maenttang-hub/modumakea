@@ -5,6 +5,7 @@ import type {
   ProjectAuditIssueConfidence,
 } from '@/types';
 import { classifyImportedPcbReviewImpact } from '@/lib/imported-pcb-review-policy';
+import { buildReviewIssueKey } from '@/lib/review-focus';
 
 function confidenceForPcbIssue(issue: ImportedPcbValidationIssue): ProjectAuditIssueConfidence {
   if (issue.source === 'kicad-cli') {
@@ -73,6 +74,18 @@ export function isImportedPcbAuditIssue(issue: ProjectAuditIssue) {
 export function getImportedPcbIssueId(issue: ProjectAuditIssue) {
   const value = issue.params?.pcbIssueId;
   return typeof value === 'string' ? value : null;
+}
+
+export function buildImportedPcbAuditIssueKey(issue: ImportedPcbValidationIssue) {
+  const code = `pcb.${issue.code}`;
+  return buildReviewIssueKey({
+    code,
+    ruleId: code,
+    componentName: issue.footprintRef,
+    operation: issue.layer,
+    title: issue.title,
+    message: issue.message,
+  });
 }
 
 export function mapImportedPcbValidationIssuesToProjectAuditIssues(

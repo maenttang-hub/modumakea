@@ -70,11 +70,13 @@ export function normalizeValidationReviewDecision(value: unknown): ValidationRev
 }
 
 export function shouldHideIssueForReviewDecision(decision?: ValidationReviewDecision | null) {
-  return decision?.primary === 'fixed' || decision?.primary === 'false-positive';
+  return decision?.primary === 'fixed' ||
+    decision?.primary === 'already-handled' ||
+    decision?.primary === 'false-positive';
 }
 
 export function shouldToneDownIssueForReviewDecision(decision?: ValidationReviewDecision | null) {
-  return decision?.primary === 'already-handled' || (decision?.flags.length ?? 0) > 0;
+  return (decision?.flags.length ?? 0) > 0;
 }
 
 export function getValidationReviewDecisionBadges(decision?: ValidationReviewDecision | null): IssueFeedbackStatus[] {

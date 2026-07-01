@@ -41,6 +41,7 @@ import {
 } from '@/lib/import-failure-report';
 import { getProductFeedbackHref } from '@/lib/product-config';
 import { getImportedPcbIssueId, isImportedPcbAuditIssue } from '@/lib/imported-pcb-audit-issues';
+import { shouldHideIssueForReviewDecision } from '@/lib/issue-feedback';
 import { validateImportedPcbDocument } from '@/lib/imported-pcb-validation';
 import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
 import { pickLanguage } from '@/lib/ui-language';
@@ -239,6 +240,7 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
   const saveProjectToBrowser = useBoardStore(state => state.saveProjectToBrowser);
   const serializeProject = useBoardStore(state => state.serializeProject);
   const hydrateProject = useBoardStore(state => state.hydrateProject);
+  const validationReviewDecisions = useBoardStore(state => state.validationReviewDecisions);
   const devScenarioRef = useRef<string | null>(null);
 
   const board = getBoardById(activeBoardId);
@@ -251,7 +253,14 @@ export default function HomeShell({ initialCloudProjectId, initialAppLanguage }:
     () => getVisibleRightTabs(effectiveShellMode, isViewOnly),
     [effectiveShellMode, isViewOnly]
   );
-  const { audit, issues: validationIssues } = useValidationReport();
+  const { audit, issues: rawValidationIssues } = useValidationReport();
+  const validationIssues = useMemo(
+    () => rawValidationIssues.filter(issue => {
+      const key = buildReviewIssueKey(issue);
+      return !shouldHideIssueForReviewDecision(validationReviewDecisions[key]);
+    }),
+    [rawValidationIssues, validationReviewDecisions]
+  );
   const validationSeverityCounts = useMemo(
     () => countIssueSeverities(validationIssues),
     [validationIssues]

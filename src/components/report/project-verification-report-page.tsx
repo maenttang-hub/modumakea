@@ -10,6 +10,7 @@ import { buildEffectiveImportedPcbValidation } from '@/lib/effective-imported-pc
 import { translateEngineIssue } from '@/lib/engine-i18n';
 import { exportReportDocumentAsPdf } from '@/lib/export-report-pdf';
 import { mapImportedPcbValidationIssuesToProjectAuditIssues } from '@/lib/imported-pcb-audit-issues';
+import { shouldHideIssueForReviewDecision } from '@/lib/issue-feedback';
 import {
   buildImportedPcbReviewComparison,
   buildImportedPcbReviewGroups,
@@ -22,6 +23,7 @@ import {
   type IssueSourceBucketInfo,
 } from '@/lib/issue-source-bucket';
 import { pickLanguage } from '@/lib/ui-language';
+import { buildReviewIssueKey } from '@/lib/review-focus';
 import { setRuntimeCustomComponentPackages } from '@/lib/custom-component-registry';
 import { setRuntimeTemplateCache } from '@/lib/template-cache-registry';
 import {
@@ -50,6 +52,7 @@ import type {
   ProjectComponentPowerModes,
   ProjectComponentUnusedPinModes,
   ProjectPowerInputMode,
+  ValidationReviewDecision,
 } from '@/types';
 
 type ActionBucket = ReviewActionBucket;
@@ -68,6 +71,7 @@ type ReportWorkspaceSnapshot = {
   powerInputMode: ProjectPowerInputMode;
   componentPowerModes: ProjectComponentPowerModes;
   componentUnusedPinModes: ProjectComponentUnusedPinModes;
+  validationReviewDecisions: Record<string, ValidationReviewDecision>;
   generatedCode: string;
   footprintPinPadOverrideCache: Record<string, unknown>;
   templateCache: Record<string, ComponentTemplate>;
@@ -431,6 +435,7 @@ function readWorkspaceSnapshot(): ReportWorkspaceSnapshot {
       powerInputMode: defaults.powerInputMode,
       componentPowerModes: defaults.componentPowerModes,
       componentUnusedPinModes: defaults.componentUnusedPinModes,
+      validationReviewDecisions: defaults.validationReviewDecisions,
       generatedCode: defaults.generatedCode,
       footprintPinPadOverrideCache: defaults.footprintPinPadOverrideCache,
       templateCache: defaults.templateCache,
@@ -456,6 +461,7 @@ function readWorkspaceSnapshot(): ReportWorkspaceSnapshot {
       powerInputMode: defaults.powerInputMode,
       componentPowerModes: defaults.componentPowerModes,
       componentUnusedPinModes: defaults.componentUnusedPinModes,
+      validationReviewDecisions: defaults.validationReviewDecisions,
       generatedCode: defaults.generatedCode,
       footprintPinPadOverrideCache: defaults.footprintPinPadOverrideCache,
       templateCache: defaults.templateCache,
@@ -482,6 +488,7 @@ function readWorkspaceSnapshot(): ReportWorkspaceSnapshot {
       powerInputMode: state.powerInputMode ?? defaults.powerInputMode,
       componentPowerModes: state.componentPowerModes ?? defaults.componentPowerModes,
       componentUnusedPinModes: state.componentUnusedPinModes ?? defaults.componentUnusedPinModes,
+      validationReviewDecisions: state.validationReviewDecisions ?? defaults.validationReviewDecisions,
       generatedCode: state.generatedCode ?? defaults.generatedCode,
       footprintPinPadOverrideCache: state.footprintPinPadOverrideCache ?? defaults.footprintPinPadOverrideCache,
       templateCache: state.templateCache ?? defaults.templateCache,
@@ -504,6 +511,7 @@ function readWorkspaceSnapshot(): ReportWorkspaceSnapshot {
       powerInputMode: defaults.powerInputMode,
       componentPowerModes: defaults.componentPowerModes,
       componentUnusedPinModes: defaults.componentUnusedPinModes,
+      validationReviewDecisions: defaults.validationReviewDecisions,
       generatedCode: defaults.generatedCode,
       footprintPinPadOverrideCache: defaults.footprintPinPadOverrideCache,
       templateCache: defaults.templateCache,
@@ -636,7 +644,10 @@ export function ProjectVerificationReportPage() {
     return [
       ...circuitIssues,
       ...mapImportedPcbValidationIssuesToProjectAuditIssues(effectiveImportedPcbValidation),
-    ];
+    ].filter(issue => {
+      const key = buildReviewIssueKey(issue);
+      return !shouldHideIssueForReviewDecision((workspace.validationReviewDecisions ?? {})[key]);
+    });
   }, [audit, effectiveImportedPcbValidation, workspace]);
 
   const verificationReport = useMemo(
