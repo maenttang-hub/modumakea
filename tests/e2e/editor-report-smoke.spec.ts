@@ -345,10 +345,14 @@ test('editor and report separate official KiCad DRC from ModuMake PCB review gro
   await expect(page.getByTestId('imported-pcb-drc-comparison')).toBeVisible({ timeout: 15000 });
   await expect(page.getByTestId('imported-pcb-drc-comparison')).toContainText('공식 DRC');
   await expect(page.getByTestId('imported-pcb-drc-comparison')).toContainText('ModuMake 검토');
+  await expect(page.getByTestId('imported-pcb-source-help')).toContainText('KiCad가 직접 계산한 판정');
+  await expect(page.getByTestId('imported-pcb-source-help')).toContainText('반복 항목을 묶어');
 
   await page.getByRole('button', { name: '분석 보고서 보기' }).click();
   await page.waitForURL('**/report');
   await expect(page.getByTestId('report-pcb-drc-source')).toContainText('공식 결과 우선');
+  await expect(page.getByTestId('report-pcb-drc-source')).toContainText('KiCad가 직접 계산한 공식 판정');
+  await expect(page.getByTestId('report-pcb-drc-source')).toContainText('보조 요약');
   await expect(page.getByTestId('report-pcb-drc-comparison')).toBeVisible();
   await expect(page.getByTestId('report-pcb-drc-comparison')).toContainText('공식 KiCad DRC 상위 항목');
   await expect(page.getByTestId('report-pcb-drc-comparison')).toContainText('ModuMake 검토 그룹');

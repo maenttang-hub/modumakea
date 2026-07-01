@@ -67,7 +67,7 @@ Before public beta:
 
 - Keep the in-app official DRC vs ModuMake comparison visible in both the PCB viewer and the report.
 - Keep the 50-file render gate green after every KiCad import/render change.
-- Add user-facing copy that explains `official DRC`, `ModuMake pre-check`, and `review group` in plain language.
+- Keep the plain-language source copy visible where users compare DRC sources.
 
 ## 2026-07-01 UI Comparison Follow-Up
 
@@ -78,9 +78,20 @@ Verification:
 - `npm run test:e2e -- tests/e2e/editor-report-smoke.spec.ts`: 10/10 passed
 - `npm run test:import-render -- --output=tmp/chrome-render-audit/drc-comparison-ui-50`: 50/50 passed, DOM issues 0
 
+## 2026-07-01 Source Help Text Follow-Up
+
+The PCB viewer and report now include short source explanations:
+
+- Official KiCad DRC: KiCad directly calculated the finding.
+- ModuMake review/pre-check: repeated items are grouped into causes to inspect first.
+
+Verification:
+
+- `npm run test:e2e -- tests/e2e/editor-report-smoke.spec.ts`: 10/10 passed
+- `npm run test:import-render -- --output=tmp/chrome-render-audit/source-help-text-50`: 50/50 passed, DOM issues 0
+
 Remaining before public beta:
 
-- Add clearer user-facing help text for what each source means.
 - Run the same comparison with external beta user files, not only the fixed rusefi sample set.
 - Decide whether official DRC should run automatically after PCB import or remain an explicit button.
 

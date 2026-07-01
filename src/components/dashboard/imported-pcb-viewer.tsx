@@ -175,6 +175,18 @@ function reviewGroupCountLabel(group: ImportedPcbReviewGroup, language: AppLangu
   return language === 'ko' ? `${visibleCount}건` : `${visibleCount} items`;
 }
 
+function officialDrcHelpText(language: AppLanguage) {
+  return language === 'ko'
+    ? 'KiCad가 직접 계산한 판정입니다.'
+    : 'Findings calculated directly by KiCad.';
+}
+
+function modumakeReviewHelpText(language: AppLanguage) {
+  return language === 'ko'
+    ? '반복 항목을 묶어 먼저 볼 원인으로 정리합니다.'
+    : 'Repeated items grouped into causes to inspect first.';
+}
+
 function ReviewGroupButton({
   group,
   language,
@@ -878,6 +890,9 @@ export function ImportedPcbViewer({
           ) : null}
           {reviewComparison.hasOfficialDrc ? (
             <div data-testid="imported-pcb-drc-comparison" className="mt-2">
+              <div className="mb-1.5 text-[10px] leading-4 text-[#8d8074]" data-testid="imported-pcb-source-help">
+                {officialDrcHelpText(language)} {modumakeReviewHelpText(language)}
+              </div>
               <div className={selectedIssue ? 'space-y-2' : 'grid grid-cols-2 gap-2'}>
                 <ReviewComparisonColumn
                   title={language === 'ko' ? '공식 DRC' : 'Official DRC'}

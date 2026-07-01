@@ -307,6 +307,17 @@ function formatPcbReviewGroupCount(
   return t(`${group.visibleIssueCount}건`, `${group.visibleIssueCount} items`);
 }
 
+function officialPcbDrcHelpText(t: (ko: string, en: string) => string) {
+  return t('KiCad가 직접 계산한 공식 판정입니다.', 'Findings calculated directly by KiCad.');
+}
+
+function modumakePcbReviewHelpText(t: (ko: string, en: string) => string) {
+  return t(
+    '반복 항목을 묶어 먼저 볼 원인으로 정리한 보조 요약입니다.',
+    'A support summary that groups repeated items into causes to inspect first.'
+  );
+}
+
 function PcbReviewGroupCard({
   group,
   t,
@@ -889,6 +900,7 @@ export function ProjectVerificationReportPage() {
                 <div className="grid gap-0 md:grid-cols-3">
                   <div className="border-b border-[#e3d7c8] px-4 py-3 md:border-b-0 md:border-r">
                     <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('공식 KiCad DRC', 'Official KiCad DRC')}</div>
+                    <div className="mt-1 text-[11px] leading-5 text-[#6b5d50]">{officialPcbDrcHelpText(t)}</div>
                     <div className="mt-2 text-[12px] font-semibold leading-6 text-[#3d332c]">
                       {pcbSourceStats.hasKiCadDrc
                         ? formatPcbSourceCounts(pcbSourceStats.kicad, t)
@@ -902,6 +914,7 @@ export function ProjectVerificationReportPage() {
                   </div>
                   <div className="border-b border-[#e3d7c8] px-4 py-3 md:border-b-0 md:border-r">
                     <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('ModuMake 자체 PCB 검사', 'ModuMake PCB pre-check')}</div>
+                    <div className="mt-1 text-[11px] leading-5 text-[#6b5d50]">{modumakePcbReviewHelpText(t)}</div>
                     <div className="mt-2 text-[12px] font-semibold leading-6 text-[#3d332c]">
                       {formatPcbSourceCounts(pcbSourceStats.modumake, t)}
                     </div>
