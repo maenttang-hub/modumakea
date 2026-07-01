@@ -56,6 +56,14 @@ export default function PrivacyPage() {
           </ul>
         </section>
 
+        <section className="mt-10 border-t border-[#ded3c5] pt-7">
+          <h2 className="text-lg font-semibold">공식 KiCad DRC 실행</h2>
+          <p className="mt-4 max-w-3xl text-sm leading-7 text-[#5f5448]">
+            PCB 화면에서 공식 KiCad DRC를 직접 실행하면 선택한 `.kicad_pcb` 원문이 서버 임시 폴더로 전송됩니다.
+            서버는 KiCad CLI 검사 결과를 만든 뒤 임시 파일을 삭제하며, 이 경로는 운영 이벤트 수집과 별도로 동작합니다.
+          </p>
+        </section>
+
         <div className="mt-10 flex flex-wrap gap-3">
           <Link
             href="/editor"
@@ -74,4 +82,3 @@ export default function PrivacyPage() {
     </main>
   );
 }
-

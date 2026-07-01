@@ -15,6 +15,13 @@
 - beta telemetry 비활성
 - beta event collection route 비활성
 
+## 공식 KiCad DRC 실행 시 파일 처리
+
+PCB 화면에서 사용자가 공식 KiCad DRC를 직접 실행하면 `.kicad_pcb` 원문을 서버 임시 폴더로 전송한다.
+서버는 KiCad CLI로 DRC JSON을 만든 뒤 임시 파일을 삭제한다.
+이 경로는 beta telemetry와 별개이며, 파일명/경로/원문을 운영 이벤트로 남기지 않는다.
+이 처리를 사용자에게 설명할 수 없다면 제한 베타에서는 공식 DRC 버튼을 숨기거나 비활성화한다.
+
 ## 베타 이벤트 수집을 켤 때
 
 클라이언트:
