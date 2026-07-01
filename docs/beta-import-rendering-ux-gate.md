@@ -43,7 +43,15 @@ Run the 50-file browser rendering gate against a running local editor:
 npm run test:import-render -- --output=tmp/chrome-render-audit/expanded-50-final
 ```
 
-The script manifest covers 25 schematic files and 25 PCB files from the real KiCad sample set. It uploads each file through the browser file input, captures a screenshot, and writes DOM metrics to `report.json`.
+The default sample manifest is `tests/fixtures/kicad-beta-sample-set.json`. It covers 25 schematic files and 25 PCB files from the real KiCad sample set. The script uploads each file through the browser file input, captures a screenshot, and writes DOM metrics to `report.json`.
+
+Run the PCB official DRC comparison baseline:
+
+```bash
+npm run test:pcb-drc-compare -- --output=tmp/kicad-drc-comparison/beta-pcb-review-report.json
+```
+
+That comparison requires `kicad-cli` for official DRC counts. If `kicad-cli` is unavailable, the script still records ModuMake pre-check/group summaries and marks official DRC as skipped. Use `--require-kicad` when the official DRC comparison must be a hard gate.
 
 ## 2026-07-01 Chrome DOM Audit
 
@@ -104,6 +112,14 @@ Follow-up PCB review grouping:
 - Editor and report surfaces show the highest-priority PCB review groups with visible and hidden candidate counts.
 - The grouping layer is an interpretation aid. It does not change the underlying KiCad DRC/pre-check issue records.
 - Verified with `npm run test:import-render -- --output=tmp/chrome-render-audit/pcb-review-groups-50`; result: 50/50 samples passed with zero DOM issues.
+
+Fixed baseline follow-up:
+
+- The 50-file KiCad sample set now lives in `tests/fixtures/kicad-beta-sample-set.json`.
+- Manifest-driven render audit: `tmp/chrome-render-audit/manifest-expanded-50/report.json`; result: 50/50 samples passed with zero DOM issues.
+- Official DRC comparison: `tmp/kicad-drc-comparison/beta-pcb-review-report.json`; result: 25/25 PCB samples completed with KiCad CLI 10.0.3.
+- Across the 25 PCB samples, KiCad official DRC produced 8,119 raw issues, while ModuMake produced 1,124 representative pre-check issues and 138 top review groups.
+- Full baseline summary: `docs/beta-quality-baseline.md`.
 
 ## Non-Goals
 

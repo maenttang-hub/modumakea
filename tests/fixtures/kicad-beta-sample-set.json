@@ -1,0 +1,307 @@
+{
+  "schemaVersion": 1,
+  "sampleSetId": "beta-kicad-import-render-50",
+  "description": "Fixed KiCad sample set for beta import, render, PCB pre-check, and DRC comparison gates.",
+  "samples": [
+    {
+      "id": "sch-a4988",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/A4988_stepper_motor_driver/Motor_driver_A4988.kicad_sch",
+      "category": "motor-driver"
+    },
+    {
+      "id": "sch-cdi",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/CDI-test/CDI-test.kicad_sch",
+      "category": "ignition"
+    },
+    {
+      "id": "sch-gdi-4ch",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/GDI-4ch/GDI-4ch.kicad_sch",
+      "category": "driver"
+    },
+    {
+      "id": "sch-gdi-6ch",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/GDI-6ch/GDI-6ch.kicad_sch",
+      "category": "driver"
+    },
+    {
+      "id": "sch-gdi-stm",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/GDI-STM/GDI-STM.kicad_sch",
+      "category": "controller"
+    },
+    {
+      "id": "sch-ir2302",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/IR2302-testboard/IR2302-testboard.kicad_sch",
+      "category": "driver"
+    },
+    {
+      "id": "sch-l9779-flash",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/L9779WD-breakout/FlashMemory.kicad_sch",
+      "category": "memory"
+    },
+    {
+      "id": "sch-l9779-tle8888",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/L9779WD-breakout/TLE8888-1QK.kicad_sch",
+      "category": "driver"
+    },
+    {
+      "id": "sch-l9779-tle9201",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/L9779WD-breakout/TLE9201SG.kicad_sch",
+      "category": "driver"
+    },
+    {
+      "id": "sch-l9779-adc",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/L9779WD-breakout/adc.kicad_sch",
+      "category": "analog"
+    },
+    {
+      "id": "sch-l9779-hi-lo",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/L9779WD-breakout/hi-lo.kicad_sch",
+      "category": "driver"
+    },
+    {
+      "id": "sch-l9779-micro",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/L9779WD-breakout/micro_rusEFI.kicad_sch",
+      "category": "mcu"
+    },
+    {
+      "id": "sch-l9779-pair",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/L9779WD-breakout/pair.kicad_sch",
+      "category": "connector"
+    },
+    {
+      "id": "sch-l9779-stm32",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/L9779WD-breakout/stm32.kicad_sch",
+      "category": "mcu"
+    },
+    {
+      "id": "sch-lm1949",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/Low-Z_LM1949/LM1949_Driver.kicad_sch",
+      "category": "driver"
+    },
+    {
+      "id": "sch-mc33810",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/MC33810-breakout/MC33810-breakout.kicad_sch",
+      "category": "driver"
+    },
+    {
+      "id": "sch-vr-hall",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/VR-Hall/VR-Hall.kicad_sch",
+      "category": "sensor"
+    },
+    {
+      "id": "sch-zf8hp",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/ZF8HP Transmission/8HPTCUAdapter.kicad_sch",
+      "category": "adapter"
+    },
+    {
+      "id": "sch-frequency-divider",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/frequency-divider/frequency-divider.kicad_sch",
+      "category": "signal"
+    },
+    {
+      "id": "sch-lambda-egt",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/lambda-x2/egt.kicad_sch",
+      "category": "sensor"
+    },
+    {
+      "id": "sch-lambda-main",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/lambda-x2/lambda-x2.kicad_sch",
+      "category": "controller"
+    },
+    {
+      "id": "sch-lambda-lsu",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/lambda-x2/lsu.kicad_sch",
+      "category": "sensor"
+    },
+    {
+      "id": "sch-mini48",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/mini48-stm32/mini48-stm32.kicad_sch",
+      "category": "mcu"
+    },
+    {
+      "id": "sch-quad-igbt",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/quad-igbt/quad-igbt.kicad_sch",
+      "category": "driver"
+    },
+    {
+      "id": "sch-wideband",
+      "type": "schematic",
+      "path": "tests/kicad_samples/rusefi/wideband-F103/wideband_controller.kicad_sch",
+      "category": "controller"
+    },
+    {
+      "id": "pcb-a4988",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/A4988_stepper_motor_driver/Motor_driver_A4988.kicad_pcb",
+      "category": "motor-driver"
+    },
+    {
+      "id": "pcb-cdi",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/CDI-test/CDI-test.kicad_pcb",
+      "category": "ignition"
+    },
+    {
+      "id": "pcb-gdi-4ch",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/GDI-4ch/GDI-4ch.kicad_pcb",
+      "category": "driver"
+    },
+    {
+      "id": "pcb-gdi-6ch",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/GDI-6ch/GDI-6ch.kicad_pcb",
+      "category": "driver"
+    },
+    {
+      "id": "pcb-gdi-stm",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/GDI-STM/GDI-STM.kicad_pcb",
+      "category": "controller"
+    },
+    {
+      "id": "pcb-ir2302",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/IR2302-testboard/IR2302-testboard.kicad_pcb",
+      "category": "driver"
+    },
+    {
+      "id": "pcb-l9779-micro",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/L9779WD-breakout/micro_rusEFI.kicad_pcb",
+      "category": "mcu"
+    },
+    {
+      "id": "pcb-lm1949",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/Low-Z_LM1949/LM1949_Driver.kicad_pcb",
+      "category": "driver"
+    },
+    {
+      "id": "pcb-mc33810",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/MC33810-breakout/MC33810-breakout.kicad_pcb",
+      "category": "driver"
+    },
+    {
+      "id": "pcb-vr-hall",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/VR-Hall/VR-Hall.kicad_pcb",
+      "category": "sensor"
+    },
+    {
+      "id": "pcb-vr-ncv1124",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/VR_ncv1124_test_module/ncv1124.kicad_pcb",
+      "category": "sensor"
+    },
+    {
+      "id": "pcb-zf8hp",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/ZF8HP Transmission/8HPTCUAdapter.kicad_pcb",
+      "category": "adapter"
+    },
+    {
+      "id": "pcb-frequency-divider",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/frequency-divider/frequency-divider.kicad_pcb",
+      "category": "signal"
+    },
+    {
+      "id": "pcb-lambda-main",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/lambda-x2/lambda-x2.kicad_pcb",
+      "category": "controller"
+    },
+    {
+      "id": "pcb-mini48",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/mini48-stm32/mini48-stm32.kicad_pcb",
+      "category": "mcu"
+    },
+    {
+      "id": "pcb-quad-igbt",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/quad-igbt/quad-igbt.kicad_pcb",
+      "category": "driver"
+    },
+    {
+      "id": "pcb-superseal-igbt",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/superseal-igbt/superseal-igbt.kicad_pcb",
+      "category": "driver"
+    },
+    {
+      "id": "pcb-tle9104",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/tle9104-breakout/tle9104-breakout.kicad_pcb",
+      "category": "driver"
+    },
+    {
+      "id": "pcb-wideband",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/wideband-F103/wideband_controller.kicad_pcb",
+      "category": "controller"
+    },
+    {
+      "id": "pcb-classic-inj-12ch",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/classic-designs/1A_injector_12-channels/inj_12ch.kicad_pcb",
+      "category": "legacy-driver"
+    },
+    {
+      "id": "pcb-classic-inj-6ch",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/classic-designs/1A_injector_6-channels/inj_6ch.kicad_pcb",
+      "category": "legacy-driver"
+    },
+    {
+      "id": "pcb-classic-5v-regulator",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/classic-designs/5V-regulator/PWR_5V_linear.kicad_pcb",
+      "category": "legacy-power"
+    },
+    {
+      "id": "pcb-classic-a4988",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/classic-designs/A4988_stepper_motor_driver/stepper_motor_driver.kicad_pcb",
+      "category": "legacy-motor-driver"
+    },
+    {
+      "id": "pcb-classic-vn750",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/classic-designs/HighSideSwitch/VN750PS_E.kicad_pcb",
+      "category": "legacy-driver"
+    },
+    {
+      "id": "pcb-classic-adc-divider",
+      "type": "pcb",
+      "path": "tests/kicad_samples/rusefi/classic-designs/adc_amp_divider/adc_amp_divider.kicad_pcb",
+      "category": "legacy-analog"
+    }
+  ]
+}

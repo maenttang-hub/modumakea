@@ -37,6 +37,7 @@
     "test:validation:baseline": "bash ./scripts/ci-validation-baseline.sh",
     "test:validation:extended": "bash ./scripts/ci-validation-extended.sh",
     "test:import-render": "node ./scripts/audit-import-rendering.mjs",
+    "test:pcb-drc-compare": "node --experimental-strip-types --import ./tests/register-alias-loader.mjs ./scripts/audit-pcb-drc-comparison.ts",
     "product:preflight": "node --experimental-strip-types --import ./tests/register-alias-loader.mjs ./scripts/product-release-preflight.ts",
     "test:launch-desk": "node --test --experimental-strip-types --import ./tests/register-alias-loader.mjs ./tests/launch-desk-tools.test.ts",
     "test:coverage": "node --test --experimental-strip-types --experimental-test-coverage --import ./tests/register-alias-loader.mjs ./tests/*.test.ts",

@@ -5,6 +5,7 @@ import { chromium } from '@playwright/test';
 
 const DEFAULT_BASE_URL = 'http://localhost:3000/editor';
 const DEFAULT_OUTPUT_DIR = 'tmp/chrome-render-audit/expanded';
+const DEFAULT_SAMPLE_MANIFEST = 'tests/fixtures/kicad-beta-sample-set.json';
 const VIEWPORT = { width: 1440, height: 900 };
 const FILE_INPUT_SELECTOR = 'input[type="file"][accept=".kicad_sch,.kicad_pcb,.pcb,text/plain"]';
 
@@ -73,6 +74,61 @@ function readArg(name, fallback) {
 function numberArg(name, fallback) {
   const parsed = Number(readArg(name, String(fallback)));
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function inlineSampleManifest() {
+  return {
+    manifestPath: null,
+    sampleSetId: 'legacy-inline-import-render-50',
+    samples: [
+      ...SCHEMATIC_SAMPLES.map(([id, relativePath]) => ({ id, path: relativePath, type: 'schematic' })),
+      ...PCB_SAMPLES.map(([id, relativePath]) => ({ id, path: relativePath, type: 'pcb' })),
+    ],
+  };
+}
+
+function normalizeSampleManifest(raw, manifestPath) {
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.samples)) {
+    throw new Error(`Invalid sample manifest: ${manifestPath}`);
+  }
+
+  return {
+    manifestPath,
+    sampleSetId: typeof raw.sampleSetId === 'string' ? raw.sampleSetId : path.basename(manifestPath),
+    samples: raw.samples.map((sample, index) => {
+      if (!sample || typeof sample !== 'object') {
+        throw new Error(`Invalid sample at index ${index} in ${manifestPath}`);
+      }
+      if (sample.type !== 'schematic' && sample.type !== 'pcb') {
+        throw new Error(`Invalid sample type at index ${index} in ${manifestPath}`);
+      }
+      if (typeof sample.id !== 'string' || typeof sample.path !== 'string') {
+        throw new Error(`Invalid sample id/path at index ${index} in ${manifestPath}`);
+      }
+
+      return {
+        id: sample.id,
+        path: sample.path,
+        type: sample.type,
+      };
+    }),
+  };
+}
+
+async function loadSampleManifest(rootDir, manifestArg) {
+  const manifestPath = path.resolve(rootDir, manifestArg);
+  try {
+    const raw = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+    return normalizeSampleManifest(raw, manifestPath);
+  } catch (error) {
+    const code = typeof error === 'object' && error && 'code' in error
+      ? error.code
+      : undefined;
+    if (manifestArg === DEFAULT_SAMPLE_MANIFEST && code === 'ENOENT') {
+      return inlineSampleManifest();
+    }
+    throw error;
+  }
 }
 
 function roundNumber(value) {
@@ -372,13 +428,16 @@ async function auditSample({ page, outputDir, rootDir, sample, type, baseUrl, se
 async function main() {
   const rootDir = process.cwd();
   const baseUrl = readArg('base-url', DEFAULT_BASE_URL);
+  const sampleManifest = await loadSampleManifest(rootDir, readArg('manifest', DEFAULT_SAMPLE_MANIFEST));
   const outputDir = path.resolve(rootDir, readArg('output', DEFAULT_OUTPUT_DIR));
-  const schematicLimit = Math.min(numberArg('schematics', SCHEMATIC_SAMPLES.length), SCHEMATIC_SAMPLES.length);
-  const pcbLimit = Math.min(numberArg('pcbs', PCB_SAMPLES.length), PCB_SAMPLES.length);
+  const schematicSamples = sampleManifest.samples.filter(sample => sample.type === 'schematic');
+  const pcbSamples = sampleManifest.samples.filter(sample => sample.type === 'pcb');
+  const schematicLimit = Math.min(numberArg('schematics', schematicSamples.length), schematicSamples.length);
+  const pcbLimit = Math.min(numberArg('pcbs', pcbSamples.length), pcbSamples.length);
   const settleMs = numberArg('settle-ms', 1_200);
   const samples = [
-    ...SCHEMATIC_SAMPLES.slice(0, schematicLimit).map(sample => ({ sample, type: 'schematic' })),
-    ...PCB_SAMPLES.slice(0, pcbLimit).map(sample => ({ sample, type: 'pcb' })),
+    ...schematicSamples.slice(0, schematicLimit).map(sample => ({ sample: [sample.id, sample.path], type: 'schematic' })),
+    ...pcbSamples.slice(0, pcbLimit).map(sample => ({ sample: [sample.id, sample.path], type: 'pcb' })),
   ];
 
   await fs.mkdir(outputDir, { recursive: true });
@@ -409,7 +468,9 @@ async function main() {
     engine,
     generatedAt: new Date().toISOString(),
     launchError,
+    manifestPath: sampleManifest.manifestPath,
     outputDir,
+    sampleSetId: sampleManifest.sampleSetId,
     totalSamples: results.length,
     issueCount: results.reduce((sum, result) => sum + result.issues.length, 0),
     viewport: VIEWPORT,
