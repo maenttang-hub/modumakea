@@ -13,8 +13,8 @@ import {
 import { pickLanguage } from '@/lib/ui-language';
 import {
   classifyIssueActionBucket,
-  countIssueSeverities,
   resolveIssueConfidence,
+  type ReviewActionBucket,
 } from '@/lib/validation-issue-classification';
 
 export type VerificationReportStatus = 'passed' | 'warning' | 'critical';
@@ -290,10 +290,20 @@ function buildPowerSummary(audit: DrcEngineReport, language: AppLanguage) {
 export function buildProjectVerificationReport(input: ProjectVerificationReportInput): ProjectVerificationReport {
   const generatedAt = input.generatedAt ?? new Date();
   const reportIssues = input.issues ?? input.audit.issues;
-  const severityCounts = countIssueSeverities(reportIssues);
-  const errorCount = severityCounts.error;
-  const warningCount = severityCounts.warning;
-  const infoCount = severityCounts.info;
+  const actionCounts = reportIssues.reduce(
+    (counts, issue) => {
+      counts[classifyIssueActionBucket(issue)] += 1;
+      return counts;
+    },
+    {
+      'must-fix': 0,
+      review: 0,
+      info: 0,
+    } satisfies Record<ReviewActionBucket, number>
+  );
+  const errorCount = actionCounts['must-fix'];
+  const warningCount = actionCounts.review;
+  const infoCount = actionCounts.info;
   const status: VerificationReportStatus = errorCount > 0 ? 'critical' : warningCount > 0 ? 'warning' : 'passed';
   const reportId = buildReportId(input.projectName, generatedAt);
   const t = (ko: string, en: string) => pickLanguage(input.language, { ko, en });

@@ -11,6 +11,11 @@ import {
   mergeImportedPcbValidationReports,
   validateImportedPcbDocument,
 } from '@/lib/imported-pcb-validation';
+import {
+  buildImportedPcbReviewGroups,
+  countImportedPcbReviewGroupImpacts,
+  type ImportedPcbReviewGroup,
+} from '@/lib/imported-pcb-review-groups';
 import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
 import { buildPcbDocument } from '@/lib/pcb-document';
 import { pickLanguage } from '@/lib/ui-language';
@@ -30,6 +35,24 @@ function countImportedPcbIssuesBySource(
   return report?.issues.filter(issue => issue.source === source).length ?? 0;
 }
 
+function summarizeImportedPcbReviewGroups(groups: ImportedPcbReviewGroup[], language: AppLanguage) {
+  const counts = countImportedPcbReviewGroupImpacts(groups);
+  const reviewCount = counts.actionable + counts['intent-dependent'];
+  if (counts.blocking > 0) {
+    return language === 'ko'
+      ? `제작 차단 ${counts.blocking} · 확인 필요 ${reviewCount}`
+      : `${counts.blocking} blocking · ${reviewCount} to review`;
+  }
+  if (reviewCount > 0) {
+    return language === 'ko'
+      ? `확정 오류 없음 · 확인 필요 ${reviewCount}`
+      : `No confirmed blockers · ${reviewCount} to review`;
+  }
+  return language === 'ko'
+    ? `확정 오류 없음 · 참고 ${counts.informational}`
+    : `No confirmed blockers · ${counts.informational} info`;
+}
+
 function summarizeImportedPcbFindings(
   report: ImportedPcbValidationReport | null | undefined,
   language: AppLanguage
@@ -42,15 +65,16 @@ function summarizeImportedPcbFindings(
   }
 
   const kicadCount = countImportedPcbIssuesBySource(report, 'kicad-cli');
-  const modumakeCount = countImportedPcbIssuesBySource(report, 'modumake-pcb');
   const hasKiCadDrc = report.checks.kicadDrc || kicadCount > 0;
+  const reviewGroups = buildImportedPcbReviewGroups(report).filter(group => group.source === 'modumake-pcb');
+  const groupSummary = summarizeImportedPcbReviewGroups(reviewGroups, language);
 
   if (!hasKiCadDrc) {
     return {
-      label: language === 'ko'
-        ? `대표 사전점검 ${report.issueCount} · 검토 필요`
-        : `${report.issueCount} representative pre-checks`,
-      toneClass: report.issueCount > 0
+      label: groupSummary,
+      toneClass: reviewGroups.some(group => group.impact === 'blocking')
+        ? 'border-[#efd3d3] bg-[#fff8f8]/92 text-[#b24f4f]'
+        : reviewGroups.some(group => group.impact === 'actionable' || group.impact === 'intent-dependent')
         ? 'border-[#ece0c5] bg-[#fffdf7]/92 text-[#94641b]'
         : 'border-[#d7e6d9] bg-[#f8fff9]/92 text-[#34764a]',
     };
@@ -58,8 +82,8 @@ function summarizeImportedPcbFindings(
 
   return {
     label: language === 'ko'
-      ? `KiCad DRC ${kicadCount} · 사전점검 ${modumakeCount}`
-      : `${kicadCount} KiCad DRC · ${modumakeCount} pre-checks`,
+      ? `KiCad DRC ${kicadCount} · ${groupSummary}`
+      : `${kicadCount} KiCad DRC · ${groupSummary}`,
     toneClass: report.errorCount > 0
       ? 'border-[#efd3d3] bg-[#fff8f8]/92 text-[#b24f4f]'
       : report.warningCount > 0
@@ -334,11 +358,12 @@ export function PcbWorkspace() {
       setWorkspaceMode('pcb');
       setSelectedPcbIssueId(validation.issues[0]?.id ?? null);
       setLastKiCadDrcError(null);
+      const reviewGroups = buildImportedPcbReviewGroups(validation).filter(group => group.source === 'modumake-pcb');
       toast.success(t('KiCad PCB 파일을 불러왔습니다.', 'KiCad PCB loaded.'), {
         duration: 900,
         description: appLanguage === 'ko'
-          ? `${document.stats.footprintCount}개 풋프린트 · ${document.stats.segmentCount}개 트랙 · 대표 사전점검 ${validation.issueCount}개`
-          : `${document.stats.footprintCount} footprints · ${document.stats.segmentCount} tracks · ${validation.issueCount} representative pre-checks`,
+          ? `${document.stats.footprintCount}개 풋프린트 · ${document.stats.segmentCount}개 트랙 · ${summarizeImportedPcbReviewGroups(reviewGroups, appLanguage)}`
+          : `${document.stats.footprintCount} footprints · ${document.stats.segmentCount} tracks · ${summarizeImportedPcbReviewGroups(reviewGroups, appLanguage)}`,
       });
     } catch (error) {
       toast.error(t('PCB 파일을 읽지 못했습니다.', 'Could not read the PCB file.'), {

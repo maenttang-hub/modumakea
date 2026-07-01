@@ -4,8 +4,14 @@ import type {
   ImportedPcbValidationSource,
   WarningSeverity,
 } from '@/types';
+import {
+  baseImportedPcbIssueCode,
+  classifyImportedPcbReviewImpact,
+  importedPcbReviewImpactRank,
+  isRepresentativeImportedPcbLimitIssue,
+  type ImportedPcbReviewImpact,
+} from '@/lib/imported-pcb-review-policy';
 
-const REPRESENTATIVE_LIMIT_SUFFIX = '_REPRESENTATIVE_LIMIT';
 const HIDDEN_CANDIDATE_PATTERN = /숨긴 반복 후보\s+(\d+)건/;
 const MAX_SCOPE_LABELS = 4;
 
@@ -25,6 +31,7 @@ export interface ImportedPcbReviewGroup {
   affectedFootprints: string[];
   affectedNets: string[];
   affectedLayers: string[];
+  impact: ImportedPcbReviewImpact;
   priority: number;
 }
 
@@ -37,6 +44,8 @@ export interface ImportedPcbReviewComparison {
   hasOfficialDrc: boolean;
 }
 
+export type ImportedPcbReviewImpactCounts = Record<ImportedPcbReviewImpact, number>;
+
 type MutableImportedPcbReviewGroup = Omit<
   ImportedPcbReviewGroup,
   'affectedFootprints' | 'affectedNets' | 'affectedLayers'
@@ -45,16 +54,6 @@ type MutableImportedPcbReviewGroup = Omit<
   affectedNets: Set<string>;
   affectedLayers: Set<string>;
 };
-
-function baseIssueCode(code: string) {
-  return code.endsWith(REPRESENTATIVE_LIMIT_SUFFIX)
-    ? code.slice(0, -REPRESENTATIVE_LIMIT_SUFFIX.length)
-    : code;
-}
-
-function isRepresentativeLimitIssue(issue: ImportedPcbValidationIssue) {
-  return issue.code.endsWith(REPRESENTATIVE_LIMIT_SUFFIX);
-}
 
 function reviewSeverity(issue: ImportedPcbValidationIssue): WarningSeverity {
   if (issue.source !== 'kicad-cli' && issue.severity === 'error') {
@@ -83,14 +82,17 @@ function hiddenCandidateCount(issue: ImportedPcbValidationIssue) {
 
 function issuePriority(issue: ImportedPcbValidationIssue) {
   const sourceBoost = issue.source === 'kicad-cli' ? 500 : 0;
-  const summaryPenalty = isRepresentativeLimitIssue(issue) ? -100 : 0;
-  return severityRank(reviewSeverity(issue)) * 1000 + sourceBoost + summaryPenalty;
+  const summaryPenalty = isRepresentativeImportedPcbLimitIssue(issue) ? -100 : 0;
+  return importedPcbReviewImpactRank(classifyImportedPcbReviewImpact(issue)) * 2000 +
+    severityRank(reviewSeverity(issue)) * 100 +
+    sourceBoost +
+    summaryPenalty;
 }
 
 function groupPriority(group: MutableImportedPcbReviewGroup) {
   const sourceBoost = group.source === 'kicad-cli' ? 500 : 0;
   const repeatWeight = Math.min(400, group.visibleIssueCount * 18 + Math.floor(group.hiddenCandidateCount / 4));
-  return severityRank(group.severity) * 1000 + sourceBoost + repeatWeight;
+  return importedPcbReviewImpactRank(group.impact) * 2000 + severityRank(group.severity) * 100 + sourceBoost + repeatWeight;
 }
 
 function stripRepresentativeSuffix(title: string) {
@@ -115,6 +117,7 @@ function createGroup(issue: ImportedPcbValidationIssue, code: string): MutableIm
     affectedFootprints: new Set(),
     affectedNets: new Set(),
     affectedLayers: new Set(),
+    impact: classifyImportedPcbReviewImpact(issue),
     priority: issuePriority(issue),
   };
 }
@@ -137,6 +140,21 @@ function toSortedLabels(values: Set<string>) {
     .slice(0, MAX_SCOPE_LABELS);
 }
 
+export function countImportedPcbReviewGroupImpacts(groups: ImportedPcbReviewGroup[]): ImportedPcbReviewImpactCounts {
+  return groups.reduce(
+    (acc, group) => {
+      acc[group.impact] += 1;
+      return acc;
+    },
+    {
+      blocking: 0,
+      actionable: 0,
+      'intent-dependent': 0,
+      informational: 0,
+    } satisfies ImportedPcbReviewImpactCounts
+  );
+}
+
 export function buildImportedPcbReviewGroups(
   report: ImportedPcbValidationReport | null | undefined
 ): ImportedPcbReviewGroup[] {
@@ -146,23 +164,27 @@ export function buildImportedPcbReviewGroups(
 
   const groups = new Map<string, MutableImportedPcbReviewGroup>();
   for (const issue of report.issues) {
-    const code = baseIssueCode(issue.code);
+    const code = baseImportedPcbIssueCode(issue.code);
     const key = `${issue.source}:${code}`;
     const group = groups.get(key) ?? createGroup(issue, code);
     const hiddenCount = hiddenCandidateCount(issue);
     const issueSeverity = reviewSeverity(issue);
+    const issueImpact = classifyImportedPcbReviewImpact(issue);
 
     group.count += 1;
     group.hiddenCandidateCount += hiddenCount;
     group.issueIds.push(issue.id);
     rememberScope(group, issue);
 
-    if (!isRepresentativeLimitIssue(issue)) {
+    if (!isRepresentativeImportedPcbLimitIssue(issue)) {
       group.visibleIssueCount += 1;
     }
 
     if (severityRank(issueSeverity) > severityRank(group.severity)) {
       group.severity = issueSeverity;
+    }
+    if (importedPcbReviewImpactRank(issueImpact) > importedPcbReviewImpactRank(group.impact)) {
+      group.impact = issueImpact;
     }
 
     const currentIssuePriority = issuePriority(issue);

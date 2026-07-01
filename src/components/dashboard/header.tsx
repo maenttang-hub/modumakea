@@ -17,6 +17,11 @@ import { buildImportedSchematicIntegratedValidationJson } from '@/lib/build-impo
 import { buildKiCadSchematic, buildKiCadSchematicFilename } from '@/lib/export-kicad';
 import { detectKiCadFileKind } from '@/lib/kicad-file-kind';
 import { validateImportedPcbDocument } from '@/lib/imported-pcb-validation';
+import {
+  buildImportedPcbReviewGroups,
+  countImportedPcbReviewGroupImpacts,
+  type ImportedPcbReviewGroup,
+} from '@/lib/imported-pcb-review-groups';
 import { importKiCadSchematicAsync } from '@/lib/import-kicad-schematic-async';
 import { parseKiCadPcb } from '@/lib/kicad-pcb-parser';
 import {
@@ -57,6 +62,24 @@ type HeaderMenuItemId =
   | 'user-guide'
   | 'shortcuts'
   | 'about';
+
+function summarizeImportedPcbReviewGroups(groups: ImportedPcbReviewGroup[], language: AppLanguage) {
+  const counts = countImportedPcbReviewGroupImpacts(groups);
+  const reviewCount = counts.actionable + counts['intent-dependent'];
+  if (counts.blocking > 0) {
+    return language === 'ko'
+      ? `제작 차단 ${counts.blocking} · 확인 필요 ${reviewCount}`
+      : `${counts.blocking} blocking · ${reviewCount} to review`;
+  }
+  if (reviewCount > 0) {
+    return language === 'ko'
+      ? `확정 오류 없음 · 확인 필요 ${reviewCount}`
+      : `No confirmed blockers · ${reviewCount} to review`;
+  }
+  return language === 'ko'
+    ? `확정 오류 없음 · 참고 ${counts.informational}`
+    : `No confirmed blockers · ${counts.informational} info`;
+}
 
 const MENU_SECTIONS: Array<{
   id: HeaderMenuSectionId;
@@ -634,6 +657,7 @@ export function Header() {
       if (kiCadFileKind === 'pcb') {
         const pcbDocument = parseKiCadPcb(text, { sourceFilename: file.name });
         const validation = validateImportedPcbDocument(pcbDocument);
+        const reviewGroups = buildImportedPcbReviewGroups(validation).filter(group => group.source === 'modumake-pcb');
         setImportedPcbDocument(pcbDocument, text, validation);
         setWorkspaceMode('pcb');
         clearCloudProjectState();
@@ -642,8 +666,8 @@ export function Header() {
         }
         toast.success(t('KiCad PCB 파일을 불러왔습니다.', 'Loaded KiCad PCB file.'), {
           description: appLanguage === 'ko'
-            ? `${pcbDocument.stats.footprintCount}개 풋프린트 · ${pcbDocument.stats.segmentCount}개 트랙 · 대표 사전점검 ${validation.issueCount}개`
-            : `${pcbDocument.stats.footprintCount} footprints · ${pcbDocument.stats.segmentCount} tracks · ${validation.issueCount} representative pre-checks`,
+            ? `${pcbDocument.stats.footprintCount}개 풋프린트 · ${pcbDocument.stats.segmentCount}개 트랙 · ${summarizeImportedPcbReviewGroups(reviewGroups, appLanguage)}`
+            : `${pcbDocument.stats.footprintCount} footprints · ${pcbDocument.stats.segmentCount} tracks · ${summarizeImportedPcbReviewGroups(reviewGroups, appLanguage)}`,
         });
         return;
       }

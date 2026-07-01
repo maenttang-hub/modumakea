@@ -4,23 +4,19 @@ import type {
   ProjectAuditIssue,
   ProjectAuditIssueConfidence,
 } from '@/types';
+import { classifyImportedPcbReviewImpact } from '@/lib/imported-pcb-review-policy';
 
 function confidenceForPcbIssue(issue: ImportedPcbValidationIssue): ProjectAuditIssueConfidence {
   if (issue.source === 'kicad-cli') {
     return 'confirmed';
   }
 
-  if (issue.severity === 'info') {
+  const impact = classifyImportedPcbReviewImpact(issue);
+  if (impact === 'informational') {
     return 'informational';
   }
 
-  if (
-    issue.code === 'PCB_EMPTY_GEOMETRY' ||
-    issue.code === 'PCB_NO_EDGE_CUTS' ||
-    issue.code === 'PCB_DUPLICATE_REFERENCE' ||
-    issue.code === 'PCB_STRAY_COPPER' ||
-    issue.code === 'PCB_NET_DISCONNECTED'
-  ) {
+  if (impact === 'blocking') {
     return 'strong-inference';
   }
 

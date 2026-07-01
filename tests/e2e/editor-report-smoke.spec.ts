@@ -264,7 +264,7 @@ test('editor shows imported PCB zoom controls and changes the board view', async
   const pcbSvg = page.getByTestId('imported-pcb-svg');
   const zoomLabel = page.getByTestId('imported-pcb-zoom-label');
   await expect(pcbSvg).toBeVisible({ timeout: 15000 });
-  await expect(page.getByTestId('pcb-workspace-top-controls')).toContainText('사전점검');
+  await expect(page.getByTestId('pcb-workspace-top-controls')).toContainText('확정 오류 없음');
   await expect(page.getByTestId('imported-pcb-issue-summary')).toContainText('KiCad 공식 DRC는 아직 실행되지 않았습니다.');
   await expect(page.getByTestId('imported-pcb-zoom-controls')).toBeVisible();
   await expect(zoomLabel).toHaveText('100%');

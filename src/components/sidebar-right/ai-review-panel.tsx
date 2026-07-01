@@ -5,7 +5,7 @@ import {
   buildSchematicPcbAugmentationCandidates,
   schematicPcbAugmentationDirectionLabel,
 } from '@/lib/schematic-pcb-augmentation-candidates';
-import { countIssueSeverities } from '@/lib/validation-issue-classification';
+import { classifyIssueActionBucket } from '@/lib/validation-issue-classification';
 import type { ImportedKiCadMapping, ProjectAuditIssue } from '@/types';
 
 type ReviewPanelIssue = ProjectAuditIssue & {
@@ -90,8 +90,7 @@ function sectionTitleTone(severity: ProjectAuditIssue['severity']) {
 function decisionLabel(
   errorCount: number,
   warningCount: number,
-  hasReviewTarget: boolean,
-  issues: ReviewPanelIssue[]
+  hasReviewTarget: boolean
 ) {
   if (!hasReviewTarget) {
     return {
@@ -101,21 +100,7 @@ function decisionLabel(
     };
   }
 
-  const confirmedErrorCount = issues.filter(issue =>
-    issue.severity === 'error' &&
-    (issue.confidence === 'confirmed' || issue.confidence === 'strong-inference' || !issue.confidence)
-  ).length;
-  const reviewOnlyErrorCount = Math.max(errorCount - confirmedErrorCount, 0);
-
   if (errorCount > 0) {
-    if (confirmedErrorCount === 0 && reviewOnlyErrorCount > 0) {
-      return {
-        label: '검토 필요',
-        description: '사전 점검 항목을 확인하세요.',
-        className: 'border-[#ece0c5] bg-[#fffdf7] text-[#94641b]',
-      };
-    }
-
     return {
       label: '수정 필요',
       description: '강한 근거 항목을 먼저 확인하세요.',
@@ -220,12 +205,22 @@ export function AiReviewPanel({
   issues: ReviewPanelIssue[];
   onSelectIssue: (issue: ReviewPanelIssue) => void;
 }) {
-  const severityCounts = countIssueSeverities(issues);
-  const errorCount = severityCounts.error;
-  const warningCount = severityCounts.warning;
-  const infoCount = severityCounts.info;
+  const actionCounts = issues.reduce(
+    (counts, issue) => {
+      counts[classifyIssueActionBucket(issue)] += 1;
+      return counts;
+    },
+    {
+      'must-fix': 0,
+      review: 0,
+      info: 0,
+    }
+  );
+  const errorCount = actionCounts['must-fix'];
+  const warningCount = actionCounts.review;
+  const infoCount = actionCounts.info;
   const lead = issues[0];
-  const decision = decisionLabel(errorCount, warningCount, hasReviewTarget, issues);
+  const decision = decisionLabel(errorCount, warningCount, hasReviewTarget);
   const actionLine = nextActionLine(lead, hasReviewTarget);
   const augmentationCandidates = hasReviewTarget ? buildSchematicPcbAugmentationCandidates(issues) : [];
   const visibleItems: ReviewItem[] =
@@ -317,11 +312,11 @@ export function AiReviewPanel({
         {hasReviewTarget ? (
           <div className="mt-3 grid grid-cols-3 gap-2">
             <div className="rounded-[12px] border border-[#edd8d8] bg-[#fff8f8] px-3 py-2.5">
-              <div className="text-[10px] uppercase tracking-[0.14em] text-[#ac938b]">오류</div>
+              <div className="text-[10px] uppercase tracking-[0.14em] text-[#ac938b]">수정 필요</div>
               <div data-testid="editor-error-count" className="mt-1 text-[16px] font-semibold text-[#b24f4f]">{errorCount}</div>
             </div>
             <div className="rounded-[12px] border border-[#ece2cf] bg-[#fffdf7] px-3 py-2.5">
-              <div className="text-[10px] uppercase tracking-[0.14em] text-[#ac938b]">경고</div>
+              <div className="text-[10px] uppercase tracking-[0.14em] text-[#ac938b]">확인 필요</div>
               <div data-testid="editor-warning-count" className="mt-1 text-[16px] font-semibold text-[#a57019]">{warningCount}</div>
             </div>
             <div className="rounded-[12px] border border-[#dde8dd] bg-[#fbfffb] px-3 py-2.5">

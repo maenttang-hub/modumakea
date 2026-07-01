@@ -423,6 +423,19 @@ test('PCB review groups keep repeated candidates tied to one visible cause', asy
   );
 });
 
+test('PCB review groups separate local blockers from intent-dependent candidates', () => {
+  const emptyDocument = parseKiCadPcb('(kicad_pcb (version 20240101) (generator modumake-test))');
+  const emptyReport = validateImportedPcbDocument(emptyDocument);
+  const emptyGroups = buildImportedPcbReviewGroups(emptyReport);
+  const advancedDocument = parseKiCadPcb(ADVANCED_RULE_PROJECT, { sourceFilename: 'advanced.kicad_pcb' });
+  const advancedReport = validateImportedPcbDocument(advancedDocument);
+  const advancedGroups = buildImportedPcbReviewGroups(advancedReport);
+
+  assert.equal(emptyGroups.find(group => group.code === 'PCB_EMPTY_GEOMETRY')?.impact, 'blocking');
+  assert.equal(advancedGroups.find(group => group.code === 'PCB_COPPER_TO_EDGE_CLEARANCE')?.impact, 'intent-dependent');
+  assert.equal(advancedGroups.find(group => group.code === 'PCB_DIFF_PAIR_IMPEDANCE_UNVERIFIED')?.impact, 'informational');
+});
+
 test('PCB review comparison separates official DRC from ModuMake pre-check groups', () => {
   const document = parseKiCadPcb(ADVANCED_RULE_PROJECT, { sourceFilename: 'advanced.kicad_pcb' });
   const localReport = validateImportedPcbDocument(document);

@@ -94,13 +94,13 @@ export function ValidationReportHeaderSection({
 
         <div className="grid grid-cols-3 gap-2.5">
           <div className="rounded-[14px] border px-3 py-2.5" style={importedCardStyle}>
-            <span className="block text-[10px] uppercase tracking-[0.14em] text-[#9b8f82]" style={importedMutedTextStyle}>{t('오류', 'Errors')}</span>
+            <span className="block text-[10px] uppercase tracking-[0.14em] text-[#9b8f82]" style={importedMutedTextStyle}>{t('수정 필요', 'Must fix')}</span>
             <span className={verificationReport.errorCount > 0 ? 'font-bold text-[#fca5a5]' : 'font-bold text-[#86efac]'}>
               {verificationReport.errorCount}
             </span>
           </div>
           <div className="rounded-[14px] border px-3 py-2.5" style={importedCardStyle}>
-            <span className="block text-[10px] uppercase tracking-[0.14em] text-[#9b8f82]" style={importedMutedTextStyle}>{t('경고', 'Warnings')}</span>
+            <span className="block text-[10px] uppercase tracking-[0.14em] text-[#9b8f82]" style={importedMutedTextStyle}>{t('확인 필요', 'Needs review')}</span>
             <span className={verificationReport.warningCount > 0 ? 'font-bold text-[#fcd34d]' : 'font-bold text-[#86efac]'}>
               {verificationReport.warningCount}
             </span>

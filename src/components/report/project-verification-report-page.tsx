@@ -13,6 +13,7 @@ import { mapImportedPcbValidationIssuesToProjectAuditIssues } from '@/lib/import
 import {
   buildImportedPcbReviewComparison,
   buildImportedPcbReviewGroups,
+  countImportedPcbReviewGroupImpacts,
   type ImportedPcbReviewGroup,
 } from '@/lib/imported-pcb-review-groups';
 import { buildProjectVerificationReport } from '@/lib/project-verification-report';
@@ -268,13 +269,27 @@ function formatPcbSourceCounts(
 }
 
 function formatModuMakePcbReviewCounts(
-  groupCount: number,
-  representativeCount: number,
+  groups: ImportedPcbReviewGroup[],
   t: (ko: string, en: string) => string
 ) {
+  const counts = countImportedPcbReviewGroupImpacts(groups);
+  const reviewCount = counts.actionable + counts['intent-dependent'];
+  if (counts.blocking > 0) {
+    return t(
+      `제작 차단 ${counts.blocking}개 · 확인 필요 ${reviewCount}개`,
+      `${counts.blocking} blocking · ${reviewCount} to review`
+    );
+  }
+  if (reviewCount > 0) {
+    return t(
+      `확정 오류 없음 · 확인 필요 ${reviewCount}개`,
+      `No confirmed blockers · ${reviewCount} to review`
+    );
+  }
+
   return t(
-    `검토 묶음 ${groupCount}개 · 대표 위치 ${representativeCount}개`,
-    `${groupCount} review groups · ${representativeCount} representative locations`
+    `확정 오류 없음 · 참고 ${counts.informational}개`,
+    `No confirmed blockers · ${counts.informational} info`
   );
 }
 
@@ -318,6 +333,22 @@ function formatPcbReviewGroupCount(
   return t(`${group.visibleIssueCount}건`, `${group.visibleIssueCount} items`);
 }
 
+function formatPcbReviewGroupImpact(
+  group: ImportedPcbReviewGroup,
+  t: (ko: string, en: string) => string
+) {
+  if (group.impact === 'blocking') {
+    return t('제작 차단', 'Blocking');
+  }
+  if (group.impact === 'actionable') {
+    return t('우선 확인', 'Check first');
+  }
+  if (group.impact === 'intent-dependent') {
+    return t('의도 확인', 'Intent needed');
+  }
+  return t('참고', 'Info');
+}
+
 function officialPcbDrcHelpText(t: (ko: string, en: string) => string) {
   return t('KiCad가 직접 계산한 공식 판정입니다.', 'Findings calculated directly by KiCad.');
 }
@@ -343,6 +374,9 @@ function PcbReviewGroupCard({
         <div className="shrink-0 text-[10px] font-semibold text-[#8b7866]">
           {formatPcbReviewGroupCount(group, t)}
         </div>
+      </div>
+      <div className="mt-1 text-[10px] font-semibold text-[#8b7866]">
+        {formatPcbReviewGroupImpact(group, t)}
       </div>
       <div className="mt-1 line-clamp-2 text-[11px] leading-5 text-[#6b5d50]">
         {formatPcbReviewGroupScope(group, t)}
@@ -882,11 +916,11 @@ export function ProjectVerificationReportPage() {
             </div>
             <div className="grid gap-0 border border-[#dcd0bf] md:grid-cols-4">
             <div className="border-b border-[#e3d7c8] bg-white px-4 py-4 md:border-b-0 md:border-r">
-              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('오류', 'Errors')}</div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('수정 필요', 'Must fix')}</div>
               <div data-testid="report-error-count" className="mt-2 text-[24px] font-semibold text-[#a94040]">{verificationReport.errorCount}</div>
             </div>
             <div className="border-b border-[#e3d7c8] bg-white px-4 py-4 md:border-b-0 md:border-r">
-              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('경고', 'Warnings')}</div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('확인 필요', 'Needs review')}</div>
               <div data-testid="report-warning-count" className="mt-2 text-[24px] font-semibold text-[#9b6615]">{verificationReport.warningCount}</div>
             </div>
             <div className="border-b border-[#e3d7c8] bg-white px-4 py-4 md:border-b-0 md:border-r">
@@ -927,11 +961,7 @@ export function ProjectVerificationReportPage() {
                     <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7866]">{t('ModuMake 자체 PCB 검사', 'ModuMake PCB pre-check')}</div>
                     <div className="mt-1 text-[11px] leading-5 text-[#6b5d50]">{modumakePcbReviewHelpText(t)}</div>
                     <div className="mt-2 text-[12px] font-semibold leading-6 text-[#3d332c]">
-                      {formatModuMakePcbReviewCounts(
-                        pcbReviewComparison.precheckGroups.length,
-                        pcbSourceStats.modumake.total,
-                        t
-                      )}
+                      {formatModuMakePcbReviewCounts(pcbReviewComparison.precheckGroups, t)}
                     </div>
                   </div>
                   <div className="px-4 py-3">

@@ -4,6 +4,7 @@ import { useMemo, useState, type WheelEvent } from 'react';
 import {
   buildImportedPcbReviewComparison,
   buildImportedPcbReviewGroups,
+  countImportedPcbReviewGroupImpacts,
   type ImportedPcbReviewGroup,
 } from '@/lib/imported-pcb-review-groups';
 import { pickLanguage } from '@/lib/ui-language';
@@ -176,6 +177,44 @@ function reviewGroupCountLabel(group: ImportedPcbReviewGroup, language: AppLangu
   return language === 'ko' ? `${visibleCount}건` : `${visibleCount} items`;
 }
 
+function reviewGroupImpactLabel(group: ImportedPcbReviewGroup, language: AppLanguage) {
+  if (group.impact === 'blocking') {
+    return language === 'ko' ? '제작 차단' : 'Blocking';
+  }
+  if (group.impact === 'actionable') {
+    return language === 'ko' ? '우선 확인' : 'Check first';
+  }
+  if (group.impact === 'intent-dependent') {
+    return language === 'ko' ? '의도 확인' : 'Intent needed';
+  }
+  return language === 'ko' ? '참고' : 'Info';
+}
+
+function reviewGroupImpactCounts(groups: ImportedPcbReviewGroup[]) {
+  return countImportedPcbReviewGroupImpacts(groups);
+}
+
+function reviewGroupSummaryLabel(groups: ImportedPcbReviewGroup[], language: AppLanguage) {
+  const counts = reviewGroupImpactCounts(groups);
+  const reviewCount = counts.actionable + counts['intent-dependent'];
+  if (counts.blocking > 0) {
+    return language === 'ko'
+      ? `제작 차단 ${counts.blocking}개 · 확인 필요 ${reviewCount}개`
+      : `${counts.blocking} blocking · ${reviewCount} to review`;
+  }
+  if (reviewCount > 0) {
+    return language === 'ko'
+      ? `확정 오류 없음 · 확인 필요 ${reviewCount}개`
+      : `No confirmed blockers · ${reviewCount} to review`;
+  }
+  if (counts.informational > 0) {
+    return language === 'ko'
+      ? `확정 오류 없음 · 참고 ${counts.informational}개`
+      : `No confirmed blockers · ${counts.informational} info`;
+  }
+  return language === 'ko' ? '확정 오류 없음' : 'No confirmed blockers';
+}
+
 function officialDrcHelpText(language: AppLanguage) {
   return language === 'ko'
     ? 'KiCad가 직접 계산한 판정입니다.'
@@ -223,6 +262,9 @@ function ReviewGroupButton({
           style={{ backgroundColor: severityColor(group.severity) }}
         />
         <span className="min-w-0 flex-1 truncate font-semibold text-[#3f342c]">{group.title}</span>
+        <span className="shrink-0 rounded-full bg-[#f4ece0] px-1.5 py-0.5 text-[9px] font-semibold text-[#7a6a5c]">
+          {reviewGroupImpactLabel(group, language)}
+        </span>
         <span className="shrink-0 text-[10px] text-[#8d8074]">
           {reviewGroupCountLabel(group, language)}
         </span>
@@ -904,11 +946,11 @@ export function ImportedPcbViewer({
           <div className="font-semibold text-[#3f342c]">
             {hasKiCadDrc
               ? language === 'ko'
-                ? `KiCad DRC ${kicadDrcIssueCount}개 · ModuMake 묶음 ${reviewComparison.precheckGroups.length}개`
-                : `${kicadDrcIssueCount} KiCad DRC · ${reviewComparison.precheckGroups.length} ModuMake groups`
+                ? `KiCad DRC ${kicadDrcIssueCount}개 · ${reviewGroupSummaryLabel(reviewComparison.precheckGroups, language)}`
+                : `${kicadDrcIssueCount} KiCad DRC · ${reviewGroupSummaryLabel(reviewComparison.precheckGroups, language)}`
               : language === 'ko'
-                ? `ModuMake 검토 묶음 ${reviewGroups.length}개 · 대표 위치 ${validation.issueCount}개`
-                : `${reviewGroups.length} ModuMake groups · ${validation.issueCount} representative locations`}
+                ? reviewGroupSummaryLabel(reviewGroups, language)
+                : reviewGroupSummaryLabel(reviewGroups, language)}
           </div>
           {!hasKiCadDrc ? (
             <div className="mt-0.5 text-[10px] text-[#8d8074]">
